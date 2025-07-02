@@ -13,9 +13,9 @@ export interface User {
 export interface CreateUserRequest {
   email: string;
   password: string;
-  wallet_address?: string;
-  passkey_id?: string;
-  metadata?: Record<string, any>;
+  wallet_address?: string | undefined;
+  passkey_id?: string | undefined;
+  metadata?: Record<string, any> | undefined;
 }
 
 export interface LoginRequest {
