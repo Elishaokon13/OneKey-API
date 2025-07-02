@@ -186,15 +186,11 @@ app.get('/api/v1/docs', (req, res) => {
   });
 });
 
-// Placeholder route handlers (will be implemented in later tasks)
-app.use('/api/v1/auth', (req, res) => {
-  res.status(501).json({
-    error: 'NOT_IMPLEMENTED',
-    message: 'Authentication endpoints not yet implemented',
-    availableIn: 'Task 2.1',
-    requestId: req.headers['x-request-id']
-  });
-});
+// Import route modules
+import authRoutes from '@/routes/auth';
+
+// API route handlers
+app.use('/api/v1/auth', authRoutes);
 
 app.use('/api/v1/kyc', (req, res) => {
   res.status(501).json({
