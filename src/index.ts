@@ -253,6 +253,10 @@ app.get('/api/v1/docs', (req, res) => {
       'AUTHORIZATION_ERROR': 'Insufficient permissions',
       'KYC_VERIFICATION_ERROR': 'KYC verification failed',
       'ATTESTATION_ERROR': 'Attestation creation/verification failed',
+      'ENCRYPTION_ERROR': 'Data encryption failed',
+      'DECRYPTION_ERROR': 'Data decryption failed',
+      'KEY_MANAGEMENT_ERROR': 'Key generation/management failed',
+      'INTEGRITY_ERROR': 'Data integrity verification failed',
       'STORAGE_ERROR': 'Decentralized storage error',
       'RATE_LIMITED': 'Too many requests'
     },
