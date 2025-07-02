@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transaction = exports.query = exports.checkDatabaseHealth = exports.getDatabase = exports.closeDatabase = exports.initializeDatabase = void 0;
 const pg_1 = require("pg");
-const environment_1 = __importDefault(require("./environment"));
-const supabase_1 = require("./supabase");
+const environment_1 = __importDefault(require("@/config/environment"));
+const supabase_1 = require("@/config/supabase");
 // Database connection pool
 let pool = null;
 // Database configuration
@@ -19,7 +19,7 @@ const dbConfig = {
     // Connection pool settings
     max: 20, // Maximum number of connections in the pool
     idleTimeoutMillis: 30000, // How long a client is allowed to remain idle
-    connectionTimeoutMillis: 2000, // How long to wait for a connection
+    connectionTimeoutMillis: 10000, // How long to wait for a connection (10 seconds for Supabase)
     // SSL configuration for production
     ssl: environment_1.default.server.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
     // Additional PostgreSQL settings
@@ -35,39 +35,26 @@ const initializeDatabase = async () => {
         if ((0, supabase_1.isSupabaseConfigured)()) {
             console.log('🌐 Supabase configuration detected, initializing Supabase...');
             (0, supabase_1.initializeSupabase)();
-            // Also initialize PostgreSQL pool for direct database operations
-            if (environment_1.default.database.url.includes('supabase') || process.env.SUPABASE_DB_URL) {
-                // Use Supabase database URL for direct connections
-                const supabaseDbUrl = process.env.SUPABASE_DB_URL || environment_1.default.database.url;
-                pool = new pg_1.Pool({
-                    connectionString: supabaseDbUrl,
-                    ssl: { rejectUnauthorized: false },
-                    max: 20,
-                    idleTimeoutMillis: 30000,
-                    connectionTimeoutMillis: 2000,
-                    statement_timeout: 30000,
-                    query_timeout: 30000,
-                    application_name: 'OneKey_KYC_API',
-                });
-            }
-            else {
-                // Fallback to regular database config
-                pool = new pg_1.Pool(dbConfig);
-            }
-            console.log('🎯 Using Supabase + PostgreSQL hybrid configuration');
+            console.log('🎯 Using Supabase-only configuration (recommended)');
+            // Skip direct PostgreSQL connection when using Supabase
+            // All database operations will use Supabase clients
+            console.log('✅ Database initialization completed (Supabase mode)');
+            return;
         }
         else {
             console.log('🐘 Using direct PostgreSQL connection');
             pool = new pg_1.Pool(dbConfig);
+            // Test the connection only for direct PostgreSQL
+            const client = await pool.connect();
+            await client.query('SELECT NOW()');
+            client.release();
         }
-        // Test the connection
-        const client = await pool.connect();
-        await client.query('SELECT NOW()');
-        client.release();
         console.log('✅ Database connection established successfully');
         if ((0, supabase_1.isSupabaseConfigured)()) {
             console.log(`📊 Supabase URL: ${environment_1.default.supabase.url}`);
-            console.log(`📊 PostgreSQL Pool: ${pool.options.host || 'connection string'}`);
+            if (pool) {
+                console.log(`📊 PostgreSQL Pool: ${pool.options.host || 'connection string'}`);
+            }
         }
         else {
             console.log(`📊 Connected to: ${environment_1.default.database.host}:${environment_1.default.database.port}/${environment_1.default.database.name}`);
@@ -96,7 +83,7 @@ const closeDatabase = async () => {
     if ((0, supabase_1.isSupabaseConfigured)()) {
         await (0, supabase_1.closeSupabase)();
     }
-    // Close PostgreSQL pool
+    // Close PostgreSQL pool (only if using direct PostgreSQL)
     if (pool) {
         await pool.end();
         pool = null;
@@ -106,6 +93,9 @@ const closeDatabase = async () => {
 exports.closeDatabase = closeDatabase;
 // Get database connection from pool
 const getDatabase = () => {
+    if ((0, supabase_1.isSupabaseConfigured)() && !pool) {
+        throw new Error('Using Supabase-only mode. Use getSupabaseClient() or getSupabaseServiceClient() instead.');
+    }
     if (!pool) {
         throw new Error('Database not initialized. Call initializeDatabase() first.');
     }
@@ -114,6 +104,27 @@ const getDatabase = () => {
 exports.getDatabase = getDatabase;
 // Database health check
 const checkDatabaseHealth = async () => {
+    // Handle Supabase-only mode
+    if ((0, supabase_1.isSupabaseConfigured)() && !pool) {
+        const supabaseStatus = await (0, supabase_1.checkSupabaseHealth)();
+        return {
+            status: supabaseStatus.status === 'healthy' ? 'healthy' : 'unhealthy',
+            details: {
+                connected: supabaseStatus.details.connected,
+                totalConnections: 0, // N/A for Supabase mode
+                idleConnections: 0, // N/A for Supabase mode
+                waitingConnections: 0, // N/A for Supabase mode
+                serverVersion: 'Supabase (managed)',
+                uptime: 'N/A (managed service)',
+                supabase: {
+                    status: supabaseStatus.status,
+                    publicClient: supabaseStatus.details.publicClient,
+                    serviceClient: supabaseStatus.details.serviceClient,
+                    ...(supabaseStatus.details.url && { url: supabaseStatus.details.url }),
+                },
+            },
+        };
+    }
     if (!pool) {
         return {
             status: 'disconnected',
