@@ -101,7 +101,7 @@ export class KycService {
     return healthChecks;
   }
 
-  private getProviderService(provider: KycProvider): BaseKycService {
+  getProviderService(provider: KycProvider): BaseKycService {
     const service = this.providers.get(provider);
     if (!service) {
       throw new KycProviderUnavailableError(provider);
