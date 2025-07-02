@@ -74,4 +74,66 @@ export const applyAttestationRateLimit = rateLimit({
     // Use IP + User ID for more accurate rate limiting
     return `${req.ip}-${req.user?.id || 'anonymous'}`;
   }
-}); 
+});
+
+// Encryption operation limiter (moderate limits due to computational cost)
+export const encryptionOperationsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 encryption/decryption operations per 15 minutes
+  message: {
+    error: 'Encryption Operation Rate Limited',
+    message: 'Too many encryption operations, please try again later.',
+    retryAfter: 15 * 60
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    // Use IP + User ID for more accurate rate limiting
+    return `${req.ip}-${req.user?.id || 'anonymous'}`;
+  }
+});
+
+// Key management limiter (restrictive due to security implications)
+export const keyManagementLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 15, // Only 15 key operations per hour per user
+  message: {
+    error: 'Key Management Rate Limited',
+    message: 'Too many key management operations, please try again later.',
+    retryAfter: 60 * 60
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    // Use IP + User ID for more accurate rate limiting
+    return `${req.ip}-${req.user?.id || 'anonymous'}`;
+  }
+});
+
+// File encryption limiter (more restrictive due to potential large file sizes)
+export const fileEncryptionLimiter = rateLimit({
+  windowMs: 30 * 60 * 1000, // 30 minutes
+  max: 10, // Only 10 file encryption operations per 30 minutes
+  message: {
+    error: 'File Encryption Rate Limited',
+    message: 'Too many file encryption operations, please try again later.',
+    retryAfter: 30 * 60
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    return `${req.ip}-${req.user?.id || 'anonymous'}`;
+  }
+});
+
+// Export organized rate limiters for easy access
+export const rateLimiter = {
+  general: generalLimiter,
+  auth: authLimiter,
+  kyc: kycLimiter,
+  attestation: attestationLimiter,
+  attestationOperations: applyAttestationRateLimit,
+  encryptionOperations: encryptionOperationsLimiter,
+  keyManagement: keyManagementLimiter,
+  fileEncryption: fileEncryptionLimiter
+}; 
