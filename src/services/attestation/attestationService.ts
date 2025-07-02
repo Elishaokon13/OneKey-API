@@ -119,8 +119,8 @@ export class AttestationService {
         kycResult,
         options: {
           revocable: true,
-          expirationTime,
-          offChainMetadata: options?.metadata
+          ...(expirationTime !== undefined && { expirationTime }),
+          ...(options?.metadata && { offChainMetadata: options.metadata })
         },
         requestId,
         timestamp: Date.now()
