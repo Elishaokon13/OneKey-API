@@ -321,7 +321,7 @@ export class EasService extends BaseAttestationService {
 
   // ===== Revocation =====
 
-  protected async revokeAttestation(uid: string, reason?: string): Promise<boolean> {
+  public async revokeAttestation(uid: string, reason?: string): Promise<boolean> {
     try {
       if (!this.config.enableRevocation) {
         throw new AttestationError(
