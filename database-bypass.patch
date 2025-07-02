@@ -1,5 +1,0 @@
-# Quick patch to test Privy without database
-# Edit src/index.ts, line ~268, change:
-await initializeDatabase();
-# to:
-// await initializeDatabase(); // Temporarily disabled for Privy testing
