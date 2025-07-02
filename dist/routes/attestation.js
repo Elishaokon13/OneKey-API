@@ -120,7 +120,7 @@ const logRequest = (req, endpoint) => {
         method: req.method,
         endpoint,
         userId: req.user?.id,
-        userWallet: req.user?.walletAddress,
+        userWallet: req.user?.wallet_address,
         requestId: req.headers['x-request-id'],
         ip: req.ip,
         userAgent: req.get('User-Agent')
@@ -131,7 +131,7 @@ const logRequest = (req, endpoint) => {
  * POST /api/v1/attestations
  * Create a new attestation from KYC verification
  */
-router.post('/', auth_1.authenticateJWT, auth_1.requireKycCompletion, rateLimiter_1.applyAttestationRateLimit, validateCreateAttestation, async (req, res) => {
+router.post('/', auth_1.authenticateJWT, auth_1.requireKYCCompletion, rateLimiter_1.applyAttestationRateLimit, validateCreateAttestation, async (req, res) => {
     logRequest(req, 'CREATE_ATTESTATION');
     if (handleValidationErrors(req, res))
         return;
@@ -290,12 +290,16 @@ router.get('/', auth_1.authenticateJWT, validateListAttestations, async (req, re
         return;
     try {
         const { recipient, limit, offset, includeRevoked, includeExpired } = req.query;
-        const result = await attestationService.listAttestations(recipient, {
-            limit: limit ? parseInt(limit) : undefined,
-            offset: offset ? parseInt(offset) : undefined,
-            includeRevoked: includeRevoked === 'true',
-            includeExpired: includeExpired === 'true'
-        });
+        const options = {};
+        if (limit)
+            options.limit = parseInt(limit);
+        if (offset)
+            options.offset = parseInt(offset);
+        if (includeRevoked !== undefined)
+            options.includeRevoked = includeRevoked === 'true';
+        if (includeExpired !== undefined)
+            options.includeExpired = includeExpired === 'true';
+        const result = await attestationService.listAttestations(recipient, options);
         logger_1.logger.info('Attestation listing completed', {
             success: result.success,
             recipient,
