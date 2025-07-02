@@ -6,17 +6,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const environment_1 = __importDefault(require("./config/environment"));
-const database_1 = require("./config/database");
-const migrator_1 = require("./database/migrator");
+const environment_1 = __importDefault(require("@/config/environment"));
+const database_1 = require("@/config/database");
+const migrator_1 = require("@/database/migrator");
 // Import routes
-const auth_1 = __importDefault(require("./routes/auth"));
-const privy_1 = __importDefault(require("./routes/privy"));
-const privyService_1 = require("./services/auth/privyService");
+const auth_1 = __importDefault(require("@/routes/auth"));
+const privy_1 = __importDefault(require("@/routes/privy"));
+const kyc_1 = __importDefault(require("@/routes/kyc"));
+const privyService_1 = require("@/services/auth/privyService");
 // Import custom middleware
-const rateLimiter_1 = require("./middleware/rateLimiter");
-const errorHandler_1 = require("./middleware/errorHandler");
-const security_1 = require("./middleware/security");
+const rateLimiter_1 = require("@/middleware/rateLimiter");
+const errorHandler_1 = require("@/middleware/errorHandler");
+const security_1 = require("@/middleware/security");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -116,9 +117,13 @@ app.get('/api/v1', (req, res) => {
                 status: 'GET /api/v1/privy/status'
             },
             kyc: {
-                initiate: 'POST /api/v1/kyc/initiate',
-                status: 'GET /api/v1/kyc/status/:sessionId',
-                providers: 'GET /api/v1/kyc/providers'
+                createSession: 'POST /api/v1/kyc/sessions',
+                getSession: 'GET /api/v1/kyc/sessions/:sessionId',
+                startVerification: 'POST /api/v1/kyc/sessions/:sessionId/verify',
+                getResult: 'GET /api/v1/kyc/sessions/:sessionId/result',
+                listSessions: 'GET /api/v1/kyc/sessions',
+                providers: 'GET /api/v1/kyc/providers',
+                providersHealth: 'GET /api/v1/kyc/providers/health'
             },
             attestations: {
                 create: 'POST /api/v1/attestations/create',
@@ -191,14 +196,8 @@ app.get('/api/v1/docs', (req, res) => {
 // API route handlers
 app.use('/api/v1/auth', auth_1.default);
 app.use('/api/v1/privy', privy_1.default);
-app.use('/api/v1/kyc', (req, res) => {
-    res.status(501).json({
-        error: 'NOT_IMPLEMENTED',
-        message: 'KYC endpoints not yet implemented',
-        availableIn: 'Task 3.2',
-        requestId: req.headers['x-request-id']
-    });
-});
+app.use('/api/v1/kyc', kyc_1.default);
+// KYC routes now implemented - see /src/routes/kyc.ts
 app.use('/api/v1/attestations', (req, res) => {
     res.status(501).json({
         error: 'NOT_IMPLEMENTED',
