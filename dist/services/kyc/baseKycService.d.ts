@@ -24,6 +24,7 @@ export declare abstract class BaseKycService implements IKycService {
         details: Record<string, any>;
     }>;
     protected generateSessionId(): string;
+    getProviderConfig(): KycProviderConfig;
     protected abstract createProviderSession(session: KycSession, request: CreateKycSessionRequest): Promise<void>;
     protected abstract performVerification(session: KycSession): Promise<KycVerificationResult>;
     protected abstract checkProviderHealth(): Promise<Record<string, any>>;
