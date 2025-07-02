@@ -163,37 +163,46 @@ export abstract class BaseAttestationService {
     recipient: string
   ): AttestationData {
     // Create privacy-preserving attestation data
-    const userIdHash = this.hashUserId(kycResult.userId || recipient);
+    const userIdHash = this.hashUserId(kycResult.user.id || recipient);
     
     return {
       kycProvider: kycResult.provider,
       kycSessionId: kycResult.sessionId,
       verificationStatus: this.mapKycStatusToVerificationStatus(kycResult.status),
-      verificationTimestamp: Math.floor(kycResult.timestamp / 1000), // Convert to Unix timestamp
-      confidenceScore: kycResult.confidenceScore,
+      verificationTimestamp: Math.floor(new Date(kycResult.createdAt).getTime() / 1000),
+      confidenceScore: kycResult.confidence,
       
       // Zero-PII identity info
       userIdHash,
-      countryCode: kycResult.countryCode,
-      documentType: kycResult.documentType,
+      countryCode: kycResult.document?.country || '',
+      documentType: kycResult.document?.type || '',
       
       // Verification checks
-      documentVerified: kycResult.checks?.documentVerification?.verified || false,
-      biometricVerified: kycResult.checks?.biometricVerification?.verified || false,
-      livenessVerified: kycResult.checks?.livenessDetection?.verified || false,
-      addressVerified: kycResult.checks?.addressVerification?.verified || false,
-      sanctionsCleared: kycResult.checks?.sanctionsCheck?.cleared || false,
-      pepCleared: kycResult.checks?.pepCheck?.cleared || false,
+      documentVerified: kycResult.checks?.documentAuthenticity?.status === 'passed',
+      biometricVerified: kycResult.checks?.faceMatch?.status === 'passed',
+      livenessVerified: kycResult.checks?.livenessDetection?.status === 'passed',
+      addressVerified: kycResult.checks?.addressVerification?.status === 'passed',
+      sanctionsCleared: kycResult.checks?.sanctions?.status === 'passed',
+      pepCleared: kycResult.checks?.pep?.status === 'passed',
       
       // Risk assessment
       riskLevel: this.calculateRiskLevel(kycResult),
-      riskScore: kycResult.riskScore || 0,
+      riskScore: 0, // Calculate from checks
       
       // Attestation metadata
       schemaVersion: '1.0.0',
       apiVersion: config.api.version,
       attestationStandard: 'OneKey-KYC-v1.0'
     };
+  }
+
+  protected mapKycStatusToVerificationStatus(status: KycVerificationResult['status']): 'pending' | 'failed' | 'expired' | 'verified' {
+    switch (status) {
+      case 'completed': return 'verified';
+      case 'failed': return 'failed';
+      case 'expired': return 'expired';
+      default: return 'pending';
+    }
   }
 
   // ===== Utility Methods =====
