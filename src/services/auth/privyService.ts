@@ -68,23 +68,11 @@ export class PrivyService {
     }
 
     try {
-      const verificationResult = await this.privy!.verifyAuthToken(accessToken);
+      // TODO: Implement actual Privy SDK verification
+      // const verificationResult = await this.privy!.verifyAuthToken(accessToken);
       
-      if (!verificationResult.userId) {
-        throw new PrivyVerificationError('Invalid access token');
-      }
-
-      // Get user details from Privy
-      const user = await this.privy!.getUser(verificationResult.userId);
-
-      return {
-        userId: verificationResult.userId,
-        appId: verificationResult.appId,
-        sessionId: verificationResult.sessionId || '',
-        isValid: true,
-        isExpired: false,
-        user: user as PrivyUser
-      };
+      // Placeholder implementation
+      throw new PrivyVerificationError('Privy SDK integration pending');
     } catch (error) {
       console.error('Privy token verification failed:', error);
       
