@@ -21,15 +21,16 @@ const validateCreateSession = [
   body('user.address.country').notEmpty().withMessage('Country is required')
 ];
 
-const handleValidationErrors = (req: Request, res: Response, next: Function) => {
+const handleValidationErrors = (req: Request, res: Response, next: Function): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    res.status(400).json({
       success: false,
       error: { code: 'VALIDATION_ERROR', message: 'Request validation failed', details: errors.array() },
       requestId: uuidv4(),
       timestamp: new Date().toISOString()
     });
+    return;
   }
   next();
 };
