@@ -352,14 +352,21 @@ router.get(
     try {
       const { recipient, limit, offset, includeRevoked, includeExpired } = req.query;
       
+      const options: {
+        limit?: number;
+        offset?: number;
+        includeRevoked?: boolean;
+        includeExpired?: boolean;
+      } = {};
+      
+      if (limit) options.limit = parseInt(limit as string);
+      if (offset) options.offset = parseInt(offset as string);
+      if (includeRevoked !== undefined) options.includeRevoked = includeRevoked === 'true';
+      if (includeExpired !== undefined) options.includeExpired = includeExpired === 'true';
+
       const result = await attestationService.listAttestations(
         recipient as string,
-        {
-          limit: limit ? parseInt(limit as string) : undefined,
-          offset: offset ? parseInt(offset as string) : undefined,
-          includeRevoked: includeRevoked === 'true',
-          includeExpired: includeExpired === 'true'
-        }
+        options
       );
 
       logger.info('Attestation listing completed', {
