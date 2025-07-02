@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.closeSupabase = exports.isSupabaseConfigured = exports.subscribeToKycUpdates = exports.checkSupabaseHealth = exports.getSupabaseServiceClient = exports.getSupabaseClient = exports.initializeSupabase = void 0;
 const supabase_js_1 = require("@supabase/supabase-js");
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = __importDefault(require("./environment"));
 // Supabase client instances
 let supabaseClient = null;
 let supabaseServiceClient = null;
