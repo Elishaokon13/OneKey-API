@@ -38,8 +38,8 @@ const handleValidationErrors = (req: Request, res: Response, next: Function) => 
  * POST /api/v1/kyc/sessions - Create new KYC session
  */
 router.post('/sessions', 
-  authenticate,
-  applyRateLimit('kyc'),
+  authenticateJWT,
+  kycLimiter,
   validateCreateSession,
   handleValidationErrors,
   async (req: Request, res: Response) => {
