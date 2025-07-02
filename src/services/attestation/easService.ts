@@ -475,9 +475,9 @@ export class EasService extends BaseAttestationService {
       ...(onChainAttestation.revocationTime > 0 && { revokedAt: Number(onChainAttestation.revocationTime) }),
       createdAt: new Date(Number(onChainAttestation.time) * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
-      expiresAt: onChainAttestation.expirationTime > 0 
-        ? new Date(Number(onChainAttestation.expirationTime) * 1000).toISOString() 
-        : undefined,
+      ...(onChainAttestation.expirationTime > 0 && { 
+        expiresAt: new Date(Number(onChainAttestation.expirationTime) * 1000).toISOString() 
+      }),
       metadata: {}
     };
   }
