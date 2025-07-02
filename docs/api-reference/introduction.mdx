@@ -1,1 +1,509 @@
- 
+---
+title: "API Reference"
+description: "Complete reference for the OneKey KYC API endpoints"
+---
+
+## Overview
+
+The OneKey API provides a comprehensive suite of endpoints for identity verification, client-side encryption, blockchain attestations, and Web3 authentication. All endpoints use REST principles with JSON payloads and standard HTTP status codes.
+
+<CardGroup cols={2}>
+  <Card title="Base URL" icon="link">
+    **Production**
+    
+    `https://api.onekey.so/api/v1`
+  </Card>
+  
+  <Card title="Authentication" icon="key">
+    **JWT Bearer Token**
+    
+    Include in `Authorization: Bearer <token>` header
+  </Card>
+  
+  <Card title="Rate Limits" icon="clock">
+    **Per Endpoint**
+    
+    Different limits for KYC, encryption, and attestation operations
+  </Card>
+  
+  <Card title="Response Format" icon="code">
+    **JSON Structure**
+    
+    Consistent success/error format with request tracking
+  </Card>
+</CardGroup>
+
+## API Structure
+
+### Endpoint Categories
+
+<AccordionGroup>
+  <Accordion title="Authentication">
+    **User and Web3 authentication**
+    
+    - JWT token generation and refresh
+    - Privy Web3 wallet verification
+    - Session management
+    
+    **Base Path:** `/auth`
+  </Accordion>
+  
+  <Accordion title="KYC Operations">
+    **Identity verification workflows**
+    
+    - Session creation and management
+    - Document upload and processing
+    - Multi-provider verification
+    - Status tracking
+    
+    **Base Path:** `/kyc`
+  </Accordion>
+  
+  <Accordion title="Encryption">
+    **Client-side data protection**
+    
+    - AES-256-GCM encryption/decryption
+    - Key generation and rotation
+    - File and batch operations
+    - Integrity validation
+    
+    **Base Path:** `/encryption`
+  </Accordion>
+  
+  <Accordion title="Attestations">
+    **Blockchain verification proofs**
+    
+    - EAS attestation creation
+    - On-chain verification
+    - Revocation management
+    - Gas estimation
+    
+    **Base Path:** `/attestations`
+  </Accordion>
+</AccordionGroup>
+
+## Request Format
+
+### Headers
+
+All API requests should include these headers:
+
+```http
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+Accept: application/json
+X-OneKey-Version: 2.1.0
+```
+
+### Request Body
+
+```json
+{
+  "data": {
+    // Endpoint-specific payload
+  },
+  "options": {
+    // Optional parameters
+  },
+  "metadata": {
+    // Request metadata
+  }
+}
+```
+
+## Response Format
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response payload
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z",
+  "version": "2.1.0"
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": {
+      "field": "email",
+      "issue": "Invalid email format"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+## Authentication
+
+### JWT Token
+
+All endpoints require a valid JWT token in the Authorization header:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Token Properties
+
+<Tabs>
+  <Tab title="Standard Claims">
+    **JWT Standard Fields**
+    
+    - `iss`: Issuer (OneKey API)
+    - `sub`: Subject (User ID)
+    - `aud`: Audience (Your application)
+    - `exp`: Expiration timestamp
+    - `iat`: Issued at timestamp
+    - `jti`: JWT ID (unique identifier)
+  </Tab>
+  
+  <Tab title="Custom Claims">
+    **OneKey-Specific Fields**
+    
+    - `userId`: OneKey user identifier
+    - `walletAddress`: Connected Web3 wallet (if applicable)
+    - `permissions`: Array of granted permissions
+    - `tier`: API tier (standard, professional, enterprise)
+    - `rateLimit`: Custom rate limit overrides
+  </Tab>
+</Tabs>
+
+### Token Refresh
+
+Tokens expire after 24 hours. Use the refresh endpoint before expiration:
+
+```javascript
+const response = await fetch('/api/v1/auth/refresh', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${currentToken}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const { data } = await response.json();
+const newToken = data.accessToken;
+```
+
+## Rate Limiting
+
+### Rate Limit Headers
+
+Every response includes rate limit information:
+
+```http
+X-RateLimit-Limit: 30
+X-RateLimit-Remaining: 28
+X-RateLimit-Reset: 1705315500
+X-RateLimit-Window: 900
+```
+
+### Limits by Category
+
+| Category | Standard | Professional | Enterprise |
+|----------|----------|--------------|------------|
+| Authentication | 10/min | 50/min | 200/min |
+| KYC Operations | 30/15min | 100/15min | 500/15min |
+| Encryption | 50/hour | 200/hour | 1000/hour |
+| Attestations | 20/hour | 100/hour | 500/hour |
+
+### Rate Limit Handling
+
+```javascript
+const handleRateLimit = async (response) => {
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After');
+    console.log(`Rate limited. Retry after ${retryAfter} seconds`);
+    
+    // Wait and retry
+    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+    return fetch(originalRequest);
+  }
+  return response;
+};
+```
+
+## Error Handling
+
+### Error Categories
+
+<CardGroup cols={2}>
+  <Card title="4xx Client Errors" icon="exclamation-triangle">
+    **Client-side issues**
+    
+    - `400 Bad Request`: Invalid request data
+    - `401 Unauthorized`: Missing/invalid auth
+    - `403 Forbidden`: Insufficient permissions
+    - `429 Too Many Requests`: Rate limited
+  </Card>
+  
+  <Card title="5xx Server Errors" icon="x-circle">
+    **Server-side issues**
+    
+    - `500 Internal Server Error`: Unexpected error
+    - `502 Bad Gateway`: Upstream service error
+    - `503 Service Unavailable`: Temporary downtime
+  </Card>
+</CardGroup>
+
+### Error Response Structure
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SPECIFIC_ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": {
+      "field": "problematic_field",
+      "expected": "expected_value",
+      "received": "actual_value"
+    },
+    "requestId": "req_123456789",
+    "timestamp": "2024-01-15T10:30:45.123Z",
+    "documentation": "https://docs.onekey.so/errors/specific-error"
+  }
+}
+```
+
+## Pagination
+
+For endpoints that return lists, pagination is handled via query parameters:
+
+### Request Parameters
+
+```http
+GET /api/v1/kyc/sessions?page=2&limit=20&sort=createdAt&order=desc
+```
+
+### Response Format
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [...],
+    "pagination": {
+      "page": 2,
+      "limit": 20,
+      "total": 156,
+      "pages": 8,
+      "hasNext": true,
+      "hasPrev": true
+    }
+  }
+}
+```
+
+## Filtering and Sorting
+
+### Query Parameters
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `filter[field]` | Filter by field value | `filter[status]=completed` |
+| `search` | Full-text search | `search=john` |
+| `sort` | Sort field | `sort=createdAt` |
+| `order` | Sort direction | `order=desc` |
+| `include` | Include related data | `include=attestations` |
+
+### Example Request
+
+```http
+GET /api/v1/kyc/sessions?filter[status]=completed&filter[provider]=smile_identity&sort=createdAt&order=desc&include=attestations&page=1&limit=10
+```
+
+## Webhooks
+
+### Event Delivery
+
+OneKey sends webhook events to your configured endpoints for real-time updates:
+
+```json
+{
+  "id": "evt_123456789",
+  "type": "kyc.verification.completed",
+  "created": 1640995200,
+  "data": {
+    "sessionId": "kyc_session_abc123",
+    "status": "pass",
+    "confidence": 95
+  }
+}
+```
+
+### Signature Verification
+
+Verify webhook authenticity using HMAC-SHA256:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload, 'utf8')
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedSignature, 'hex'),
+    Buffer.from(signature.replace('sha256=', ''), 'hex')
+  );
+}
+```
+
+## SDK Usage
+
+### JavaScript/TypeScript
+
+```javascript
+import { OneKeyAPI } from '@onekey/api';
+
+const onekey = new OneKeyAPI({
+  apiKey: 'your_api_key',
+  environment: 'production' // or 'sandbox'
+});
+
+// Create KYC session
+const session = await onekey.kyc.createSession({
+  user: {
+    email: 'user@example.com',
+    firstName: 'John',
+    lastName: 'Doe'
+  },
+  country: 'US',
+  documentType: 'passport'
+});
+```
+
+### React Hook
+
+```jsx
+import { useOneKey } from '@onekey/react';
+
+function KYCComponent() {
+  const { createSession, loading, error } = useOneKey();
+  
+  const handleKYC = async () => {
+    const session = await createSession({
+      user: userData,
+      country: 'US',
+      documentType: 'passport'
+    });
+  };
+  
+  return (
+    <button onClick={handleKYC} disabled={loading}>
+      {loading ? 'Creating...' : 'Start KYC'}
+    </button>
+  );
+}
+```
+
+## Testing
+
+### Sandbox Environment
+
+Use the sandbox environment for testing:
+
+```javascript
+const onekey = new OneKeyAPI({
+  apiKey: 'test_key_...',
+  environment: 'sandbox',
+  baseUrl: 'https://api-sandbox.onekey.so/api/v1'
+});
+```
+
+### Test Data
+
+The sandbox environment provides test data for various scenarios:
+
+<Tabs>
+  <Tab title="Success Cases">
+    **Successful verification scenarios**
+    
+    ```javascript
+    // Always passes verification
+    const testUser = {
+      email: 'test-pass@onekey.so',
+      firstName: 'Test',
+      lastName: 'Pass'
+    };
+    ```
+  </Tab>
+  
+  <Tab title="Failure Cases">
+    **Failed verification scenarios**
+    
+    ```javascript
+    // Always fails verification
+    const testUser = {
+      email: 'test-fail@onekey.so',
+      firstName: 'Test',
+      lastName: 'Fail'
+    };
+    ```
+  </Tab>
+  
+  <Tab title="Review Cases">
+    **Manual review scenarios**
+    
+    ```javascript
+    // Requires manual review
+    const testUser = {
+      email: 'test-review@onekey.so',
+      firstName: 'Test',
+      lastName: 'Review'
+    };
+    ```
+  </Tab>
+</Tabs>
+
+## Getting Started
+
+<Steps>
+  <Step title="Get API Credentials">
+    Sign up for OneKey and obtain your API key from the dashboard
+  </Step>
+  <Step title="Install SDK">
+    Install the OneKey SDK for your preferred language
+  </Step>
+  <Step title="Authenticate">
+    Generate a JWT token using your API credentials
+  </Step>
+  <Step title="Create KYC Session">
+    Start with a simple KYC session creation
+  </Step>
+  <Step title="Handle Webhooks">
+    Set up webhook endpoints for real-time updates
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api-reference/authentication/login">
+    Learn how to authenticate with the OneKey API
+  </Card>
+  <Card title="KYC Sessions" icon="id-card" href="/api-reference/kyc/create-session">
+    Create and manage identity verification sessions
+  </Card>
+  <Card title="Encryption" icon="lock" href="/api-reference/encryption/encrypt">
+    Implement client-side encryption for sensitive data
+  </Card>
+  <Card title="Attestations" icon="shield" href="/api-reference/attestations/create">
+    Create blockchain attestations for verified users
+  </Card>
+</CardGroup> 
