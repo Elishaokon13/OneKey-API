@@ -124,8 +124,8 @@ router.get('/providers',
  * GET /api/v1/kyc/providers/health - Get provider health status
  */
 router.get('/providers/health',
-  authenticate,
-  applyRateLimit('general'),
+  authenticateJWT,
+  generalLimiter,
   async (req: Request, res: Response) => {
     const requestId = uuidv4();
     
