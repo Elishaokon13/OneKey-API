@@ -23,7 +23,7 @@ class AttestationService {
             attesterAddress: environment_1.config.blockchain.attesterAddress,
             defaultSchemaId: environment_1.config.blockchain.easSchemaId,
             gasLimit: 500000,
-            gasPrice: undefined, // Will be estimated
+            gasPrice: '20', // Default gas price in gwei
             gasPriceStrategy: 'estimate',
             enableRevocation: true,
             defaultExpirationHours: 365 * 24, // 1 year
@@ -63,7 +63,7 @@ class AttestationService {
                 kycStatus: kycResult.status
             });
             // Validate KYC result
-            if (kycResult.status !== 'verified') {
+            if (kycResult.status !== 'completed') {
                 throw new attestation_1.AttestationError('KYC verification must be completed successfully before creating attestation', 'KYC_NOT_VERIFIED', { kycStatus: kycResult.status, sessionId: kycResult.sessionId });
             }
             // Calculate expiration time
@@ -393,7 +393,7 @@ class AttestationService {
      */
     async handleKycCompletion(userWalletAddress, kycResult) {
         try {
-            if (kycResult.status !== 'verified') {
+            if (kycResult.status !== 'completed') {
                 logger_1.logger.info('KYC not verified, skipping auto-attestation', {
                     sessionId: kycResult.sessionId,
                     status: kycResult.status
