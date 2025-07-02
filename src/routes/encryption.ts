@@ -229,7 +229,7 @@ router.post('/keys/generate',
 router.get('/health',
   rateLimiter.general,
   async (req, res) => {
-    const requestId = req.requestId || uuidv4();
+    const requestId = (req as any).requestId || uuidv4();
 
     try {
       const health = encryptionService.getHealthStatus();
@@ -244,11 +244,13 @@ router.get('/health',
       res.json(response);
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       const response: EncryptionApiResponse = {
         success: false,
         error: {
           code: 'HEALTH_CHECK_ERROR',
-          message: error.message
+          message: errorMessage
         },
         requestId,
         timestamp: Date.now()
