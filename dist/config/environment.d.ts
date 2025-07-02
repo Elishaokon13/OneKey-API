@@ -62,6 +62,24 @@ interface Config {
         encryptionIv: string;
         hashSalt: string;
     };
+    encryption: {
+        enabled: boolean;
+        defaultAlgorithm: 'aes-256-gcm' | 'aes-256-cbc' | 'chacha20-poly1305';
+        keyDerivation: {
+            algorithm: 'pbkdf2' | 'scrypt' | 'argon2';
+            iterations: number;
+            saltLength: number;
+            keyLength: number;
+            hashFunction: 'sha256' | 'sha512';
+        };
+        keyRotationInterval: number;
+        maxKeyAge: number;
+        compressionEnabled: boolean;
+        integrityCheckEnabled: boolean;
+        maxFileSize: number;
+        masterKey: string;
+        saltSeed: string;
+    };
 }
 declare const config: Config;
 export { config };
