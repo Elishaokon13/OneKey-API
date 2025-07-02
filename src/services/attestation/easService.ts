@@ -119,8 +119,14 @@ export class EasService extends BaseAttestationService {
 
       // Create the attestation on-chain
       const tx = await this.eas.attest(attestationRequest);
-      const receipt = await tx.wait();
+      const txHash = await tx.wait();
 
+      if (!txHash) {
+        throw new AttestationCreationError('Transaction hash not available');
+      }
+
+      // Get the actual receipt from provider
+      const receipt = await this.provider.getTransactionReceipt(txHash);
       if (!receipt) {
         throw new AttestationCreationError('Transaction receipt not available');
       }
