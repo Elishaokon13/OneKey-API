@@ -192,6 +192,7 @@ app.get('/api/v1/docs', (req, res) => {
 
 // API route handlers
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/privy', privyRoutes);
 
 app.use('/api/v1/kyc', (req, res) => {
   res.status(501).json({
