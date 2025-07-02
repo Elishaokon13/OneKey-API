@@ -1,9 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.bypassAuthInDev = exports.requireKYCCompletion = exports.authenticateAPIKey = exports.authRateLimit = exports.requireWalletOwnership = exports.requirePermissions = exports.optionalAuth = exports.authenticateJWT = void 0;
-const jwtService_1 = require("@/services/auth/jwtService");
-const authService_1 = require("@/services/auth/authService");
-const auth_1 = require("@/types/auth");
+const jwtService_1 = require("../services/auth/jwtService");
+const authService_1 = require("../services/auth/authService");
+const auth_1 = require("../types/auth");
 /**
  * JWT Authentication middleware
  * Verifies JWT token and attaches user to request
