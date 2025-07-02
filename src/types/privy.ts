@@ -78,9 +78,9 @@ export interface PrivyLinkAccountRequest {
 export interface PrivyWalletData {
   address: string;
   chainType: 'ethereum' | 'solana';
-  chainId?: string;
-  walletClient?: string;
-  connectorType?: string;
+  chainId?: string | undefined;
+  walletClient?: string | undefined;
+  connectorType?: string | undefined;
 }
 
 export interface PrivyEmailData {
