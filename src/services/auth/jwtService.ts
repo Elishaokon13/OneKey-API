@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import config from '@/config/environment';
+import { config } from '../../config/environment';
 import { 
   JWTPayload, 
   AuthTokens, 
