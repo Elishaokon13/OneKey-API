@@ -34,9 +34,9 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateHybrid = exports.requireVerifiedEmail = exports.requirePrivyWallet = exports.requirePrivyLinkedUser = exports.optionalPrivyAuth = exports.authenticatePrivy = void 0;
-const privyService_1 = require("@/services/auth/privyService");
-const authService_1 = require("@/services/auth/authService");
-const privy_1 = require("@/types/privy");
+const privyService_1 = require("../services/auth/privyService");
+const authService_1 = require("../services/auth/authService");
+const privy_1 = require("../types/privy");
 /**
  * Privy Authentication middleware
  * Verifies Privy access token and attaches user context to request
