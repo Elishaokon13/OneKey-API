@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrivyAuthContext } from '@/types/privy';
+import { User } from '@/types/auth';
 declare global {
     namespace Express {
         interface Request {
             privyUser?: any;
             privyContext?: PrivyAuthContext;
             privyToken?: string;
+            user?: User | null;
         }
     }
 }
