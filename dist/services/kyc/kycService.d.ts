@@ -1,3 +1,4 @@
+import { BaseKycService } from './baseKycService';
 import { KycSession, KycVerificationResult, CreateKycSessionRequest, KycProvider, KycProviderConfig } from '@/types/kyc';
 export declare class KycService {
     private providers;
@@ -8,6 +9,6 @@ export declare class KycService {
     startVerification(sessionId: string): Promise<KycVerificationResult>;
     getAvailableProviders(): KycProviderConfig[];
     getProvidersHealth(): Promise<Record<KycProvider, any>>;
-    private getProviderService;
+    getProviderService(provider: KycProvider): BaseKycService;
 }
 //# sourceMappingURL=kycService.d.ts.map
