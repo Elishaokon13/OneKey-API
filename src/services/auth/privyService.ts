@@ -21,7 +21,7 @@ import { User, AuthResponse, AuthTokens } from '@/types/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 export class PrivyService {
-  private privy: PrivyApi | null = null;
+  private privy: any = null; // Placeholder until we get correct SDK
   private isInitialized = false;
 
   constructor() {
@@ -38,13 +38,14 @@ export class PrivyService {
         return;
       }
 
-      this.privy = new PrivyApi({
-        appId: config.blockchain.privyAppId,
-        appSecret: config.blockchain.privyAppSecret,
-      });
+      // TODO: Initialize actual Privy SDK when import is fixed
+      // this.privy = new PrivyApi({
+      //   appId: config.blockchain.privyAppId,
+      //   appSecret: config.blockchain.privyAppSecret,
+      // });
 
-      this.isInitialized = true;
-      console.log('✅ Privy service initialized successfully');
+      this.isInitialized = false; // Set to false until actual SDK is integrated
+      console.log('⚠️ Privy service placeholder initialized (SDK integration pending)');
     } catch (error) {
       console.error('❌ Failed to initialize Privy service:', error);
       this.isInitialized = false;
