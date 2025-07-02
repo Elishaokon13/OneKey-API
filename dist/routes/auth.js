@@ -44,9 +44,9 @@ router.post('/register', rateLimiter_1.authLimiter, async (req, res) => {
         const result = await authService_1.authService.register({
             email: email.toLowerCase(),
             password,
-            wallet_address,
-            passkey_id,
-            metadata
+            wallet_address: wallet_address || undefined,
+            passkey_id: passkey_id || undefined,
+            metadata: metadata || undefined
         });
         res.status(201).json({
             success: true,
