@@ -50,6 +50,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@privy-io/server-auth": "^1.28.2",
     "@supabase/supabase-js": "^2.50.2",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
