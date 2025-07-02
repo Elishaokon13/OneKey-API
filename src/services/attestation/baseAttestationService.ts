@@ -168,7 +168,7 @@ export abstract class BaseAttestationService {
     return {
       kycProvider: kycResult.provider,
       kycSessionId: kycResult.sessionId,
-      verificationStatus: kycResult.status,
+      verificationStatus: this.mapKycStatusToVerificationStatus(kycResult.status),
       verificationTimestamp: Math.floor(kycResult.timestamp / 1000), // Convert to Unix timestamp
       confidenceScore: kycResult.confidenceScore,
       
