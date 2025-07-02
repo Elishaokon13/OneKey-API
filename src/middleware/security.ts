@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import config from '@/config/environment';
+import { config } from '../config/environment';
 
 // Enhanced helmet configuration for KYC API
 export const securityHeaders = helmet({
