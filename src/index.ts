@@ -217,7 +217,7 @@ app.get('/api/v1/docs', (req, res) => {
       general: '100 requests per 15 minutes',
       authentication: '10 requests per 15 minutes',
       kyc: '5 requests per hour',
-      attestations: '50 requests per 5 minutes'
+      attestations: '50 requests per 5 minutes (queries), 10 per hour (operations)'
     },
     errorCodes: {
       'VALIDATION_ERROR': 'Request validation failed',
