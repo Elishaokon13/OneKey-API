@@ -55,7 +55,7 @@ router.post('/encrypt',
   body('keyId').optional().isUUID().withMessage('KeyId must be a valid UUID'),
   handleValidationErrors,
   async (req, res) => {
-    const requestId = req.requestId || uuidv4();
+    const requestId = (req as any).requestId || uuidv4();
 
     try {
       const encryptionRequest: EncryptionRequest = {
@@ -86,17 +86,19 @@ router.post('/encrypt',
       res.json(response);
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       logger.error('Encryption endpoint error', {
         requestId,
         userId: req.user?.id,
-        error: error.message
+        error: errorMessage
       });
 
       const response: EncryptionApiResponse = {
         success: false,
         error: {
           code: error instanceof EncryptionError ? error.code : 'ENCRYPTION_ERROR',
-          message: error.message
+          message: errorMessage
         },
         requestId,
         timestamp: Date.now()
