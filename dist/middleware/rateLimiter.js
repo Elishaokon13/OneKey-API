@@ -3,17 +3,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.attestationLimiter = exports.kycLimiter = exports.authLimiter = exports.generalLimiter = void 0;
+exports.applyAttestationRateLimit = exports.attestationLimiter = exports.kycLimiter = exports.authLimiter = exports.generalLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const environment_1 = __importDefault(require("../config/environment"));
+const environment_1 = require("../config/environment");
 // General API rate limiter
 exports.generalLimiter = (0, express_rate_limit_1.default)({
-    windowMs: environment_1.default.security.rateLimitWindowMs, // 15 minutes
-    max: environment_1.default.security.rateLimitMaxRequests, // 100 requests per windowMs
+    windowMs: environment_1.config.security.rateLimitWindowMs, // 15 minutes
+    max: environment_1.config.security.rateLimitMaxRequests, // 100 requests per windowMs
     message: {
         error: 'Too Many Requests',
         message: 'Too many requests from this IP, please try again later.',
-        retryAfter: Math.ceil(environment_1.default.security.rateLimitWindowMs / 1000)
+        retryAfter: Math.ceil(environment_1.config.security.rateLimitWindowMs / 1000)
     },
     standardHeaders: true,
     legacyHeaders: false,
@@ -58,5 +58,21 @@ exports.attestationLimiter = (0, express_rate_limit_1.default)({
     },
     standardHeaders: true,
     legacyHeaders: false,
+});
+// Attestation creation/modification limiter (very restrictive due to blockchain costs)
+exports.applyAttestationRateLimit = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // Only 10 attestation operations per hour per IP
+    message: {
+        error: 'Attestation Operation Rate Limited',
+        message: 'Too many attestation operations, please try again later.',
+        retryAfter: 60 * 60
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Use IP + User ID for more accurate rate limiting
+        return `${req.ip}-${req.user?.id || 'anonymous'}`;
+    }
 });
 //# sourceMappingURL=rateLimiter.js.map
