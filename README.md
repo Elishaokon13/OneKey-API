@@ -409,17 +409,6 @@ npm run type-check   # Run TypeScript compiler check
 - Update documentation for API changes
 - Use conventional commit messages
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: [API Docs](./docs/api.md)
-- **Issues**: [GitHub Issues](./issues)
-- **Discussions**: [GitHub Discussions](./discussions)
-- **Email**: support@onekey.so
-
 ## 🗺️ Roadmap
 
 ### Phase 1: Core Infrastructure ✅
