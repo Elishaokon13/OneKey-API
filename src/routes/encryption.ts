@@ -179,7 +179,7 @@ router.post('/keys/generate',
   body('usage').isArray().withMessage('Usage must be an array'),
   handleValidationErrors,
   async (req, res) => {
-    const requestId = req.requestId || uuidv4();
+    const requestId = (req as any).requestId || uuidv4();
 
     try {
       const keyGenerationRequest: KeyGenerationRequest = {
@@ -205,11 +205,13 @@ router.post('/keys/generate',
       res.json(response);
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       const response: EncryptionApiResponse = {
         success: false,
         error: {
           code: error instanceof KeyManagementError ? error.code : 'KEY_GENERATION_ERROR',
-          message: error.message
+          message: errorMessage
         },
         requestId,
         timestamp: Date.now()
