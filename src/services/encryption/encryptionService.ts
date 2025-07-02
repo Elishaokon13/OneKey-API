@@ -134,7 +134,7 @@ export class EncryptionService implements IEncryptionService {
         salt,
         authTag,
         algorithm,
-        keyId: keyId || undefined,
+        ...(keyId && { keyId }),
         metadata
       };
 
