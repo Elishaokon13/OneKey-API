@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.jwtService = exports.JWTService = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = require("../../config/environment");
 const auth_1 = require("@/types/auth");
 // Refresh token storage (in production, use Redis or database)
 const refreshTokens = new Map();
@@ -16,10 +16,10 @@ class JWTService {
     accessTokenExpiry;
     refreshTokenExpiry;
     constructor() {
-        this.accessTokenSecret = environment_1.default.jwt.secret;
-        this.refreshTokenSecret = environment_1.default.jwt.refreshSecret;
-        this.accessTokenExpiry = environment_1.default.jwt.expiresIn;
-        this.refreshTokenExpiry = environment_1.default.jwt.refreshExpiresIn;
+        this.accessTokenSecret = environment_1.config.jwt.secret;
+        this.refreshTokenSecret = environment_1.config.jwt.refreshSecret;
+        this.accessTokenExpiry = environment_1.config.jwt.expiresIn;
+        this.refreshTokenExpiry = environment_1.config.jwt.refreshExpiresIn;
         // Validate JWT secrets
         if (!this.accessTokenSecret || this.accessTokenSecret.length < 32) {
             throw new Error('JWT_SECRET must be at least 32 characters long');
