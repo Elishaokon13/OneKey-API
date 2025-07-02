@@ -203,8 +203,12 @@ export class PrivyService {
     }
 
     try {
-      const user = await this.privy!.getUser(privyUserId);
-      return user as PrivyUser;
+      // TODO: Implement actual Privy SDK user fetching
+      // const user = await this.privy!.getUser(privyUserId);
+      // return user as PrivyUser;
+      
+      console.log('Privy getUserByPrivyId placeholder called for:', privyUserId);
+      return null;
     } catch (error) {
       console.error('Failed to get Privy user:', error);
       return null;
