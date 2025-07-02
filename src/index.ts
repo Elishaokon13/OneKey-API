@@ -78,10 +78,11 @@ app.get('/health', async (req, res) => {
   try {
     const dbHealth = await checkDatabaseHealth();
     const privyHealth = privyService.getHealthStatus();
+    const attestationHealth = await attestationService.getHealthStatus();
     
     // Determine overall status
     let overallStatus = 'OK';
-    if (dbHealth.status !== 'healthy') {
+    if (dbHealth.status !== 'healthy' || attestationHealth.status === 'unhealthy') {
       overallStatus = 'DEGRADED';
     }
     
@@ -99,6 +100,13 @@ app.get('/health', async (req, res) => {
           configured: privyHealth.configured,
           initialized: privyHealth.initialized,
           appId: privyHealth.appId
+        },
+        attestations: {
+          status: attestationHealth.status,
+          initialized: attestationHealth.details.initialized,
+          chainId: attestationHealth.services.eas.details.chainId,
+          attesterAddress: attestationHealth.services.eas.details.attesterAddress,
+          cacheSize: attestationHealth.details.cacheSize
         }
       },
       requestId: req.headers['x-request-id']
@@ -113,7 +121,8 @@ app.get('/health', async (req, res) => {
       uptime: process.uptime(),
       components: {
         database: { status: 'error', error: (error as Error).message },
-        privy: { status: 'error', error: 'Health check failed' }
+        privy: { status: 'error', error: 'Health check failed' },
+        attestations: { status: 'error', error: 'Health check failed' }
       },
       requestId: req.headers['x-request-id']
     });
