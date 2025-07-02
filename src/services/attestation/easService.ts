@@ -343,11 +343,8 @@ export class EasService extends BaseAttestationService {
         data: { uid, value: 0n }
       });
 
-      const txHash = await tx.wait();
-
-      if (!txHash) {
-        throw new AttestationError('Revocation transaction failed', 'REVOCATION_FAILED');
-      }
+      await tx.wait();
+      const txHash = tx.hash;
 
       // Get the actual receipt from provider
       const receipt = await this.provider.getTransactionReceipt(txHash);
