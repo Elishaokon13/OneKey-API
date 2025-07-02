@@ -219,14 +219,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/privy', privyRoutes);
 app.use('/api/v1/kyc', kycRoutes);
 
-app.use('/api/v1/kyc', (req, res) => {
-  res.status(501).json({
-    error: 'NOT_IMPLEMENTED',
-    message: 'KYC endpoints not yet implemented',
-    availableIn: 'Task 3.2',
-    requestId: req.headers['x-request-id']
-  });
-});
+// KYC routes now implemented - see /src/routes/kyc.ts
 
 app.use('/api/v1/attestations', (req, res) => {
   res.status(501).json({
