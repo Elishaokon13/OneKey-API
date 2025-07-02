@@ -216,7 +216,7 @@ export class EasService extends BaseAttestationService {
       const verification = {
         onChain: true,
         schemaValid: attestation.schema === this.config.defaultSchemaId,
-        notRevoked: !attestation.revoked,
+        notRevoked: !attestation.revocationTime || attestation.revocationTime === 0n,
         notExpired: attestation.expirationTime === 0n || attestation.expirationTime > BigInt(Math.floor(Date.now() / 1000)),
         attesterValid: attestation.attester.toLowerCase() === this.config.attesterAddress.toLowerCase(),
         recipientMatch: true // Will be validated by caller if needed
@@ -235,7 +235,7 @@ export class EasService extends BaseAttestationService {
           blockNumber: currentBlock,
           verificationTime: Date.now() - startTime
         },
-        errors: valid ? undefined : this.getVerificationErrors(verification)
+        ...(valid ? {} : { errors: this.getVerificationErrors(verification) })
       };
 
       // If verification passed, include full attestation data
