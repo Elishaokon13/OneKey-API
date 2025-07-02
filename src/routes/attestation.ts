@@ -134,7 +134,7 @@ const logRequest = (req: Request, endpoint: string) => {
     method: req.method,
     endpoint,
     userId: req.user?.id,
-    userWallet: req.user?.walletAddress,
+    userWallet: req.user?.wallet_address,
     requestId: req.headers['x-request-id'],
     ip: req.ip,
     userAgent: req.get('User-Agent')
@@ -150,10 +150,10 @@ const logRequest = (req: Request, endpoint: string) => {
 router.post(
   '/',
   authenticateJWT,
-  requireKycCompletion,
+  requireKYCCompletion,
   applyAttestationRateLimit,
   validateCreateAttestation,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     logRequest(req, 'CREATE_ATTESTATION');
 
     if (handleValidationErrors(req, res)) return;
@@ -254,7 +254,7 @@ router.get(
     try {
       const { uid } = req.params;
       
-      const result = await attestationService.getAttestation(uid);
+      const result = await attestationService.getAttestation(uid!);
 
       logger.info('Attestation retrieval completed', {
         success: result.success,
@@ -458,7 +458,7 @@ router.post(
   '/estimate-cost',
   authenticateJWT,
   validateEstimateCost,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     logRequest(req, 'ESTIMATE_ATTESTATION_COST');
 
     if (handleValidationErrors(req, res)) return;
