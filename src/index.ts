@@ -181,6 +181,17 @@ app.get('/api/v1', (req, res) => {
         health: 'GET /api/v1/attestations/health',
         stats: 'GET /api/v1/attestations/stats'
       },
+      encryption: {
+        encrypt: 'POST /api/v1/encryption/encrypt',
+        decrypt: 'POST /api/v1/encryption/decrypt',
+        generateKey: 'POST /api/v1/encryption/keys/generate',
+        rotateKey: 'POST /api/v1/encryption/keys/:keyId/rotate',
+        fileEncrypt: 'POST /api/v1/encryption/files/encrypt',
+        fileDecrypt: 'POST /api/v1/encryption/files/decrypt',
+        validateIntegrity: 'POST /api/v1/encryption/validate-integrity',
+        health: 'GET /api/v1/encryption/health',
+        config: 'GET /api/v1/encryption/config'
+      },
       storage: {
         encrypt: 'POST /api/v1/storage/encrypt',
         decrypt: 'POST /api/v1/storage/decrypt',
