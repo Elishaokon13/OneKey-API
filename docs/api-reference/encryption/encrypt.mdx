@@ -1,1 +1,678 @@
- 
+---
+title: "POST /encryption/encrypt"
+api: "POST https://api.onekey.so/api/v1/encryption/encrypt"
+description: "Encrypt sensitive data using AES-256-GCM client-side encryption"
+---
+
+## Overview
+
+Encrypt sensitive data using AES-256-GCM encryption with PBKDF2 key derivation. This endpoint supports both password-based encryption and pre-generated key encryption, with optional compression and metadata handling.
+
+<Note>
+Encryption is performed server-side but designed for zero-knowledge architecture. OneKey never stores unencrypted data or encryption keys.
+</Note>
+
+## Request
+
+### Headers
+
+```http
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+Accept: application/json
+```
+
+### Body Parameters
+
+<ParamField body="data" type="string" required>
+  The data to encrypt (base64 encoded for binary data)
+</ParamField>
+
+<ParamField body="password" type="string">
+  Password for key derivation (required if keyId not provided)
+</ParamField>
+
+<ParamField body="keyId" type="string">
+  Pre-generated key identifier (required if password not provided)
+</ParamField>
+
+<ParamField body="options" type="object">
+  <Expandable title="Encryption options">
+    <ParamField body="algorithm" type="string" default="AES-256-GCM">
+      Encryption algorithm (AES-256-GCM, AES-256-CBC, ChaCha20-Poly1305)
+    </ParamField>
+    
+    <ParamField body="keyDerivation" type="string" default="PBKDF2">
+      Key derivation function (PBKDF2, Scrypt)
+    </ParamField>
+    
+    <ParamField body="iterations" type="number" default="100000">
+      PBKDF2 iterations for key derivation
+    </ParamField>
+    
+    <ParamField body="compression" type="boolean" default="false">
+      Apply gzip compression before encryption
+    </ParamField>
+    
+    <ParamField body="integrityCheck" type="boolean" default="true">
+      Include integrity verification data
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  <Expandable title="Optional metadata">
+    <ParamField body="userId" type="string">
+      Associated user identifier
+    </ParamField>
+    
+    <ParamField body="sessionId" type="string">
+      Associated session identifier
+    </ParamField>
+    
+    <ParamField body="dataType" type="string">
+      Type of data being encrypted (pii, documents, kyc_data, etc.)
+    </ParamField>
+    
+    <ParamField body="tags" type="array">
+      Array of tags for categorization
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.onekey.so/api/v1/encryption/encrypt \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": "eyJuYW1lIjoiSm9obiBEb2UiLCJlbWFpbCI6ImpvaG5AZXhhbXBsZS5jb20ifQ==",
+    "password": "secure_password_123",
+    "options": {
+      "algorithm": "AES-256-GCM",
+      "compression": true,
+      "integrityCheck": true
+    },
+    "metadata": {
+      "userId": "user_123456",
+      "dataType": "pii",
+      "tags": ["personal_info", "kyc_data"]
+    }
+  }'
+```
+
+```javascript JavaScript
+const encryptData = async (data, password, options = {}) => {
+  const response = await fetch('/api/v1/encryption/encrypt', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      data: btoa(JSON.stringify(data)), // Base64 encode
+      password,
+      options: {
+        algorithm: 'AES-256-GCM',
+        compression: true,
+        integrityCheck: true,
+        ...options
+      },
+      metadata: {
+        userId: 'user_123456',
+        dataType: 'pii',
+        tags: ['personal_info']
+      }
+    })
+  });
+  
+  const result = await response.json();
+  return result.data;
+};
+
+// Usage
+const userData = { name: 'John Doe', email: 'john@example.com' };
+const encrypted = await encryptData(userData, 'secure_password_123');
+```
+
+```python Python
+import requests
+import base64
+import json
+
+def encrypt_data(data, password, access_token, options=None):
+    if options is None:
+        options = {}
+    
+    # Encode data as base64
+    data_str = json.dumps(data)
+    encoded_data = base64.b64encode(data_str.encode()).decode()
+    
+    response = requests.post(
+        'https://api.onekey.so/api/v1/encryption/encrypt',
+        headers={
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        },
+        json={
+            'data': encoded_data,
+            'password': password,
+            'options': {
+                'algorithm': 'AES-256-GCM',
+                'compression': True,
+                'integrityCheck': True,
+                **options
+            },
+            'metadata': {
+                'userId': 'user_123456',
+                'dataType': 'pii',
+                'tags': ['personal_info']
+            }
+        }
+    )
+    
+    return response.json()['data']
+
+# Usage
+user_data = {'name': 'John Doe', 'email': 'john@example.com'}
+encrypted = encrypt_data(user_data, 'secure_password_123', access_token)
+```
+
+</CodeGroup>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the encryption was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Encryption result">
+    <ResponseField name="encryptedData" type="string">
+      Base64-encoded encrypted data
+    </ResponseField>
+    
+    <ResponseField name="encryptionId" type="string">
+      Unique identifier for this encryption operation
+    </ResponseField>
+    
+    <ResponseField name="algorithm" type="string">
+      Encryption algorithm used
+    </ResponseField>
+    
+    <ResponseField name="keyDerivation" type="object">
+      <Expandable title="Key derivation details">
+        <ResponseField name="algorithm" type="string">
+          Key derivation algorithm (PBKDF2, Scrypt)
+        </ResponseField>
+        
+        <ResponseField name="iterations" type="number">
+          Number of iterations used
+        </ResponseField>
+        
+        <ResponseField name="salt" type="string">
+          Base64-encoded salt used for key derivation
+        </ResponseField>
+        
+        <ResponseField name="keyLength" type="number">
+          Derived key length in bytes
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="encryptionMetadata" type="object">
+      <Expandable title="Encryption metadata">
+        <ResponseField name="iv" type="string">
+          Base64-encoded initialization vector
+        </ResponseField>
+        
+        <ResponseField name="authTag" type="string">
+          Base64-encoded authentication tag (for GCM mode)
+        </ResponseField>
+        
+        <ResponseField name="compressed" type="boolean">
+          Whether data was compressed before encryption
+        </ResponseField>
+        
+        <ResponseField name="originalSize" type="number">
+          Original data size in bytes
+        </ResponseField>
+        
+        <ResponseField name="encryptedSize" type="number">
+          Encrypted data size in bytes
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="integrityHash" type="string">
+      SHA-256 hash for integrity verification
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      Encryption timestamp (ISO 8601)
+    </ResponseField>
+    
+    <ResponseField name="expiresAt" type="string">
+      Optional expiration timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "encryptedData": "U2FsdGVkX1/+5KjKxPqWxJ8N7bF3ks9J...",
+    "encryptionId": "enc_1a2b3c4d5e6f7g8h9i",
+    "algorithm": "AES-256-GCM",
+    "keyDerivation": {
+      "algorithm": "PBKDF2",
+      "iterations": 100000,
+      "salt": "randomSalt123...",
+      "keyLength": 32
+    },
+    "encryptionMetadata": {
+      "iv": "randomIV456...",
+      "authTag": "authTag789...",
+      "compressed": true,
+      "originalSize": 1024,
+      "encryptedSize": 892
+    },
+    "integrityHash": "sha256:a1b2c3d4e5f6...",
+    "createdAt": "2024-01-15T10:30:45.123Z",
+    "expiresAt": "2024-04-15T10:30:45.123Z"
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+## Usage Examples
+
+### Basic Data Encryption
+
+```javascript
+class OneKeyEncryption {
+  constructor(accessToken) {
+    this.accessToken = accessToken;
+    this.baseUrl = 'https://api.onekey.so/api/v1';
+  }
+  
+  async encrypt(data, password, options = {}) {
+    // Convert data to base64 if it's an object
+    const encodedData = typeof data === 'string' 
+      ? btoa(data) 
+      : btoa(JSON.stringify(data));
+    
+    const response = await fetch(`${this.baseUrl}/encryption/encrypt`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        data: encodedData,
+        password,
+        options: {
+          algorithm: 'AES-256-GCM',
+          compression: true,
+          integrityCheck: true,
+          ...options
+        }
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(`Encryption failed: ${result.error.message}`);
+    }
+    
+    return result.data;
+  }
+  
+  async encryptWithKeyId(data, keyId, options = {}) {
+    const encodedData = typeof data === 'string' 
+      ? btoa(data) 
+      : btoa(JSON.stringify(data));
+    
+    const response = await fetch(`${this.baseUrl}/encryption/encrypt`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        data: encodedData,
+        keyId,
+        options
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(`Encryption failed: ${result.error.message}`);
+    }
+    
+    return result.data;
+  }
+}
+
+// Usage examples
+const encryption = new OneKeyEncryption(accessToken);
+
+// Encrypt personal data
+const personalData = {
+  firstName: 'John',
+  lastName: 'Doe',
+  dateOfBirth: '1990-01-01',
+  ssn: '123-45-6789'
+};
+
+const encrypted = await encryption.encrypt(personalData, 'user_password_123', {
+  metadata: {
+    dataType: 'pii',
+    userId: 'user_123456',
+    tags: ['personal_info', 'sensitive']
+  }
+});
+
+console.log('Encryption ID:', encrypted.encryptionId);
+console.log('Encrypted data:', encrypted.encryptedData);
+```
+
+### Batch Encryption
+
+```javascript
+const encryptBatch = async (dataItems, password) => {
+  const encryptedItems = await Promise.all(
+    dataItems.map(async (item, index) => {
+      try {
+        const encrypted = await encryption.encrypt(item.data, password, {
+          metadata: {
+            ...item.metadata,
+            batchIndex: index,
+            batchId: 'batch_' + Date.now()
+          }
+        });
+        
+        return {
+          id: item.id,
+          encrypted,
+          status: 'success'
+        };
+      } catch (error) {
+        return {
+          id: item.id,
+          error: error.message,
+          status: 'failed'
+        };
+      }
+    })
+  );
+  
+  return encryptedItems;
+};
+
+// Usage
+const batchData = [
+  { id: 'doc1', data: { type: 'passport', number: 'A12345678' }, metadata: { dataType: 'document' } },
+  { id: 'doc2', data: { type: 'license', number: 'DL9876543' }, metadata: { dataType: 'document' } },
+  { id: 'bio1', data: { fingerprint: 'base64_data...' }, metadata: { dataType: 'biometric' } }
+];
+
+const results = await encryptBatch(batchData, 'batch_password_456');
+console.log('Batch encryption results:', results);
+```
+
+### KYC Data Encryption
+
+```javascript
+const encryptKycData = async (kycData, userPassword) => {
+  // Separate sensitive and non-sensitive data
+  const sensitiveData = {
+    personalInfo: kycData.personalInfo,
+    documents: kycData.documents,
+    biometrics: kycData.biometrics
+  };
+  
+  const nonSensitiveData = {
+    sessionId: kycData.sessionId,
+    provider: kycData.provider,
+    status: kycData.status,
+    timestamp: kycData.timestamp
+  };
+  
+  // Encrypt sensitive data
+  const encryptedSensitive = await encryption.encrypt(sensitiveData, userPassword, {
+    algorithm: 'AES-256-GCM',
+    compression: true,
+    integrityCheck: true,
+    metadata: {
+      dataType: 'kyc_sensitive',
+      userId: kycData.userId,
+      sessionId: kycData.sessionId,
+      tags: ['pii', 'kyc', 'sensitive']
+    }
+  });
+  
+  // Return combined data structure
+  return {
+    ...nonSensitiveData,
+    encryptedData: {
+      encryptionId: encryptedSensitive.encryptionId,
+      data: encryptedSensitive.encryptedData,
+      algorithm: encryptedSensitive.algorithm,
+      keyDerivation: encryptedSensitive.keyDerivation,
+      integrityHash: encryptedSensitive.integrityHash
+    }
+  };
+};
+```
+
+## Error Responses
+
+<ResponseExample>
+
+```json 400 Invalid Data
+{
+  "success": false,
+  "error": {
+    "code": "ENCRYPTION_INVALID_DATA",
+    "message": "Invalid data format",
+    "details": {
+      "field": "data",
+      "issue": "Data must be base64 encoded",
+      "received": "invalid_base64_data"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 400 Missing Authentication
+{
+  "success": false,
+  "error": {
+    "code": "ENCRYPTION_MISSING_AUTH",
+    "message": "Either password or keyId must be provided",
+    "details": {
+      "options": ["password", "keyId"],
+      "action": "Provide either a password for key derivation or a pre-generated keyId"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 413 Data Too Large
+{
+  "success": false,
+  "error": {
+    "code": "ENCRYPTION_DATA_TOO_LARGE",
+    "message": "Data size exceeds maximum limit",
+    "details": {
+      "maxSize": "10MB",
+      "receivedSize": "15MB",
+      "suggestion": "Use file encryption endpoint for large data"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+</ResponseExample>
+
+## Rate Limiting
+
+This endpoint is rate limited to **30 requests per 15 minutes** per user.
+
+<Warning>
+Large encryption operations count towards rate limits. Consider using batch operations or file encryption for bulk data.
+</Warning>
+
+## Security Features
+
+<AccordionGroup>
+  <Accordion title="Zero-Knowledge Architecture">
+    **No plaintext storage**
+    
+    - Encryption performed server-side but data never stored unencrypted
+    - Keys derived from user passwords, not stored
+    - Authentication tags ensure data integrity
+    - Perfect forward secrecy with unique salts and IVs
+    
+    ```javascript
+    // Client-side key derivation verification
+    const verifyEncryption = (encryptedResult, originalPassword) => {
+      const { salt, iterations } = encryptedResult.keyDerivation;
+      
+      // Verify that you can derive the same key
+      const derivedKey = pbkdf2(originalPassword, salt, iterations, 32);
+      console.log('Key derivation verified locally');
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Algorithm Security">
+    **Industry-standard encryption**
+    
+    - AES-256-GCM with authenticated encryption
+    - PBKDF2 with 100,000+ iterations
+    - Cryptographically secure random IV/salt generation
+    - SHA-256 integrity verification
+    
+    ```javascript
+    // Encryption parameters
+    const securityConfig = {
+      algorithm: 'AES-256-GCM',        // NIST approved
+      keyDerivation: 'PBKDF2',         // RFC 2898
+      iterations: 100000,              // OWASP recommended minimum
+      saltLength: 16,                  // 128 bits
+      ivLength: 12,                    // 96 bits for GCM
+      authTagLength: 16                // 128 bits
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Data Protection">
+    **Comprehensive data security**
+    
+    - Optional compression before encryption
+    - Metadata encryption for sensitive fields
+    - Automatic data expiration
+    - Audit trail for all operations
+    
+    ```javascript
+    // Data classification and protection
+    const classifyAndEncrypt = async (data, classification) => {
+      const protectionLevel = {
+        'public': { compression: true, expiration: '1y' },
+        'internal': { compression: true, expiration: '6m' },
+        'confidential': { compression: true, expiration: '3m' },
+        'restricted': { compression: false, expiration: '1m' }
+      };
+      
+      const config = protectionLevel[classification] || protectionLevel.confidential;
+      
+      return await encryption.encrypt(data, password, {
+        ...config,
+        metadata: { classification, protectionLevel: classification }
+      });
+    };
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Optimization
+
+### Efficient Encryption Patterns
+
+```javascript
+// 1. Batch small items together
+const batchSmallItems = (items, maxBatchSize = 1024 * 1024) => {
+  const batches = [];
+  let currentBatch = [];
+  let currentSize = 0;
+  
+  for (const item of items) {
+    const itemSize = JSON.stringify(item).length;
+    
+    if (currentSize + itemSize > maxBatchSize && currentBatch.length > 0) {
+      batches.push(currentBatch);
+      currentBatch = [item];
+      currentSize = itemSize;
+    } else {
+      currentBatch.push(item);
+      currentSize += itemSize;
+    }
+  }
+  
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+  
+  return batches;
+};
+
+// 2. Use compression for text data
+const encryptTextData = async (textData, password) => {
+  return encryption.encrypt(textData, password, {
+    compression: true,  // Significantly reduces size for text
+    algorithm: 'AES-256-GCM'
+  });
+};
+
+// 3. Pre-generate keys for multiple operations
+const encryptWithPreGeneratedKey = async (dataItems, keyId) => {
+  return Promise.all(
+    dataItems.map(data => encryption.encryptWithKeyId(data, keyId))
+  );
+};
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Decrypt Data" icon="unlock" href="/api-reference/encryption/decrypt">
+    Decrypt previously encrypted data
+  </Card>
+  <Card title="Generate Keys" icon="key" href="/api-reference/encryption/generate-key">
+    Generate and manage encryption keys
+  </Card>
+  <Card title="File Encryption" icon="file" href="/api-reference/encryption/encrypt-file">
+    Encrypt large files and documents
+  </Card>
+  <Card title="Encryption Guide" icon="shield" href="/guides/encryption-setup">
+    Complete encryption implementation guide
+  </Card>
+</CardGroup> 
