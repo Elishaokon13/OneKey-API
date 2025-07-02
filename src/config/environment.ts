@@ -125,6 +125,7 @@ const config: Config = {
     rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
     encryptionKey: process.env.ENCRYPTION_KEY || 'dev-encryption-key-change-in-production',
     encryptionIv: process.env.ENCRYPTION_IV || 'dev-encryption-iv-change-in-production',
+    hashSalt: process.env.HASH_SALT || 'dev-hash-salt-change-in-production',
   },
 };
 
