@@ -145,12 +145,13 @@ export class EncryptionService implements IEncryptionService {
 
     } catch (error) {
       this.stats.errors++;
-      logger.error('Encryption failed', { error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Encryption failed', { error: errorMessage });
       
       if (error instanceof EncryptionError) {
         throw error;
       }
-      throw new EncryptionError('Encryption failed', 'ENCRYPTION_FAILED', { originalError: error.message });
+      throw new EncryptionError('Encryption failed', 'ENCRYPTION_FAILED', { originalError: errorMessage });
     }
   }
 
