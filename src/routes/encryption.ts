@@ -48,7 +48,7 @@ const handleValidationErrors = (req: any, res: any, next: any) => {
  * Encrypt data using AES-256-GCM encryption
  */
 router.post('/encrypt',
-  authenticate,
+  authenticateJWT,
   rateLimiter.encryptionOperations,
   body('data').notEmpty().withMessage('Data is required'),
   body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
