@@ -1,0 +1,12 @@
+{
+    "name": "onekey-docs",
+    "version": "1.0.0",
+    "scripts": {
+      "dev": "mintlify dev",
+      "build": "mintlify build",
+      "start": "mintlify start"
+    },
+    "devDependencies": {
+      "mintlify": "^4.0.0"
+    }
+  }
