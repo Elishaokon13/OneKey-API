@@ -100,7 +100,7 @@ export class AttestationService {
       });
 
       // Validate KYC result
-      if (kycResult.status !== 'verified') {
+      if (kycResult.status !== 'completed') {
         throw new AttestationError(
           'KYC verification must be completed successfully before creating attestation',
           'KYC_NOT_VERIFIED',
