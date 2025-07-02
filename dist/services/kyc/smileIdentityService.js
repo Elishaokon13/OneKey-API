@@ -1,24 +1,21 @@
 "use strict";
 // OneKey KYC API - Smile Identity Service
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SmileIdentityService = void 0;
 const baseKycService_1 = require("./baseKycService");
 const kyc_1 = require("@/types/kyc");
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = require("../../config/environment");
 class SmileIdentityService extends baseKycService_1.BaseKycService {
     provider = 'smile_identity';
     constructor() {
         const providerConfig = {
             provider: 'smile_identity',
-            enabled: !!environment_1.default.kycProviders.smileIdentity.apiKey,
+            enabled: !!environment_1.config.kycProviders.smileIdentity.apiKey,
             priority: 1,
             config: {
-                apiKey: environment_1.default.kycProviders.smileIdentity.apiKey,
+                apiKey: environment_1.config.kycProviders.smileIdentity.apiKey,
                 baseUrl: 'https://3eydmgh10d.execute-api.us-west-2.amazonaws.com/test',
-                testMode: environment_1.default.server.nodeEnv !== 'production'
+                testMode: environment_1.config.server.nodeEnv !== 'production'
             },
             capabilities: {
                 documentVerification: true,
@@ -114,7 +111,7 @@ class SmileIdentityService extends baseKycService_1.BaseKycService {
         return {
             status: this.config.enabled ? 'operational' : 'disabled',
             apiConnectivity: this.config.enabled,
-            configuration: !!environment_1.default.kycProviders.smileIdentity.apiKey,
+            configuration: !!environment_1.config.kycProviders.smileIdentity.apiKey,
             supportedCountries: this.config.supportedCountries.length,
             lastChecked: new Date().toISOString()
         };
