@@ -1,32 +1,29 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.closeSupabase = exports.isSupabaseConfigured = exports.subscribeToKycUpdates = exports.checkSupabaseHealth = exports.getSupabaseServiceClient = exports.getSupabaseClient = exports.initializeSupabase = void 0;
 const supabase_js_1 = require("@supabase/supabase-js");
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = require("./environment");
 // Supabase client instances
 let supabaseClient = null;
 let supabaseServiceClient = null;
 // Initialize Supabase clients
 const initializeSupabase = () => {
-    if (!environment_1.default.supabase.url || !environment_1.default.supabase.anonKey) {
+    if (!environment_1.config.supabase.url || !environment_1.config.supabase.anonKey) {
         console.log('⚠️  Supabase configuration not found, using direct PostgreSQL connection');
         return;
     }
     try {
         console.log('🔗 Initializing Supabase clients...');
         // Public client (for frontend interactions)
-        supabaseClient = (0, supabase_js_1.createClient)(environment_1.default.supabase.url, environment_1.default.supabase.anonKey, {
+        supabaseClient = (0, supabase_js_1.createClient)(environment_1.config.supabase.url, environment_1.config.supabase.anonKey, {
             auth: {
                 autoRefreshToken: true,
                 persistSession: true,
             },
         });
         // Service role client (for server-side operations)
-        if (environment_1.default.supabase.serviceKey) {
-            supabaseServiceClient = (0, supabase_js_1.createClient)(environment_1.default.supabase.url, environment_1.default.supabase.serviceKey, {
+        if (environment_1.config.supabase.serviceKey) {
+            supabaseServiceClient = (0, supabase_js_1.createClient)(environment_1.config.supabase.url, environment_1.config.supabase.serviceKey, {
                 auth: {
                     autoRefreshToken: false,
                     persistSession: false,
@@ -34,7 +31,7 @@ const initializeSupabase = () => {
             });
         }
         console.log('✅ Supabase clients initialized successfully');
-        console.log(`📊 Connected to: ${environment_1.default.supabase.url}`);
+        console.log(`📊 Connected to: ${environment_1.config.supabase.url}`);
     }
     catch (error) {
         console.error('❌ Supabase initialization failed:', error);
@@ -82,7 +79,7 @@ const checkSupabaseHealth = async () => {
                 connected: true,
                 publicClient: !!supabaseClient,
                 serviceClient: !!supabaseServiceClient,
-                url: environment_1.default.supabase.url,
+                url: environment_1.config.supabase.url,
             },
         };
     }
@@ -94,7 +91,7 @@ const checkSupabaseHealth = async () => {
                 connected: false,
                 publicClient: !!supabaseClient,
                 serviceClient: !!supabaseServiceClient,
-                url: environment_1.default.supabase.url,
+                url: environment_1.config.supabase.url,
             },
         };
     }
@@ -118,7 +115,7 @@ const subscribeToKycUpdates = (userId, callback) => {
 exports.subscribeToKycUpdates = subscribeToKycUpdates;
 // Utility function to check if Supabase is configured
 const isSupabaseConfigured = () => {
-    return !!(environment_1.default.supabase.url && environment_1.default.supabase.anonKey);
+    return !!(environment_1.config.supabase.url && environment_1.config.supabase.anonKey);
 };
 exports.isSupabaseConfigured = isSupabaseConfigured;
 // Close Supabase connections (for cleanup)
