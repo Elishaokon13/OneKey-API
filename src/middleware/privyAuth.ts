@@ -16,6 +16,7 @@ declare global {
       privyUser?: any; // Privy user object
       privyContext?: PrivyAuthContext;
       privyToken?: string;
+      user?: User | null; // Override to allow null
     }
   }
 }
