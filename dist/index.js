@@ -9,6 +9,8 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const environment_1 = __importDefault(require("@/config/environment"));
 const database_1 = require("@/config/database");
 const migrator_1 = require("@/database/migrator");
+// Import routes
+const auth_1 = __importDefault(require("@/routes/auth"));
 // Import custom middleware
 const rateLimiter_1 = require("@/middleware/rateLimiter");
 const errorHandler_1 = require("@/middleware/errorHandler");
@@ -163,15 +165,8 @@ app.get('/api/v1/docs', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
-// Placeholder route handlers (will be implemented in later tasks)
-app.use('/api/v1/auth', (req, res) => {
-    res.status(501).json({
-        error: 'NOT_IMPLEMENTED',
-        message: 'Authentication endpoints not yet implemented',
-        availableIn: 'Task 2.1',
-        requestId: req.headers['x-request-id']
-    });
-});
+// API route handlers
+app.use('/api/v1/auth', auth_1.default);
 app.use('/api/v1/kyc', (req, res) => {
     res.status(501).json({
         error: 'NOT_IMPLEMENTED',
