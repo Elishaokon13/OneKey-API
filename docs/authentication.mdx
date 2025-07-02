@@ -1,1 +1,566 @@
- 
+---
+title: "Authentication"
+description: "Learn how to authenticate with OneKey KYC API using JWT tokens and Web3 wallets"
+---
+
+## Overview
+
+OneKey KYC API supports two authentication methods:
+
+1. **JWT Authentication** - Traditional API key-based authentication
+2. **Web3 Authentication** - Wallet-based authentication using Privy
+
+Both methods provide secure access to the API with different use cases and security models.
+
+<CardGroup cols={2}>
+  <Card title="JWT Authentication" icon="key" href="#jwt-authentication">
+    Server-to-server authentication using API keys
+  </Card>
+  <Card title="Web3 Authentication" icon="wallet" href="#web3-authentication">
+    Wallet-based authentication for decentralized applications
+  </Card>
+</CardGroup>
+
+## JWT Authentication
+
+JWT (JSON Web Token) authentication is the primary method for server-to-server communication and traditional web applications.
+
+### Getting API Credentials
+
+<Steps>
+  <Step title="Create an Account">
+    Sign up at [dashboard.onekey.so](https://dashboard.onekey.so)
+  </Step>
+  <Step title="Create a Project">
+    Navigate to Projects and create a new project
+  </Step>
+  <Step title="Get API Keys">
+    Copy your API Key and API Secret from the project settings
+  </Step>
+</Steps>
+
+### Login Endpoint
+
+<api-endpoint method="POST" url="https://api.onekey.so/v1/auth/login">
+  Authenticate with API credentials to receive a JWT token
+</api-endpoint>
+
+**Request Body:**
+
+```json
+{
+  "apiKey": "your_api_key",
+  "apiSecret": "your_api_secret"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": "24h",
+    "tokenType": "Bearer"
+  },
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+### Using JWT Tokens
+
+Include the JWT token in the `Authorization` header for all API requests:
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.onekey.so/v1/kyc/sessions \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.onekey.so/v1/kyc/sessions', {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+});
+```
+
+```python Python
+headers = {
+    'Authorization': f'Bearer {token}',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get(
+    'https://api.onekey.so/v1/kyc/sessions',
+    headers=headers
+)
+```
+
+</CodeGroup>
+
+### Token Management
+
+<AccordionGroup>
+  <Accordion title="Token Expiration">
+    JWT tokens expire after 24 hours by default. You'll need to re-authenticate when tokens expire.
+    
+    **Handling Expiration:**
+    - Monitor for 401 responses
+    - Implement automatic token refresh
+    - Store refresh tokens securely
+  </Accordion>
+  
+  <Accordion title="Token Refresh">
+    Use the refresh endpoint to get new tokens without re-authentication:
+    
+    ```javascript
+    const refreshResponse = await fetch('https://api.onekey.so/v1/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${expiredToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Security Best Practices">
+    - Store API secrets securely (environment variables)
+    - Never expose secrets in client-side code
+    - Rotate API keys regularly
+    - Use HTTPS only
+    - Implement token refresh logic
+  </Accordion>
+</AccordionGroup>
+
+## Web3 Authentication
+
+Web3 authentication enables wallet-based access using Privy for signature verification.
+
+### Privy Integration
+
+<api-endpoint method="POST" url="https://api.onekey.so/v1/auth/privy/verify">
+  Verify Privy access token and get OneKey JWT
+</api-endpoint>
+
+**Request Body:**
+
+```json
+{
+  "accessToken": "privy_access_token_from_client"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "user_123",
+      "walletAddress": "0x742d35Cc6634C0532925a3b8D400EeA9615F8327",
+      "email": "user@example.com"
+    },
+    "expiresIn": "24h"
+  },
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+### Client-Side Implementation
+
+<CodeGroup>
+
+```jsx React + Privy
+import { usePrivy } from '@privy-io/react-auth';
+
+function AuthComponent() {
+  const { login, authenticated, getAccessToken } = usePrivy();
+  
+  const authenticateWithOneKey = async () => {
+    if (!authenticated) {
+      await login();
+    }
+    
+    const privyToken = await getAccessToken();
+    
+    const response = await fetch('https://api.onekey.so/v1/auth/privy/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: privyToken })
+    });
+    
+    const { data } = await response.json();
+    return data.token; // OneKey JWT token
+  };
+  
+  return (
+    <button onClick={authenticateWithOneKey}>
+      Connect Wallet & Authenticate
+    </button>
+  );
+}
+```
+
+```javascript Vanilla JavaScript
+// Initialize Privy
+const privy = new PrivyClient({
+  appId: 'your_privy_app_id'
+});
+
+async function authenticateWithWallet() {
+  // Login with Privy
+  await privy.login();
+  
+  // Get access token
+  const privyToken = await privy.getAccessToken();
+  
+  // Exchange for OneKey JWT
+  const response = await fetch('https://api.onekey.so/v1/auth/privy/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accessToken: privyToken })
+  });
+  
+  const { data } = await response.json();
+  const onekeyToken = data.token;
+  
+  // Use OneKey token for API calls
+  return onekeyToken;
+}
+```
+
+</CodeGroup>
+
+### Wallet Support
+
+OneKey supports authentication with various wallet types through Privy:
+
+<Tabs>
+  <Tab title="Ethereum Wallets">
+    - MetaMask
+    - WalletConnect
+    - Coinbase Wallet
+    - Rainbow Wallet
+    - Trust Wallet
+  </Tab>
+  
+  <Tab title="Email/Social">
+    - Email-based wallets
+    - Google authentication
+    - Twitter authentication
+    - Discord authentication
+  </Tab>
+  
+  <Tab title="Mobile Wallets">
+    - In-app wallets
+    - Progressive Web App support
+    - Mobile-optimized flows
+  </Tab>
+</Tabs>
+
+## Authentication Flow Comparison
+
+| Feature | JWT Authentication | Web3 Authentication |
+|---------|-------------------|---------------------|
+| **Use Case** | Server-to-server, traditional apps | DApps, wallet-based apps |
+| **Setup** | API key & secret | Privy integration |
+| **User Experience** | Developer manages auth | User controls wallet |
+| **Security Model** | API key security | Cryptographic signatures |
+| **Token Duration** | 24 hours (configurable) | 24 hours |
+| **Refresh Method** | Refresh endpoint | Re-authenticate with wallet |
+
+## Complete Authentication Examples
+
+### Server-Side (Node.js)
+
+<CodeGroup>
+
+```javascript Express.js Middleware
+const jwt = require('jsonwebtoken');
+
+// Authentication middleware
+const authenticateToken = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  try {
+    // Verify with OneKey
+    const response = await fetch('https://api.onekey.so/v1/auth/verify', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Token verification failed');
+    }
+    
+    const userData = await response.json();
+    req.user = userData.data.user;
+    next();
+  } catch (error) {
+    res.status(403).json({ error: 'Invalid token' });
+  }
+};
+
+// Usage
+app.get('/protected-route', authenticateToken, (req, res) => {
+  res.json({ message: 'Access granted', user: req.user });
+});
+```
+
+```python Flask Example
+from functools import wraps
+import requests
+
+def authenticate_token(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization')
+        
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'error': 'Access token required'}), 401
+        
+        token = auth_header.split(' ')[1]
+        
+        try:
+            response = requests.get(
+                'https://api.onekey.so/v1/auth/verify',
+                headers={'Authorization': f'Bearer {token}'}
+            )
+            
+            if response.status_code != 200:
+                raise Exception('Token verification failed')
+            
+            user_data = response.json()
+            request.user = user_data['data']['user']
+            
+            return f(*args, **kwargs)
+            
+        except Exception:
+            return jsonify({'error': 'Invalid token'}), 403
+    
+    return decorated_function
+
+# Usage
+@app.route('/protected-route')
+@authenticate_token
+def protected_route():
+    return jsonify({
+        'message': 'Access granted',
+        'user': request.user
+    })
+```
+
+</CodeGroup>
+
+### Client-Side (React)
+
+```jsx Authentication Hook
+import { useState, useEffect, createContext, useContext } from 'react';
+
+const AuthContext = createContext();
+
+export function AuthProvider({ children }) {
+  const [token, setToken] = useState(localStorage.getItem('onekey_token'));
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  
+  const login = async (apiKey, apiSecret) => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://api.onekey.so/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey, apiSecret })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setToken(data.data.token);
+        localStorage.setItem('onekey_token', data.data.token);
+        // Fetch user data
+        await fetchUser(data.data.token);
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const loginWithWallet = async (privyToken) => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://api.onekey.so/v1/auth/privy/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken: privyToken })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setToken(data.data.token);
+        setUser(data.data.user);
+        localStorage.setItem('onekey_token', data.data.token);
+      }
+    } catch (error) {
+      console.error('Wallet login failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('onekey_token');
+  };
+  
+  const fetchUser = async (authToken = token) => {
+    if (!authToken) return;
+    
+    try {
+      const response = await fetch('https://api.onekey.so/v1/auth/me', {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setUser(data.data.user);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+    }
+  };
+  
+  useEffect(() => {
+    if (token) {
+      fetchUser();
+    }
+  }, [token]);
+  
+  return (
+    <AuthContext.Provider value={{
+      token,
+      user,
+      loading,
+      login,
+      loginWithWallet,
+      logout,
+      isAuthenticated: !!token
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export const useAuth = () => useContext(AuthContext);
+```
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="Common Authentication Errors">
+    **401 Unauthorized**
+    - Invalid or expired token
+    - Missing Authorization header
+    - Malformed token format
+    
+    **403 Forbidden**
+    - Valid token but insufficient permissions
+    - Account suspended or disabled
+    - API endpoint not accessible
+    
+    **429 Too Many Requests**
+    - Rate limit exceeded
+    - Too many failed authentication attempts
+  </Accordion>
+  
+  <Accordion title="Error Response Format">
+    ```json
+    {
+      "success": false,
+      "error": {
+        "code": "INVALID_TOKEN",
+        "message": "The provided token is invalid or expired",
+        "details": {
+          "reason": "token_expired",
+          "expiresAt": "2024-01-15T10:30:45.123Z"
+        }
+      },
+      "requestId": "req_123456789",
+      "timestamp": "2024-01-15T11:30:45.123Z"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Retry Strategies">
+    ```javascript
+    async function apiCallWithRetry(url, options, maxRetries = 3) {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const response = await fetch(url, options);
+          
+          if (response.status === 401) {
+            // Token expired, refresh and retry
+            await refreshToken();
+            options.headers.Authorization = `Bearer ${newToken}`;
+            continue;
+          }
+          
+          if (response.status === 429) {
+            // Rate limited, wait and retry
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            continue;
+          }
+          
+          return response;
+        } catch (error) {
+          if (i === maxRetries - 1) throw error;
+        }
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Security Considerations
+
+<Warning>
+Never expose API secrets in client-side code. Always use secure server-side storage and implement proper token management.
+</Warning>
+
+### API Security Checklist
+
+- ✅ Store API secrets in environment variables
+- ✅ Use HTTPS for all API communications
+- ✅ Implement token refresh logic
+- ✅ Handle authentication errors gracefully
+- ✅ Rotate API keys regularly
+- ✅ Monitor for suspicious authentication patterns
+- ✅ Implement proper session management
+- ✅ Use secure token storage (HTTP-only cookies for web)
+
+### Web3 Security Considerations
+
+- ✅ Verify wallet signatures server-side
+- ✅ Validate Privy tokens with their API
+- ✅ Implement proper nonce handling
+- ✅ Use secure wallet connection libraries
+- ✅ Handle wallet disconnection gracefully
+- ✅ Validate wallet addresses
+- ✅ Implement proper session timeouts
+
+Ready to start authenticating? Check out our [Quickstart Guide](/quickstart) for a complete implementation example. 
