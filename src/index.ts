@@ -110,6 +110,15 @@ app.get('/health', async (req, res) => {
           chainId: attestationHealth.services.eas.details.chainId,
           attesterAddress: attestationHealth.services.eas.details.attesterAddress,
           cacheSize: attestationHealth.details.cacheSize
+        },
+        encryption: {
+          status: encryptionHealth.status,
+          algorithm: encryptionHealth.algorithm,
+          activeKeys: encryptionHealth.activeKeys,
+          expiredKeys: encryptionHealth.expiredKeys,
+          averageLatency: `${encryptionHealth.encryptionLatency}ms`,
+          errorRate: `${encryptionHealth.errorRate}%`,
+          uptime: encryptionHealth.uptime
         }
       },
       requestId: req.headers['x-request-id']
