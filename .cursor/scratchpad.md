@@ -395,9 +395,11 @@ Ready to proceed with **Task 2.1: JWT Authentication System**
 16. **Hybrid Authentication**: Supporting both JWT and Web3 authentication requires flexible middleware architecture
 
 ### Security Lessons
-15. **Environment File Security**: Always remove .env files from git tracking using `git rm --cached .env` to prevent credential leaks
-16. **Git Ignore Patterns**: Use `.env*` in .gitignore to catch all environment file variations
-17. **Repository Security**: Existing .env files in git history require removal from tracking before continuing development
+17. **Environment File Security**: Always remove .env files from git tracking using `git rm --cached .env` to prevent credential leaks
+18. **Git Ignore Patterns**: Use `.env*` in .gitignore to catch all environment file variations
+19. **Repository Security**: Existing .env files in git history require removal from tracking before continuing development
+20. **Token Security**: Separate JWT secrets for access/refresh tokens and proper token expiration (15min access, 7 days refresh)
+21. **Web3 Authentication**: Privy integration requires careful handling of wallet signatures and session management
 
 ### OneKey-Specific Architecture Insights
 1. **Zero PII Storage**: Database schema designed to store only hashes and references, never raw PII
