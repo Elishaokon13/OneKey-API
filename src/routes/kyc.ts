@@ -77,6 +77,9 @@ router.post('/sessions/:sessionId/verify',
     
     try {
       const { sessionId } = req.params;
+      if (!sessionId) {
+        throw new Error('Session ID is required');
+      }
       const verificationResult = await kycService.startVerification(sessionId);
       res.json({ success: true, data: verificationResult, requestId, timestamp: new Date().toISOString() });
     } catch (error) {
