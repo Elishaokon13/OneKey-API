@@ -6,10 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authService = exports.AuthService = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const uuid_1 = require("uuid");
-const database_1 = require("../../config/database");
-const supabase_1 = require("../../config/supabase");
+const database_1 = require("@/config/database");
+const supabase_1 = require("@/config/supabase");
 const jwtService_1 = require("./jwtService");
-const auth_1 = require("../../types/auth");
+const auth_1 = require("@/types/auth");
 class AuthService {
     saltRounds = 12;
     /**
