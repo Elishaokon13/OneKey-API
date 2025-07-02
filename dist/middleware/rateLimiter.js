@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.attestationLimiter = exports.kycLimiter = exports.authLimiter = exports.generalLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const environment_1 = __importDefault(require("../config/environment"));
+const environment_1 = __importDefault(require("@/config/environment"));
 // General API rate limiter
 exports.generalLimiter = (0, express_rate_limit_1.default)({
     windowMs: environment_1.default.security.rateLimitWindowMs, // 15 minutes
