@@ -20,8 +20,8 @@ class BaseKycService {
             sessionId,
             provider: this.provider,
             status: 'pending',
-            countryCode: request.user.address?.country,
-            documentType: request.document?.type,
+            ...(request.user.address?.country && { countryCode: request.user.address.country }),
+            ...(request.document?.type && { documentType: request.document.type }),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             expiresAt: expiresAt.toISOString(),
@@ -62,6 +62,9 @@ class BaseKycService {
         const timestamp = Date.now().toString(36);
         const random = Math.random().toString(36).substring(2, 8);
         return `${this.provider}_${timestamp}_${random}`;
+    }
+    getProviderConfig() {
+        return this.config;
     }
 }
 exports.BaseKycService = BaseKycService;
