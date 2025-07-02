@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
-import config from '@/config/environment';
+import { config } from '../config/environment';
 
 // General API rate limiter
 export const generalLimiter = rateLimit({
