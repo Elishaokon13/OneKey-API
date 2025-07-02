@@ -11,7 +11,7 @@ import {
   SmileIdentityRequest,
   SmileIdentityResult
 } from '@/types/kyc';
-import config from '@/config/environment';
+import { config } from '../../config/environment';
 
 export class SmileIdentityService extends BaseKycService {
   provider: KycProvider = 'smile_identity';
