@@ -1,27 +1,24 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transaction = exports.query = exports.checkDatabaseHealth = exports.getDatabase = exports.closeDatabase = exports.initializeDatabase = void 0;
 const pg_1 = require("pg");
-const environment_1 = __importDefault(require("@/config/environment"));
-const supabase_1 = require("@/config/supabase");
+const environment_1 = require("./environment");
+const supabase_1 = require("./supabase");
 // Database connection pool
 let pool = null;
 // Database configuration
 const dbConfig = {
-    host: environment_1.default.database.host,
-    port: environment_1.default.database.port,
-    database: environment_1.default.database.name,
-    user: environment_1.default.database.user,
-    password: environment_1.default.database.password,
+    host: environment_1.config.database.host,
+    port: environment_1.config.database.port,
+    database: environment_1.config.database.name,
+    user: environment_1.config.database.user,
+    password: environment_1.config.database.password,
     // Connection pool settings
     max: 20, // Maximum number of connections in the pool
     idleTimeoutMillis: 30000, // How long a client is allowed to remain idle
     connectionTimeoutMillis: 10000, // How long to wait for a connection (10 seconds for Supabase)
     // SSL configuration for production
-    ssl: environment_1.default.server.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
+    ssl: environment_1.config.server.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
     // Additional PostgreSQL settings
     statement_timeout: 30000, // 30 seconds
     query_timeout: 30000,
@@ -51,13 +48,13 @@ const initializeDatabase = async () => {
         }
         console.log('✅ Database connection established successfully');
         if ((0, supabase_1.isSupabaseConfigured)()) {
-            console.log(`📊 Supabase URL: ${environment_1.default.supabase.url}`);
+            console.log(`📊 Supabase URL: ${environment_1.config.supabase.url}`);
             if (pool) {
                 console.log(`📊 PostgreSQL Pool: ${pool.options.host || 'connection string'}`);
             }
         }
         else {
-            console.log(`📊 Connected to: ${environment_1.default.database.host}:${environment_1.default.database.port}/${environment_1.default.database.name}`);
+            console.log(`📊 Connected to: ${environment_1.config.database.host}:${environment_1.config.database.port}/${environment_1.config.database.name}`);
         }
         // Set up connection event handlers
         pool.on('connect', (client) => {
