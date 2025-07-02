@@ -1,1 +1,378 @@
- 
+---
+title: "POST /auth/refresh"
+api: "POST https://api.onekey.so/api/v1/auth/refresh"
+description: "Refresh an expired or expiring JWT access token"
+---
+
+## Overview
+
+Refresh an expired or expiring JWT access token without requiring re-authentication with API credentials. This is useful for maintaining continuous authentication in long-running applications.
+
+<Note>
+You can refresh a token up to 7 days after its expiration. After that, you must re-authenticate using the login endpoint.
+</Note>
+
+## Request
+
+### Headers
+
+```http
+Authorization: Bearer <existing_token>
+Content-Type: application/json
+Accept: application/json
+```
+
+### Body Parameters
+
+<ParamField body="expiresIn" type="string" default="24h">
+  New token expiration time (e.g., "1h", "24h", "7d")
+</ParamField>
+
+<ParamField body="permissions" type="array">
+  Requested permissions for the new token (optional, defaults to existing permissions)
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.onekey.so/api/v1/auth/refresh \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "expiresIn": "24h",
+    "permissions": ["kyc:read", "kyc:write"]
+  }'
+```
+
+```javascript JavaScript
+const refreshToken = async (currentToken) => {
+  const response = await fetch('https://api.onekey.so/api/v1/auth/refresh', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${currentToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      expiresIn: '24h',
+      permissions: ['kyc:read', 'kyc:write', 'attestations:create']
+    })
+  });
+
+  const data = await response.json();
+  return data.data.accessToken;
+};
+```
+
+```python Python
+import requests
+
+def refresh_token(current_token):
+    response = requests.post(
+        'https://api.onekey.so/api/v1/auth/refresh',
+        headers={
+            'Authorization': f'Bearer {current_token}',
+            'Content-Type': 'application/json'
+        },
+        json={
+            'expiresIn': '24h',
+            'permissions': ['kyc:read', 'kyc:write', 'attestations:create']
+        }
+    )
+    
+    data = response.json()
+    return data['data']['accessToken']
+```
+
+</CodeGroup>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="accessToken" type="string">
+      New JWT access token for API authentication
+    </ResponseField>
+    
+    <ResponseField name="tokenType" type="string">
+      Token type (always "Bearer")
+    </ResponseField>
+    
+    <ResponseField name="expiresIn" type="number">
+      Token expiration time in seconds
+    </ResponseField>
+    
+    <ResponseField name="expiresAt" type="string">
+      Token expiration timestamp (ISO 8601)
+    </ResponseField>
+    
+    <ResponseField name="permissions" type="array">
+      Granted permissions for the new token
+    </ResponseField>
+    
+    <ResponseField name="refreshedAt" type="string">
+      Token refresh timestamp (ISO 8601)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400,
+    "expiresAt": "2024-01-16T10:30:45.123Z",
+    "permissions": [
+      "kyc:read",
+      "kyc:write",
+      "attestations:create"
+    ],
+    "refreshedAt": "2024-01-15T10:30:45.123Z"
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+## Usage Examples
+
+### Automatic Token Refresh
+
+```javascript
+class TokenManager {
+  constructor(initialToken) {
+    this.token = initialToken;
+    this.refreshPromise = null;
+  }
+  
+  async getValidToken() {
+    // Check if token is close to expiring (refresh 5 minutes before)
+    const tokenPayload = JSON.parse(atob(this.token.split('.')[1]));
+    const expiresAt = new Date(tokenPayload.exp * 1000);
+    const refreshThreshold = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    
+    if (expiresAt <= refreshThreshold) {
+      // Prevent multiple concurrent refresh attempts
+      if (!this.refreshPromise) {
+        this.refreshPromise = this.refreshToken();
+      }
+      
+      try {
+        this.token = await this.refreshPromise;
+      } finally {
+        this.refreshPromise = null;
+      }
+    }
+    
+    return this.token;
+  }
+  
+  async refreshToken() {
+    const response = await fetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ expiresIn: '24h' })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+    
+    const data = await response.json();
+    return data.data.accessToken;
+  }
+  
+  async makeRequest(url, options = {}) {
+    const token = await this.getValidToken();
+    
+    return fetch(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+  }
+}
+```
+
+### Background Token Refresh
+
+```javascript
+class BackgroundTokenRefresher {
+  constructor(tokenManager) {
+    this.tokenManager = tokenManager;
+    this.refreshInterval = null;
+  }
+  
+  start() {
+    // Check every minute for tokens that need refreshing
+    this.refreshInterval = setInterval(async () => {
+      try {
+        await this.tokenManager.getValidToken();
+      } catch (error) {
+        console.error('Background token refresh failed:', error);
+      }
+    }, 60000); // 1 minute
+  }
+  
+  stop() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+  }
+}
+
+// Usage
+const tokenManager = new TokenManager(initialToken);
+const refresher = new BackgroundTokenRefresher(tokenManager);
+refresher.start();
+
+// Clean up on app shutdown
+process.on('SIGTERM', () => refresher.stop());
+```
+
+## Error Responses
+
+<ResponseExample>
+
+```json 401 Token Expired
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_TOKEN_EXPIRED",
+    "message": "Token has expired and cannot be refreshed",
+    "details": {
+      "expiredAt": "2024-01-08T10:30:45.123Z",
+      "gracePeriod": "7 days",
+      "action": "Re-authenticate using login endpoint"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 401 Invalid Token
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_INVALID_TOKEN",
+    "message": "Invalid or malformed token",
+    "details": {
+      "reason": "Token signature verification failed"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 403 Insufficient Permissions
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_INSUFFICIENT_PERMISSIONS",
+    "message": "Requested permissions exceed token scope",
+    "details": {
+      "requested": ["admin:write"],
+      "available": ["kyc:read", "kyc:write"]
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+</ResponseExample>
+
+## Rate Limiting
+
+This endpoint is rate limited to **30 requests per minute** per user.
+
+<Warning>
+Implement exponential backoff when refresh requests fail to avoid rate limiting.
+</Warning>
+
+## Security Considerations
+
+<AccordionGroup>
+  <Accordion title="Token Validation">
+    **Verify token before refresh**
+    
+    ```javascript
+    const isTokenValid = (token) => {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const now = Math.floor(Date.now() / 1000);
+        
+        // Token must not be expired by more than 7 days
+        const gracePeriod = 7 * 24 * 60 * 60; // 7 days in seconds
+        return payload.exp + gracePeriod > now;
+      } catch {
+        return false;
+      }
+    };
+    
+    if (!isTokenValid(currentToken)) {
+      // Must re-authenticate
+      throw new Error('Token too old, re-authentication required');
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Refresh Strategy">
+    **Optimal refresh timing**
+    
+    ```javascript
+    const getRefreshStrategy = (token) => {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiresAt = new Date(payload.exp * 1000);
+      const now = new Date();
+      const timeUntilExpiry = expiresAt - now;
+      
+      // Refresh strategy based on time remaining
+      if (timeUntilExpiry > 24 * 60 * 60 * 1000) {
+        return 'no_refresh_needed';
+      } else if (timeUntilExpiry > 5 * 60 * 1000) {
+        return 'schedule_refresh';
+      } else if (timeUntilExpiry > 0) {
+        return 'immediate_refresh';
+      } else {
+        return 'grace_period_refresh';
+      }
+    };
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Login" icon="key" href="/api-reference/authentication/login">
+    Generate new tokens when refresh fails
+  </Card>
+  <Card title="Privy Verify" icon="wallet" href="/api-reference/authentication/privy-verify">
+    Verify Web3 wallet signatures with Privy
+  </Card>
+  <Card title="Rate Limits" icon="clock" href="/resources/rate-limits">
+    Understand API rate limiting policies
+  </Card>
+  <Card title="Error Handling" icon="exclamation-triangle" href="/resources/errors">
+    Handle authentication errors gracefully
+  </Card>
+</CardGroup> 
