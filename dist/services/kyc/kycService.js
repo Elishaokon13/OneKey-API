@@ -5,7 +5,7 @@ exports.KycService = void 0;
 const smileIdentityService_1 = require("./smileIdentityService");
 const onfidoService_1 = require("./onfidoService");
 const truliooService_1 = require("./truliooService");
-const kyc_1 = require("@/types/kyc");
+const kyc_1 = require("../../types/kyc");
 class KycService {
     providers = new Map();
     constructor() {
@@ -34,7 +34,11 @@ class KycService {
         if (availableProviders.length === 0) {
             throw new kyc_1.KycProviderUnavailableError('smile_identity', 'No KYC providers are enabled');
         }
-        return availableProviders[0][0];
+        const selectedProvider = availableProviders[0];
+        if (!selectedProvider) {
+            throw new kyc_1.KycProviderUnavailableError('smile_identity', 'No KYC providers are enabled');
+        }
+        return selectedProvider[0];
     }
     async createSession(request) {
         const provider = request.provider || this.selectProvider(request);
