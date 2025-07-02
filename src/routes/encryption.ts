@@ -170,7 +170,7 @@ router.post('/decrypt',
  * Generate a new encryption key
  */
 router.post('/keys/generate',
-  authenticate,
+  authenticateJWT,
   rateLimiter.keyManagement,
   body('usage').isArray().withMessage('Usage must be an array'),
   handleValidationErrors,
