@@ -42,6 +42,12 @@ interface Config {
   blockchain: {
     privyAppId: string;
     privyAppSecret: string;
+    chainId: number;
+    rpcUrl: string;
+    easContractAddress: string;
+    easSchemaRegistryAddress: string;
+    attesterPrivateKey: string;
+    attesterAddress: string;
     easSchemaId: string;
     easAttestationUrl: string;
   };
