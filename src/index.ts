@@ -134,7 +134,8 @@ app.get('/health', async (req, res) => {
       components: {
         database: { status: 'error', error: (error as Error).message },
         privy: { status: 'error', error: 'Health check failed' },
-        attestations: { status: 'error', error: 'Health check failed' }
+        attestations: { status: 'error', error: 'Health check failed' },
+        encryption: { status: 'error', error: 'Health check failed' }
       },
       requestId: req.headers['x-request-id']
     });
