@@ -54,9 +54,9 @@ router.post('/register', authLimiter, async (req: Request, res: Response): Promi
     const result = await authService.register({
       email: email.toLowerCase(),
       password,
-      wallet_address,
-      passkey_id,
-      metadata
+      wallet_address: wallet_address || undefined,
+      passkey_id: passkey_id || undefined,
+      metadata: metadata || undefined
     });
 
     res.status(201).json({
