@@ -159,9 +159,14 @@ app.get('/api/v1', (req, res) => {
         providersHealth: 'GET /api/v1/kyc/providers/health'
       },
       attestations: {
-        create: 'POST /api/v1/attestations/create',
+        create: 'POST /api/v1/attestations',
+        get: 'GET /api/v1/attestations/:uid',
         verify: 'POST /api/v1/attestations/verify',
-        query: 'GET /api/v1/attestations/:userId'
+        list: 'GET /api/v1/attestations',
+        revoke: 'POST /api/v1/attestations/revoke',
+        estimateCost: 'POST /api/v1/attestations/estimate-cost',
+        health: 'GET /api/v1/attestations/health',
+        stats: 'GET /api/v1/attestations/stats'
       },
       storage: {
         encrypt: 'POST /api/v1/storage/encrypt',
