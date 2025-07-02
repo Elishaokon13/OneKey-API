@@ -15,7 +15,7 @@ const dbConfig = {
   // Connection pool settings
   max: 20, // Maximum number of connections in the pool
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle
-  connectionTimeoutMillis: 2000, // How long to wait for a connection
+  connectionTimeoutMillis: 10000, // How long to wait for a connection (10 seconds for Supabase)
   // SSL configuration for production
   ssl: config.server.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
   // Additional PostgreSQL settings
