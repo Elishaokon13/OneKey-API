@@ -6,6 +6,9 @@ import config from '@/config/environment';
 import { initializeDatabase, closeDatabase, checkDatabaseHealth } from '@/config/database';
 import { runMigrations } from '@/database/migrator';
 
+// Import routes
+import authRoutes from '@/routes/auth';
+
 // Import custom middleware
 import { generalLimiter } from '@/middleware/rateLimiter';
 import { 
