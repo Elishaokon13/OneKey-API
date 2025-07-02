@@ -164,10 +164,10 @@ export const optionalPrivyAuth = async (
         const internalUser = await findInternalUserFromPrivy(verification.user);
         const privyContext = await privyService.getAuthContext(token);
 
-        req.privyUser = verification.user;
-        req.privyContext = privyContext;
-        req.privyToken = token;
-        req.user = internalUser;
+                 req.privyUser = verification.user;
+         req.privyContext = privyContext;
+         req.privyToken = token;
+         (req as any).user = internalUser;
       }
     }
   } catch (error) {
