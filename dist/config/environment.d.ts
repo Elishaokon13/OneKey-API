@@ -1,4 +1,7 @@
 interface Config {
+    api: {
+        version: string;
+    };
     server: {
         port: number;
         nodeEnv: string;
@@ -37,6 +40,12 @@ interface Config {
     blockchain: {
         privyAppId: string;
         privyAppSecret: string;
+        chainId: number;
+        rpcUrl: string;
+        easContractAddress: string;
+        easSchemaRegistryAddress: string;
+        attesterPrivateKey: string;
+        attesterAddress: string;
         easSchemaId: string;
         easAttestationUrl: string;
     };
@@ -51,8 +60,9 @@ interface Config {
         rateLimitMaxRequests: number;
         encryptionKey: string;
         encryptionIv: string;
+        hashSalt: string;
     };
 }
 declare const config: Config;
-export default config;
+export { config };
 //# sourceMappingURL=environment.d.ts.map
