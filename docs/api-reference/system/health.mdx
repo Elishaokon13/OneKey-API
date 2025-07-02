@@ -1,1 +1,969 @@
- 
+---
+title: "GET /health"
+api: "GET https://api.onekey.so/api/v1/health"
+description: "Check the health and status of OneKey API services"
+---
+
+## Overview
+
+Get the current health status of all OneKey API services including KYC providers, encryption services, attestation blockchain connectivity, and system performance metrics. This endpoint is useful for monitoring, alerting, and integration health checks.
+
+<Note>
+This endpoint does not require authentication and is designed for high-frequency health monitoring and load balancer health checks.
+</Note>
+
+## Request
+
+### Headers
+
+```http
+Accept: application/json
+```
+
+### Query Parameters
+
+<ParamField query="detailed" type="boolean" default="false">
+  Include detailed service metrics and performance data
+</ParamField>
+
+<ParamField query="services" type="string">
+  Comma-separated list of specific services to check
+  
+  **Options:** `kyc`, `encryption`, `attestations`, `auth`, `database`, `blockchain`
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.onekey.so/api/v1/health \
+  -H "Accept: application/json"
+```
+
+```bash Detailed Health Check
+curl -X GET https://api.onekey.so/api/v1/health?detailed=true \
+  -H "Accept: application/json"
+```
+
+```bash Specific Services
+curl -X GET "https://api.onekey.so/api/v1/health?services=kyc,encryption,attestations" \
+  -H "Accept: application/json"
+```
+
+```javascript JavaScript
+const checkHealth = async (detailed = false) => {
+  const url = new URL('/api/v1/health', 'https://api.onekey.so');
+  if (detailed) url.searchParams.set('detailed', 'true');
+  
+  const response = await fetch(url);
+  const health = await response.json();
+  
+  return health;
+};
+
+// Basic health check
+const health = await checkHealth();
+console.log('API Status:', health.data.status);
+
+// Detailed health check
+const detailedHealth = await checkHealth(true);
+console.log('Service Details:', detailedHealth.data.services);
+```
+
+```python Python
+import requests
+
+def check_health(detailed=False, services=None):
+    url = 'https://api.onekey.so/api/v1/health'
+    params = {}
+    
+    if detailed:
+        params['detailed'] = 'true'
+    
+    if services:
+        params['services'] = ','.join(services)
+    
+    response = requests.get(url, params=params)
+    return response.json()
+
+# Basic health check
+health = check_health()
+print(f"API Status: {health['data']['status']}")
+
+# Check specific services
+kyc_health = check_health(services=['kyc', 'encryption'])
+print(f"KYC Status: {kyc_health['data']['services']['kyc']['status']}")
+```
+
+</CodeGroup>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the health check request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="Health status data">
+    <ResponseField name="status" type="string">
+      Overall system status
+      
+      **Values:** `healthy`, `degraded`, `unhealthy`, `maintenance`
+    </ResponseField>
+    
+    <ResponseField name="version" type="string">
+      Current API version
+    </ResponseField>
+    
+    <ResponseField name="uptime" type="number">
+      System uptime in seconds
+    </ResponseField>
+    
+    <ResponseField name="timestamp" type="string">
+      Health check timestamp (ISO 8601)
+    </ResponseField>
+    
+    <ResponseField name="region" type="string">
+      API server region
+    </ResponseField>
+    
+    <ResponseField name="services" type="object">
+      <Expandable title="Service status breakdown">
+        <ResponseField name="api" type="object">
+          <Expandable title="Core API service">
+            <ResponseField name="status" type="string">
+              Service status (healthy, degraded, unhealthy)
+            </ResponseField>
+            
+            <ResponseField name="responseTime" type="number">
+              Average response time in milliseconds
+            </ResponseField>
+            
+            <ResponseField name="requestsPerMinute" type="number">
+              Current requests per minute
+            </ResponseField>
+            
+            <ResponseField name="errorRate" type="number">
+              Error rate as percentage (0-100)
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="authentication" type="object">
+          <Expandable title="Authentication service">
+            <ResponseField name="status" type="string">
+              Authentication service status
+            </ResponseField>
+            
+            <ResponseField name="tokensIssued" type="number">
+              Tokens issued in last hour
+            </ResponseField>
+            
+            <ResponseField name="jwtValidation" type="object">
+              <Expandable title="JWT validation metrics">
+                <ResponseField name="successRate" type="number">
+                  JWT validation success rate (0-100)
+                </ResponseField>
+                
+                <ResponseField name="averageTime" type="number">
+                  Average validation time in milliseconds
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="kyc" type="object">
+          <Expandable title="KYC service">
+            <ResponseField name="status" type="string">
+              KYC service status
+            </ResponseField>
+            
+            <ResponseField name="activeSessions" type="number">
+              Number of active KYC sessions
+            </ResponseField>
+            
+            <ResponseField name="providers" type="object">
+              <Expandable title="KYC provider status">
+                <ResponseField name="smile_identity" type="object">
+                  <Expandable title="Smile Identity status">
+                    <ResponseField name="status" type="string">
+                      Provider status
+                    </ResponseField>
+                    
+                    <ResponseField name="responseTime" type="number">
+                      Average response time in milliseconds
+                    </ResponseField>
+                    
+                    <ResponseField name="successRate" type="number">
+                      Success rate percentage
+                    </ResponseField>
+                  </Expandable>
+                </ResponseField>
+                
+                <ResponseField name="onfido" type="object">
+                  <Expandable title="Onfido status">
+                    <ResponseField name="status" type="string">
+                      Provider status
+                    </ResponseField>
+                    
+                    <ResponseField name="responseTime" type="number">
+                      Average response time in milliseconds
+                    </ResponseField>
+                    
+                    <ResponseField name="successRate" type="number">
+                      Success rate percentage
+                    </ResponseField>
+                  </Expandable>
+                </ResponseField>
+                
+                <ResponseField name="trulioo" type="object">
+                  <Expandable title="Trulioo status">
+                    <ResponseField name="status" type="string">
+                      Provider status
+                    </ResponseField>
+                    
+                    <ResponseField name="responseTime" type="number">
+                      Average response time in milliseconds
+                    </ResponseField>
+                    
+                    <ResponseField name="successRate" type="number">
+                      Success rate percentage
+                    </ResponseField>
+                  </Expandable>
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="encryption" type="object">
+          <Expandable title="Encryption service">
+            <ResponseField name="status" type="string">
+              Encryption service status
+            </ResponseField>
+            
+            <ResponseField name="operationsPerMinute" type="number">
+              Encryption operations per minute
+            </ResponseField>
+            
+            <ResponseField name="averageEncryptionTime" type="number">
+              Average encryption time in milliseconds
+            </ResponseField>
+            
+            <ResponseField name="keyManagement" type="object">
+              <Expandable title="Key management metrics">
+                <ResponseField name="activeKeys" type="number">
+                  Number of active encryption keys
+                </ResponseField>
+                
+                <ResponseField name="keyRotations" type="number">
+                  Key rotations in last 24 hours
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="attestations" type="object">
+          <Expandable title="Blockchain attestation service">
+            <ResponseField name="status" type="string">
+              Attestation service status
+            </ResponseField>
+            
+            <ResponseField name="blockchain" type="object">
+              <Expandable title="Blockchain connectivity">
+                <ResponseField name="ethereum" type="object">
+                  <Expandable title="Ethereum network status">
+                    <ResponseField name="status" type="string">
+                      Network connection status
+                    </ResponseField>
+                    
+                    <ResponseField name="blockNumber" type="number">
+                      Latest block number
+                    </ResponseField>
+                    
+                    <ResponseField name="gasPrice" type="string">
+                      Current gas price in gwei
+                    </ResponseField>
+                    
+                    <ResponseField name="responseTime" type="number">
+                      Network response time in milliseconds
+                    </ResponseField>
+                  </Expandable>
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+            
+            <ResponseField name="attestationsCreated" type="number">
+              Attestations created in last hour
+            </ResponseField>
+            
+            <ResponseField name="averageConfirmationTime" type="number">
+              Average confirmation time in seconds
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="database" type="object">
+          <Expandable title="Database service">
+            <ResponseField name="status" type="string">
+              Database connection status
+            </ResponseField>
+            
+            <ResponseField name="responseTime" type="number">
+              Database response time in milliseconds
+            </ResponseField>
+            
+            <ResponseField name="connections" type="object">
+              <Expandable title="Connection pool status">
+                <ResponseField name="active" type="number">
+                  Active database connections
+                </ResponseField>
+                
+                <ResponseField name="idle" type="number">
+                  Idle database connections
+                </ResponseField>
+                
+                <ResponseField name="total" type="number">
+                  Total connection pool size
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="performance" type="object">
+      <Expandable title="Performance metrics (detailed=true only)">
+        <ResponseField name="memory" type="object">
+          <Expandable title="Memory usage">
+            <ResponseField name="used" type="number">
+              Used memory in bytes
+            </ResponseField>
+            
+            <ResponseField name="total" type="number">
+              Total available memory in bytes
+            </ResponseField>
+            
+            <ResponseField name="percentage" type="number">
+              Memory usage percentage
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="cpu" type="object">
+          <Expandable title="CPU usage">
+            <ResponseField name="percentage" type="number">
+              CPU usage percentage
+            </ResponseField>
+            
+            <ResponseField name="loadAverage" type="array">
+              System load averages [1min, 5min, 15min]
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="storage" type="object">
+          <Expandable title="Storage metrics">
+            <ResponseField name="used" type="number">
+              Used storage in bytes
+            </ResponseField>
+            
+            <ResponseField name="total" type="number">
+              Total available storage in bytes
+            </ResponseField>
+            
+            <ResponseField name="percentage" type="number">
+              Storage usage percentage
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="maintenanceWindow" type="object">
+      <Expandable title="Scheduled maintenance (if any)">
+        <ResponseField name="scheduled" type="boolean">
+          Whether maintenance is scheduled
+        </ResponseField>
+        
+        <ResponseField name="startTime" type="string">
+          Maintenance start time (ISO 8601)
+        </ResponseField>
+        
+        <ResponseField name="endTime" type="string">
+          Maintenance end time (ISO 8601)
+        </ResponseField>
+        
+        <ResponseField name="description" type="string">
+          Maintenance description
+        </ResponseField>
+        
+        <ResponseField name="affectedServices" type="array">
+          List of affected services
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Response
+
+<Tabs>
+  <Tab title="Basic Health Check">
+    ```json
+    {
+      "success": true,
+      "data": {
+        "status": "healthy",
+        "version": "2.1.0",
+        "uptime": 86400,
+        "timestamp": "2024-01-15T10:30:45.123Z",
+        "region": "us-east-1",
+        "services": {
+          "api": {
+            "status": "healthy",
+            "responseTime": 45,
+            "requestsPerMinute": 1250,
+            "errorRate": 0.2
+          },
+          "authentication": {
+            "status": "healthy",
+            "tokensIssued": 342,
+            "jwtValidation": {
+              "successRate": 99.8,
+              "averageTime": 12
+            }
+          },
+          "kyc": {
+            "status": "healthy",
+            "activeSessions": 89,
+            "providers": {
+              "smile_identity": {
+                "status": "healthy",
+                "responseTime": 2300,
+                "successRate": 94.2
+              },
+              "onfido": {
+                "status": "healthy",
+                "responseTime": 1800,
+                "successRate": 96.7
+              },
+              "trulioo": {
+                "status": "healthy",
+                "responseTime": 2100,
+                "successRate": 95.1
+              }
+            }
+          },
+          "encryption": {
+            "status": "healthy",
+            "operationsPerMinute": 456,
+            "averageEncryptionTime": 23,
+            "keyManagement": {
+              "activeKeys": 1247,
+              "keyRotations": 12
+            }
+          },
+          "attestations": {
+            "status": "healthy",
+            "blockchain": {
+              "ethereum": {
+                "status": "healthy",
+                "blockNumber": 19145678,
+                "gasPrice": "25.4 gwei",
+                "responseTime": 150
+              }
+            },
+            "attestationsCreated": 23,
+            "averageConfirmationTime": 45
+          },
+          "database": {
+            "status": "healthy",
+            "responseTime": 8,
+            "connections": {
+              "active": 12,
+              "idle": 8,
+              "total": 20
+            }
+          }
+        },
+        "maintenanceWindow": {
+          "scheduled": false
+        }
+      },
+      "timestamp": "2024-01-15T10:30:45.123Z"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Detailed Health Check">
+    ```json
+    {
+      "success": true,
+      "data": {
+        "status": "healthy",
+        "version": "2.1.0",
+        "uptime": 86400,
+        "timestamp": "2024-01-15T10:30:45.123Z",
+        "region": "us-east-1",
+        "services": {
+          // ... same as basic response
+        },
+        "performance": {
+          "memory": {
+            "used": 2147483648,
+            "total": 8589934592,
+            "percentage": 25.0
+          },
+          "cpu": {
+            "percentage": 15.4,
+            "loadAverage": [0.8, 1.2, 1.1]
+          },
+          "storage": {
+            "used": 107374182400,
+            "total": 1073741824000,
+            "percentage": 10.0
+          }
+        },
+        "maintenanceWindow": {
+          "scheduled": true,
+          "startTime": "2024-01-20T02:00:00.000Z",
+          "endTime": "2024-01-20T04:00:00.000Z",
+          "description": "Database maintenance and performance optimization",
+          "affectedServices": ["database", "kyc"]
+        }
+      },
+      "timestamp": "2024-01-15T10:30:45.123Z"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Degraded Status">
+    ```json
+    {
+      "success": true,
+      "data": {
+        "status": "degraded",
+        "version": "2.1.0",
+        "uptime": 86400,
+        "timestamp": "2024-01-15T10:30:45.123Z",
+        "region": "us-east-1",
+        "services": {
+          "api": {
+            "status": "healthy",
+            "responseTime": 67,
+            "requestsPerMinute": 1250,
+            "errorRate": 0.2
+          },
+          "kyc": {
+            "status": "degraded",
+            "activeSessions": 89,
+            "providers": {
+              "smile_identity": {
+                "status": "unhealthy",
+                "responseTime": 8500,
+                "successRate": 78.2
+              },
+              "onfido": {
+                "status": "healthy",
+                "responseTime": 1800,
+                "successRate": 96.7
+              },
+              "trulioo": {
+                "status": "healthy",
+                "responseTime": 2100,
+                "successRate": 95.1
+              }
+            }
+          },
+          // ... other services
+        },
+        "maintenanceWindow": {
+          "scheduled": false
+        }
+      },
+      "timestamp": "2024-01-15T10:30:45.123Z"
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Status Definitions
+
+<AccordionGroup>
+  <Accordion title="healthy">
+    **All systems operational**
+    
+    - All services are functioning normally
+    - Response times within expected ranges
+    - Error rates below thresholds
+    - No known issues or degradations
+  </Accordion>
+  
+  <Accordion title="degraded">
+    **Some services experiencing issues**
+    
+    - One or more services have performance issues
+    - Functionality may be slower than normal
+    - Some features may have reduced capacity
+    - System remains functional but sub-optimal
+  </Accordion>
+  
+  <Accordion title="unhealthy">
+    **Major service disruptions**
+    
+    - Critical services are failing
+    - Significant functionality is unavailable
+    - High error rates or timeouts
+    - Immediate attention required
+  </Accordion>
+  
+  <Accordion title="maintenance">
+    **Scheduled maintenance in progress**
+    
+    - Planned maintenance window is active
+    - Some services may be temporarily unavailable
+    - Maintenance details provided in response
+    - Normal service will resume after maintenance
+  </Accordion>
+</AccordionGroup>
+
+## Monitoring Integration
+
+### Automated Health Monitoring
+
+```javascript
+class OneKeyHealthMonitor {
+  constructor(options = {}) {
+    this.interval = options.interval || 30000; // 30 seconds
+    this.alertThresholds = options.alertThresholds || {
+      responseTime: 5000,
+      errorRate: 5.0,
+      successRate: 95.0
+    };
+    this.webhookUrl = options.webhookUrl;
+    this.isMonitoring = false;
+    this.lastStatus = null;
+  }
+  
+  async start() {
+    if (this.isMonitoring) return;
+    
+    this.isMonitoring = true;
+    console.log('Starting OneKey health monitoring...');
+    
+    await this.checkHealth();
+    this.intervalId = setInterval(() => this.checkHealth(), this.interval);
+  }
+  
+  stop() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+    this.isMonitoring = false;
+    console.log('Stopped OneKey health monitoring');
+  }
+  
+  async checkHealth() {
+    try {
+      const response = await fetch('https://api.onekey.so/api/v1/health?detailed=true');
+      const health = await response.json();
+      
+      const currentStatus = health.data.status;
+      
+      // Check for status changes
+      if (this.lastStatus && this.lastStatus !== currentStatus) {
+        await this.alertStatusChange(this.lastStatus, currentStatus, health.data);
+      }
+      
+      // Check service-specific alerts
+      await this.checkServiceAlerts(health.data.services);
+      
+      this.lastStatus = currentStatus;
+      
+    } catch (error) {
+      console.error('Health check failed:', error);
+      await this.alertError('Health check failed', error);
+    }
+  }
+  
+  async alertStatusChange(oldStatus, newStatus, healthData) {
+    const alert = {
+      type: 'status_change',
+      message: `OneKey API status changed from ${oldStatus} to ${newStatus}`,
+      oldStatus,
+      newStatus,
+      timestamp: new Date().toISOString(),
+      services: healthData.services
+    };
+    
+    await this.sendAlert(alert);
+  }
+  
+  async checkServiceAlerts(services) {
+    for (const [serviceName, serviceData] of Object.entries(services)) {
+      if (serviceData.responseTime > this.alertThresholds.responseTime) {
+        await this.sendAlert({
+          type: 'high_response_time',
+          service: serviceName,
+          responseTime: serviceData.responseTime,
+          threshold: this.alertThresholds.responseTime
+        });
+      }
+      
+      if (serviceData.errorRate > this.alertThresholds.errorRate) {
+        await this.sendAlert({
+          type: 'high_error_rate',
+          service: serviceName,
+          errorRate: serviceData.errorRate,
+          threshold: this.alertThresholds.errorRate
+        });
+      }
+      
+      // Check KYC provider health
+      if (serviceName === 'kyc' && serviceData.providers) {
+        for (const [provider, providerData] of Object.entries(serviceData.providers)) {
+          if (providerData.successRate < this.alertThresholds.successRate) {
+            await this.sendAlert({
+              type: 'low_success_rate',
+              service: `kyc_${provider}`,
+              successRate: providerData.successRate,
+              threshold: this.alertThresholds.successRate
+            });
+          }
+        }
+      }
+    }
+  }
+  
+  async sendAlert(alert) {
+    console.warn('OneKey Health Alert:', alert);
+    
+    if (this.webhookUrl) {
+      try {
+        await fetch(this.webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(alert)
+        });
+      } catch (error) {
+        console.error('Failed to send webhook alert:', error);
+      }
+    }
+  }
+  
+  async alertError(message, error) {
+    await this.sendAlert({
+      type: 'monitor_error',
+      message,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+}
+
+// Usage
+const monitor = new OneKeyHealthMonitor({
+  interval: 30000, // Check every 30 seconds
+  alertThresholds: {
+    responseTime: 3000, // 3 seconds
+    errorRate: 2.0,     // 2%
+    successRate: 98.0   // 98%
+  },
+  webhookUrl: 'https://yourapp.com/alerts/onekey-health'
+});
+
+monitor.start();
+
+// Stop monitoring on app shutdown
+process.on('SIGTERM', () => monitor.stop());
+```
+
+### Load Balancer Health Check
+
+```bash
+#!/bin/bash
+# Health check script for load balancer
+
+HEALTH_URL="https://api.onekey.so/api/v1/health"
+TIMEOUT=5
+
+# Simple health check
+response=$(curl -s -w "%{http_code}" -o /dev/null --max-time $TIMEOUT "$HEALTH_URL")
+
+if [ "$response" = "200" ]; then
+    echo "Health check passed"
+    exit 0
+else
+    echo "Health check failed with HTTP status: $response"
+    exit 1
+fi
+```
+
+### Comprehensive Health Check Script
+
+```python
+#!/usr/bin/env python3
+import requests
+import json
+import sys
+import time
+from datetime import datetime
+
+class OneKeyHealthChecker:
+    def __init__(self, base_url="https://api.onekey.so/api/v1"):
+        self.base_url = base_url
+        self.health_url = f"{base_url}/health"
+        
+    def check_health(self, detailed=True):
+        """Perform comprehensive health check"""
+        try:
+            params = {'detailed': 'true'} if detailed else {}
+            response = requests.get(self.health_url, params=params, timeout=10)
+            
+            if response.status_code != 200:
+                return {
+                    'success': False,
+                    'error': f'HTTP {response.status_code}',
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+            
+            return response.json()
+            
+        except requests.exceptions.Timeout:
+            return {
+                'success': False,
+                'error': 'Request timeout',
+                'timestamp': datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            }
+    
+    def validate_health(self, health_data):
+        """Validate health data and return issues"""
+        issues = []
+        
+        if not health_data.get('success'):
+            issues.append(f"Health check failed: {health_data.get('error')}")
+            return issues
+        
+        data = health_data.get('data', {})
+        status = data.get('status')
+        
+        if status == 'unhealthy':
+            issues.append("System is unhealthy")
+        elif status == 'degraded':
+            issues.append("System is degraded")
+        
+        # Check individual services
+        services = data.get('services', {})
+        for service_name, service_data in services.items():
+            service_status = service_data.get('status')
+            if service_status in ['unhealthy', 'degraded']:
+                issues.append(f"{service_name} service is {service_status}")
+            
+            # Check response times
+            response_time = service_data.get('responseTime')
+            if response_time and response_time > 5000:  # 5 seconds
+                issues.append(f"{service_name} has high response time: {response_time}ms")
+            
+            # Check error rates
+            error_rate = service_data.get('errorRate')
+            if error_rate and error_rate > 5.0:  # 5%
+                issues.append(f"{service_name} has high error rate: {error_rate}%")
+        
+        return issues
+    
+    def run_continuous_check(self, interval=30, max_failures=3):
+        """Run continuous health monitoring"""
+        consecutive_failures = 0
+        
+        print(f"Starting continuous health monitoring (interval: {interval}s)")
+        
+        while True:
+            try:
+                health = self.check_health(detailed=True)
+                issues = self.validate_health(health)
+                
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                if not issues:
+                    print(f"[{timestamp}] ✅ All systems healthy")
+                    consecutive_failures = 0
+                else:
+                    consecutive_failures += 1
+                    print(f"[{timestamp}] ⚠️  Issues detected:")
+                    for issue in issues:
+                        print(f"  - {issue}")
+                    
+                    if consecutive_failures >= max_failures:
+                        print(f"❌ Maximum consecutive failures ({max_failures}) reached")
+                        sys.exit(1)
+                
+                time.sleep(interval)
+                
+            except KeyboardInterrupt:
+                print("\n🛑 Monitoring stopped by user")
+                break
+            except Exception as e:
+                print(f"❌ Monitoring error: {e}")
+                time.sleep(interval)
+
+def main():
+    checker = OneKeyHealthChecker()
+    
+    if len(sys.argv) > 1 and sys.argv[1] == '--continuous':
+        checker.run_continuous_check()
+    else:
+        # Single health check
+        health = checker.check_health(detailed=True)
+        issues = checker.validate_health(health)
+        
+        print(json.dumps(health, indent=2))
+        
+        if issues:
+            print("\n⚠️  Issues detected:")
+            for issue in issues:
+                print(f"  - {issue}")
+            sys.exit(1)
+        else:
+            print("\n✅ All systems healthy")
+            sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+```
+
+## Rate Limiting
+
+This endpoint has generous rate limits to support monitoring:
+
+- **1000 requests per minute** per IP
+- **No authentication required**
+- Designed for high-frequency monitoring
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="exclamation-triangle" href="/resources/errors">
+    Understand error codes and troubleshooting
+  </Card>
+  <Card title="Rate Limits" icon="clock" href="/resources/rate-limits">
+    Learn about API rate limiting policies
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/resources/webhooks">
+    Set up real-time notifications
+  </Card>
+  <Card title="Authentication" icon="key" href="/api-reference/authentication/login">
+    Get started with API authentication
+  </Card>
+</CardGroup> 
