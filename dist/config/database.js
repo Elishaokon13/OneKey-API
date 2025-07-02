@@ -5,8 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.transaction = exports.query = exports.checkDatabaseHealth = exports.getDatabase = exports.closeDatabase = exports.initializeDatabase = void 0;
 const pg_1 = require("pg");
-const environment_1 = __importDefault(require("./environment"));
-const supabase_1 = require("./supabase");
+const environment_1 = __importDefault(require("@/config/environment"));
+const supabase_1 = require("@/config/supabase");
 // Database connection pool
 let pool = null;
 // Database configuration
