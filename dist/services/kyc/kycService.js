@@ -61,6 +61,24 @@ class KycService {
         }
         throw new Error(`Session ${sessionId} not found in any provider`);
     }
+    async getVerificationResult(sessionId) {
+        // Find which provider owns this session and start verification if needed
+        for (const service of this.providers.values()) {
+            try {
+                const session = await service.getSession(sessionId);
+                if (session) {
+                    // If session status is already completed, we would need to get cached result
+                    // For now, we'll use startVerification which should handle already processed sessions
+                    return service.startVerification(sessionId);
+                }
+            }
+            catch (error) {
+                // Session not found in this provider, continue
+                continue;
+            }
+        }
+        return null;
+    }
     getAvailableProviders() {
         return Array.from(this.providers.values())
             .map(service => service.getProviderConfig())
