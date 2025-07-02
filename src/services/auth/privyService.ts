@@ -1,6 +1,6 @@
 // import { PrivyApi } from '@privy-io/server-auth';
 // TODO: Update import when we have correct Privy SDK export name
-import config from '@/config/environment';
+import { config } from '../../config/environment';
 import { authService } from './authService';
 import { jwtService } from './jwtService';
 import {
