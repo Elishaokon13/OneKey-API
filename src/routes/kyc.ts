@@ -3,7 +3,7 @@
 import { Router, Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticateJWT } from '@/middleware/auth';
-import { applyRateLimit } from '@/middleware/rateLimiter';
+import { generalLimiter, kycLimiter } from '@/middleware/rateLimiter';
 import { KycService } from '@/services/kyc/kycService';
 import {
   CreateKycSessionRequest,
