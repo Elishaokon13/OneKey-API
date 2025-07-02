@@ -1,6 +1,6 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
 import { config } from './environment';
-import { initializeSupabase, checkSupabaseHealth, isSupabaseConfigured, closeSupabase } from '@/config/supabase';
+import { initializeSupabase, checkSupabaseHealth, isSupabaseConfigured, closeSupabase } from './supabase';
 
 // Database connection pool
 let pool: Pool | null = null;
