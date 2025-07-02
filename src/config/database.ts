@@ -53,7 +53,9 @@ export const initializeDatabase = async (): Promise<void> => {
     
     if (isSupabaseConfigured()) {
       console.log(`📊 Supabase URL: ${config.supabase.url}`);
-      console.log(`📊 PostgreSQL Pool: ${pool.options.host || 'connection string'}`);
+      if (pool) {
+        console.log(`📊 PostgreSQL Pool: ${pool.options.host || 'connection string'}`);
+      }
     } else {
       console.log(`📊 Connected to: ${config.database.host}:${config.database.port}/${config.database.name}`);
     }
