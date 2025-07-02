@@ -473,9 +473,9 @@ export class EasService extends BaseAttestationService {
       blockNumber: 0, // Would need to query
       blockTimestamp: Number(onChainAttestation.time),
       chainId: this.config.chainId,
-      status: onChainAttestation.revoked ? 'revoked' : 'confirmed',
-      revoked: onChainAttestation.revoked,
-      revokedAt: onChainAttestation.revoked ? Number(onChainAttestation.revocationTime) : undefined,
+      status: onChainAttestation.revocationTime > 0 ? 'revoked' : 'confirmed',
+      revoked: onChainAttestation.revocationTime > 0,
+      ...(onChainAttestation.revocationTime > 0 && { revokedAt: Number(onChainAttestation.revocationTime) }),
       createdAt: new Date(Number(onChainAttestation.time) * 1000).toISOString(),
       updatedAt: new Date().toISOString(),
       expiresAt: onChainAttestation.expirationTime > 0 
