@@ -9,6 +9,7 @@ import { runMigrations } from '@/database/migrator';
 // Import routes
 import authRoutes from '@/routes/auth';
 import privyRoutes from '@/routes/privy';
+import kycRoutes from '@/routes/kyc';
 import { privyService } from '@/services/auth/privyService';
 
 // Import custom middleware
