@@ -71,6 +71,24 @@ const config = {
         encryptionIv: process.env.ENCRYPTION_IV || 'dev-encryption-iv-change-in-production',
         hashSalt: process.env.HASH_SALT || 'dev-hash-salt-change-in-production',
     },
+    encryption: {
+        enabled: process.env.ENCRYPTION_ENABLED === 'true',
+        defaultAlgorithm: process.env.ENCRYPTION_ALGORITHM || 'aes-256-gcm',
+        keyDerivation: {
+            algorithm: process.env.KEY_DERIVATION_ALGORITHM || 'pbkdf2',
+            iterations: parseInt(process.env.KEY_DERIVATION_ITERATIONS || '100000'),
+            saltLength: parseInt(process.env.KEY_DERIVATION_SALT_LENGTH || '32'),
+            keyLength: parseInt(process.env.KEY_DERIVATION_KEY_LENGTH || '32'),
+            hashFunction: process.env.KEY_DERIVATION_HASH || 'sha256'
+        },
+        keyRotationInterval: parseInt(process.env.KEY_ROTATION_INTERVAL_HOURS || '24'),
+        maxKeyAge: parseInt(process.env.MAX_KEY_AGE_HOURS || '168'), // 7 days
+        compressionEnabled: process.env.ENCRYPTION_COMPRESSION_ENABLED !== 'false',
+        integrityCheckEnabled: process.env.ENCRYPTION_INTEGRITY_CHECK_ENABLED !== 'false',
+        maxFileSize: parseInt(process.env.ENCRYPTION_MAX_FILE_SIZE || '52428800'), // 50MB
+        masterKey: process.env.ENCRYPTION_MASTER_KEY || crypto.randomBytes(32).toString('hex'),
+        saltSeed: process.env.ENCRYPTION_SALT_SEED || crypto.randomBytes(16).toString('hex')
+    },
 };
 exports.config = config;
 //# sourceMappingURL=environment.js.map
