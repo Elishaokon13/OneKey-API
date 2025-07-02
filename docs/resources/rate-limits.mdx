@@ -1,1 +1,737 @@
- 
+---
+title: "Rate Limits"
+description: "OneKey API rate limiting policies and best practices for optimal performance"
+---
+
+## Overview
+
+OneKey API implements rate limiting to ensure fair usage and maintain service quality for all users. Rate limits are applied per API key and IP address, with different limits for various endpoint categories based on their computational requirements.
+
+<Note>
+Rate limits are designed to accommodate typical usage patterns while preventing abuse. Contact support if you need higher limits for legitimate use cases.
+</Note>
+
+## Rate Limit Structure
+
+### Standard Limits
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key">
+    **10 requests / minute**
+    
+    - Token generation and refresh
+    - User authentication
+    - Account management
+  </Card>
+  
+  <Card title="KYC Operations" icon="id-card">
+    **30 requests / 15 minutes**
+    
+    - Session creation
+    - Document upload
+    - Status checks
+    - Provider switching
+  </Card>
+  
+  <Card title="Encryption" icon="lock">
+    **50 requests / hour**
+    
+    - Data encryption/decryption
+    - Key generation
+    - File processing
+    - Batch operations
+  </Card>
+  
+  <Card title="Attestations" icon="shield">
+    **20 requests / hour**
+    
+    - Attestation creation
+    - Verification
+    - Revocation
+    - Blockchain queries
+  </Card>
+</CardGroup>
+
+### Premium Limits
+
+<Tabs>
+  <Tab title="Professional">
+    **Enhanced limits for production applications**
+    
+    | Category | Standard | Professional | Increase |
+    |----------|----------|--------------|----------|
+    | Authentication | 10/min | 50/min | 5x |
+    | KYC Operations | 30/15min | 100/15min | 3.3x |
+    | Encryption | 50/hour | 200/hour | 4x |
+    | Attestations | 20/hour | 100/hour | 5x |
+  </Tab>
+  
+  <Tab title="Enterprise">
+    **High-volume limits for enterprise applications**
+    
+    | Category | Standard | Enterprise | Increase |
+    |----------|----------|------------|----------|
+    | Authentication | 10/min | 200/min | 20x |
+    | KYC Operations | 30/15min | 500/15min | 16.7x |
+    | Encryption | 50/hour | 1000/hour | 20x |
+    | Attestations | 20/hour | 500/hour | 25x |
+  </Tab>
+  
+  <Tab title="Custom">
+    **Tailored limits for specific use cases**
+    
+    - Custom rate limits based on usage patterns
+    - Burst capacity for traffic spikes
+    - Dedicated infrastructure options
+    - SLA guarantees
+    - Priority support
+  </Tab>
+</Tabs>
+
+## Rate Limit Headers
+
+### Response Headers
+
+Every API response includes rate limit information in headers:
+
+```http
+HTTP/1.1 200 OK
+X-RateLimit-Limit: 30
+X-RateLimit-Remaining: 28
+X-RateLimit-Reset: 1705315500
+X-RateLimit-Window: 900
+X-RateLimit-Policy: 30-per-15-minutes
+```
+
+### Header Descriptions
+
+<AccordionGroup>
+  <Accordion title="X-RateLimit-Limit">
+    **Maximum requests allowed**
+    
+    - Total number of requests allowed in the time window
+    - Varies by endpoint and plan tier
+    - Resets at the start of each window
+  </Accordion>
+  
+  <Accordion title="X-RateLimit-Remaining">
+    **Requests remaining**
+    
+    - Number of requests left in current window
+    - Decrements with each request
+    - Resets when window expires
+  </Accordion>
+  
+  <Accordion title="X-RateLimit-Reset">
+    **Reset timestamp**
+    
+    - Unix timestamp when the rate limit resets
+    - Use to calculate wait time
+    - Updates with each response
+  </Accordion>
+  
+  <Accordion title="X-RateLimit-Window">
+    **Window duration**
+    
+    - Length of rate limit window in seconds
+    - Fixed per endpoint category
+    - Used for client-side rate limiting
+  </Accordion>
+</AccordionGroup>
+
+## Rate Limit Handling
+
+### Basic Rate Limit Check
+
+```javascript
+// Check rate limit status before making requests
+const checkRateLimit = (response) => {
+  const limit = parseInt(response.headers.get('X-RateLimit-Limit'));
+  const remaining = parseInt(response.headers.get('X-RateLimit-Remaining'));
+  const reset = parseInt(response.headers.get('X-RateLimit-Reset'));
+  
+  return {
+    limit,
+    remaining,
+    reset,
+    resetDate: new Date(reset * 1000),
+    percentUsed: ((limit - remaining) / limit) * 100
+  };
+};
+
+// Usage
+const response = await fetch('/api/v1/kyc/sessions', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+
+const rateLimit = checkRateLimit(response);
+console.log(`Rate limit: ${rateLimit.remaining}/${rateLimit.limit} remaining`);
+```
+
+### Exponential Backoff
+
+```javascript
+class RateLimitHandler {
+  constructor(maxRetries = 3, baseDelay = 1000) {
+    this.maxRetries = maxRetries;
+    this.baseDelay = baseDelay;
+  }
+  
+  async makeRequest(requestFn) {
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        const response = await requestFn();
+        
+        // Check if we're approaching rate limit
+        const remaining = parseInt(response.headers.get('X-RateLimit-Remaining'));
+        if (remaining < 5) {
+          console.warn('Approaching rate limit, consider throttling requests');
+        }
+        
+        return response;
+        
+      } catch (error) {
+        if (error.status === 429 && attempt < this.maxRetries) {
+          // Rate limit exceeded, calculate wait time
+          const retryAfter = error.headers.get('Retry-After');
+          const delay = retryAfter ? 
+            parseInt(retryAfter) * 1000 : 
+            this.baseDelay * Math.pow(2, attempt);
+          
+          console.log(`Rate limited. Waiting ${delay}ms before retry ${attempt + 1}`);
+          await this.sleep(delay);
+          continue;
+        }
+        
+        throw error;
+      }
+    }
+    
+    throw new Error('Max retries exceeded for rate limited request');
+  }
+  
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// Usage
+const rateLimitHandler = new RateLimitHandler();
+
+const result = await rateLimitHandler.makeRequest(async () => {
+  return await onekey.kyc.createSession(sessionData);
+});
+```
+
+### Client-Side Rate Limiting
+
+```javascript
+class ClientRateLimiter {
+  constructor() {
+    this.requestQueue = new Map(); // endpoint -> queue
+    this.lastRequestTime = new Map(); // endpoint -> timestamp
+    this.requestCounts = new Map(); // endpoint -> count
+    
+    // Rate limit configurations per endpoint
+    this.limits = {
+      'auth': { requests: 10, window: 60000 }, // 10 per minute
+      'kyc': { requests: 30, window: 900000 }, // 30 per 15 minutes
+      'encryption': { requests: 50, window: 3600000 }, // 50 per hour
+      'attestation': { requests: 20, window: 3600000 } // 20 per hour
+    };
+  }
+  
+  async throttle(endpoint) {
+    const category = this.getCategory(endpoint);
+    const limit = this.limits[category];
+    
+    if (!limit) return; // No limit configured
+    
+    const now = Date.now();
+    const windowStart = now - limit.window;
+    
+    // Clean old requests
+    const requests = this.requestCounts.get(category) || [];
+    const validRequests = requests.filter(time => time > windowStart);
+    
+    if (validRequests.length >= limit.requests) {
+      // Rate limit would be exceeded, wait
+      const oldestRequest = Math.min(...validRequests);
+      const waitTime = oldestRequest + limit.window - now;
+      
+      if (waitTime > 0) {
+        console.log(`Client rate limiting: waiting ${waitTime}ms`);
+        await this.sleep(waitTime);
+      }
+    }
+    
+    // Record this request
+    validRequests.push(now);
+    this.requestCounts.set(category, validRequests);
+  }
+  
+  getCategory(endpoint) {
+    if (endpoint.includes('/auth/')) return 'auth';
+    if (endpoint.includes('/kyc/')) return 'kyc';
+    if (endpoint.includes('/encryption/')) return 'encryption';
+    if (endpoint.includes('/attestation')) return 'attestation';
+    return 'default';
+  }
+  
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+// Usage
+const rateLimiter = new ClientRateLimiter();
+
+async function makeAPICall(endpoint, options) {
+  await rateLimiter.throttle(endpoint);
+  return await fetch(endpoint, options);
+}
+```
+
+## Advanced Strategies
+
+### Request Batching
+
+```javascript
+class RequestBatcher {
+  constructor(batchSize = 10, flushInterval = 1000) {
+    this.batchSize = batchSize;
+    this.flushInterval = flushInterval;
+    this.batches = new Map(); // endpoint -> batch
+    this.timers = new Map(); // endpoint -> timer
+  }
+  
+  async addRequest(endpoint, request) {
+    const batch = this.batches.get(endpoint) || [];
+    batch.push(request);
+    
+    this.batches.set(endpoint, batch);
+    
+    // Set flush timer if not already set
+    if (!this.timers.has(endpoint)) {
+      const timer = setTimeout(() => {
+        this.flush(endpoint);
+      }, this.flushInterval);
+      
+      this.timers.set(endpoint, timer);
+    }
+    
+    // Flush immediately if batch is full
+    if (batch.length >= this.batchSize) {
+      this.flush(endpoint);
+    }
+    
+    return new Promise((resolve, reject) => {
+      request.resolve = resolve;
+      request.reject = reject;
+    });
+  }
+  
+  flush(endpoint) {
+    const batch = this.batches.get(endpoint);
+    if (!batch || batch.length === 0) return;
+    
+    // Clear timer
+    const timer = this.timers.get(endpoint);
+    if (timer) {
+      clearTimeout(timer);
+      this.timers.delete(endpoint);
+    }
+    
+    // Process batch
+    this.processBatch(endpoint, batch);
+    
+    // Clear batch
+    this.batches.set(endpoint, []);
+  }
+  
+  async processBatch(endpoint, batch) {
+    try {
+      // Example: Batch encryption requests
+      if (endpoint.includes('/encryption/encrypt')) {
+        const batchRequest = {
+          operations: batch.map(req => req.data)
+        };
+        
+        const response = await fetch('/api/v1/encryption/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(batchRequest)
+        });
+        
+        const results = await response.json();
+        
+        // Resolve individual promises
+        batch.forEach((req, index) => {
+          req.resolve(results.data[index]);
+        });
+      }
+    } catch (error) {
+      // Reject all promises in batch
+      batch.forEach(req => req.reject(error));
+    }
+  }
+}
+```
+
+### Priority Queue
+
+```javascript
+class PriorityRequestQueue {
+  constructor() {
+    this.queues = {
+      high: [],
+      normal: [],
+      low: []
+    };
+    this.processing = false;
+  }
+  
+  async enqueue(request, priority = 'normal') {
+    return new Promise((resolve, reject) => {
+      this.queues[priority].push({
+        ...request,
+        resolve,
+        reject,
+        timestamp: Date.now()
+      });
+      
+      this.processQueue();
+    });
+  }
+  
+  async processQueue() {
+    if (this.processing) return;
+    this.processing = true;
+    
+    while (this.hasRequests()) {
+      const request = this.dequeue();
+      if (!request) break;
+      
+      try {
+        const result = await this.executeRequest(request);
+        request.resolve(result);
+      } catch (error) {
+        request.reject(error);
+      }
+      
+      // Respect rate limits
+      await this.respectRateLimit();
+    }
+    
+    this.processing = false;
+  }
+  
+  dequeue() {
+    // Process high priority first
+    if (this.queues.high.length > 0) {
+      return this.queues.high.shift();
+    }
+    if (this.queues.normal.length > 0) {
+      return this.queues.normal.shift();
+    }
+    if (this.queues.low.length > 0) {
+      return this.queues.low.shift();
+    }
+    return null;
+  }
+  
+  hasRequests() {
+    return Object.values(this.queues).some(queue => queue.length > 0);
+  }
+  
+  async executeRequest(request) {
+    // Execute the actual API request
+    return await fetch(request.url, request.options);
+  }
+  
+  async respectRateLimit() {
+    // Simple delay to respect rate limits
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
+```
+
+## Rate Limit Monitoring
+
+### Dashboard Integration
+
+```javascript
+class RateLimitMonitor {
+  constructor() {
+    this.metrics = {
+      totalRequests: 0,
+      rateLimitHits: 0,
+      averageWaitTime: 0,
+      endpointStats: new Map()
+    };
+    
+    this.startTime = Date.now();
+  }
+  
+  recordRequest(endpoint, responseHeaders, waitTime = 0) {
+    this.metrics.totalRequests++;
+    
+    // Check if rate limited
+    const remaining = parseInt(responseHeaders.get('X-RateLimit-Remaining'));
+    if (remaining === 0 || waitTime > 0) {
+      this.metrics.rateLimitHits++;
+      this.updateAverageWaitTime(waitTime);
+    }
+    
+    // Update endpoint stats
+    const category = this.getEndpointCategory(endpoint);
+    const stats = this.metrics.endpointStats.get(category) || {
+      requests: 0,
+      rateLimitHits: 0,
+      totalWaitTime: 0
+    };
+    
+    stats.requests++;
+    if (waitTime > 0) {
+      stats.rateLimitHits++;
+      stats.totalWaitTime += waitTime;
+    }
+    
+    this.metrics.endpointStats.set(category, stats);
+  }
+  
+  updateAverageWaitTime(waitTime) {
+    const currentAvg = this.metrics.averageWaitTime;
+    const hitCount = this.metrics.rateLimitHits;
+    
+    this.metrics.averageWaitTime = 
+      ((currentAvg * (hitCount - 1)) + waitTime) / hitCount;
+  }
+  
+  getDashboard() {
+    const runtime = Date.now() - this.startTime;
+    const requestsPerSecond = this.metrics.totalRequests / (runtime / 1000);
+    const rateLimitRate = (this.metrics.rateLimitHits / this.metrics.totalRequests) * 100;
+    
+    return {
+      uptime: runtime,
+      totalRequests: this.metrics.totalRequests,
+      requestsPerSecond: requestsPerSecond.toFixed(2),
+      rateLimitHits: this.metrics.rateLimitHits,
+      rateLimitRate: rateLimitRate.toFixed(2) + '%',
+      averageWaitTime: this.metrics.averageWaitTime.toFixed(0) + 'ms',
+      endpointBreakdown: Array.from(this.metrics.endpointStats.entries()).map(([endpoint, stats]) => ({
+        endpoint,
+        requests: stats.requests,
+        rateLimitHits: stats.rateLimitHits,
+        averageWaitTime: stats.rateLimitHits > 0 ? 
+          (stats.totalWaitTime / stats.rateLimitHits).toFixed(0) + 'ms' : '0ms'
+      }))
+    };
+  }
+  
+  getEndpointCategory(endpoint) {
+    if (endpoint.includes('/auth/')) return 'Authentication';
+    if (endpoint.includes('/kyc/')) return 'KYC';
+    if (endpoint.includes('/encryption/')) return 'Encryption';
+    if (endpoint.includes('/attestation')) return 'Attestation';
+    return 'Other';
+  }
+}
+
+// Usage
+const monitor = new RateLimitMonitor();
+
+// In your API wrapper
+async function apiRequest(endpoint, options) {
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch(endpoint, options);
+    const waitTime = Date.now() - startTime;
+    
+    monitor.recordRequest(endpoint, response.headers, 
+      response.status === 429 ? waitTime : 0);
+    
+    return response;
+  } catch (error) {
+    monitor.recordRequest(endpoint, new Headers(), Date.now() - startTime);
+    throw error;
+  }
+}
+
+// View dashboard
+console.log(monitor.getDashboard());
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Proactive Rate Limiting">
+    **Implement client-side controls**
+    
+    - Track your own request counts
+    - Implement request queuing
+    - Use exponential backoff
+    - Monitor rate limit headers
+    - Plan for peak usage
+    
+    ```javascript
+    // Simple client-side rate limiter
+    class SimpleRateLimiter {
+      constructor(requestsPerMinute = 30) {
+        this.limit = requestsPerMinute;
+        this.requests = [];
+      }
+      
+      async waitIfNeeded() {
+        const now = Date.now();
+        const oneMinuteAgo = now - 60000;
+        
+        // Remove old requests
+        this.requests = this.requests.filter(time => time > oneMinuteAgo);
+        
+        if (this.requests.length >= this.limit) {
+          const waitTime = this.requests[0] + 60000 - now;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+        
+        this.requests.push(now);
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    **Graceful degradation strategies**
+    
+    - Always handle 429 responses
+    - Implement retry logic with backoff
+    - Cache responses when possible
+    - Provide user feedback
+    - Log rate limit events
+    
+    ```javascript
+    const handleRateLimitError = (error) => {
+      if (error.status === 429) {
+        const retryAfter = error.headers.get('Retry-After');
+        const message = `Rate limit exceeded. Please try again in ${retryAfter} seconds.`;
+        
+        // Show user-friendly message
+        showNotification(message, 'warning');
+        
+        // Log for monitoring
+        logger.warn('Rate limit exceeded', {
+          endpoint: error.url,
+          retryAfter,
+          timestamp: new Date().toISOString()
+        });
+        
+        return true; // Handled
+      }
+      
+      return false; // Not a rate limit error
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Performance Optimization">
+    **Maximize efficiency within limits**
+    
+    - Batch requests when possible
+    - Cache frequently accessed data
+    - Use webhooks for real-time updates
+    - Optimize request timing
+    - Monitor usage patterns
+    
+    ```javascript
+    // Intelligent request scheduling
+    class RequestScheduler {
+      constructor() {
+        this.schedules = new Map(); // endpoint -> next available time
+      }
+      
+      getOptimalTime(endpoint) {
+        const category = this.getCategory(endpoint);
+        const limit = this.getLimitForCategory(category);
+        const interval = limit.window / limit.requests;
+        
+        const lastTime = this.schedules.get(category) || 0;
+        const nextTime = Math.max(Date.now(), lastTime + interval);
+        
+        this.schedules.set(category, nextTime);
+        return nextTime;
+      }
+      
+      async scheduleRequest(endpoint, requestFn) {
+        const optimalTime = this.getOptimalTime(endpoint);
+        const delay = optimalTime - Date.now();
+        
+        if (delay > 0) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        return await requestFn();
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Upgrading Limits
+
+### When to Upgrade
+
+<CardGroup cols={2}>
+  <Card title="High Usage" icon="trending-up">
+    **Consistently hitting limits**
+    
+    - 80%+ of requests near rate limits
+    - Frequent 429 errors
+    - User experience degradation
+    - Business growth requirements
+  </Card>
+  
+  <Card title="Production Scale" icon="server">
+    **Enterprise requirements**
+    
+    - Multiple production environments
+    - High-availability needs
+    - Compliance requirements
+    - SLA guarantees needed
+  </Card>
+</CardGroup>
+
+### Upgrade Process
+
+<Steps>
+  <Step title="Analyze Usage">
+    Review your current usage patterns and rate limit hit frequency
+  </Step>
+  <Step title="Choose Plan">
+    Select the appropriate tier based on your requirements
+  </Step>
+  <Step title="Contact Sales">
+    Reach out to discuss custom enterprise solutions if needed
+  </Step>
+  <Step title="Test New Limits">
+    Verify the increased limits meet your application needs
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="exclamation-triangle" href="/resources/errors">
+    Learn how to handle rate limit errors gracefully
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/resources/webhooks">
+    Use webhooks to reduce polling and API calls
+  </Card>
+  <Card title="Optimization Guide" icon="zap" href="/guides/performance">
+    Advanced techniques for API performance optimization
+  </Card>
+  <Card title="Enterprise Plans" icon="building" href="mailto:sales@onekey.so">
+    Discuss custom rate limits for enterprise needs
+  </Card>
+</CardGroup> 
