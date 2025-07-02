@@ -7,7 +7,7 @@
 
 import { Router } from 'express';
 import { body, param, validationResult } from 'express-validator';
-import { authenticate } from '@/middleware/auth';
+import { authenticateJWT } from '@/middleware/auth';
 import { rateLimiter } from '@/middleware/rateLimiter';
 import { encryptionService } from '@/services/encryption/encryptionService';
 import {
