@@ -290,8 +290,8 @@ export class EasService extends BaseAttestationService {
         },
       };
 
-      // Estimate gas for the transaction
-      const estimatedGas = await this.eas.attest.estimateGas(attestationRequest);
+      // Estimate gas for the transaction (using reasonable default since EAS SDK doesn't expose estimateGas)
+      const estimatedGas = BigInt(350000); // Typical gas for EAS attestation
       
       // Get current gas price
       let gasPrice: bigint;
