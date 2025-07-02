@@ -29,6 +29,7 @@ export interface PrivyAuthRequest {
     idToken?: string;
     sessionToken?: string;
     clientSideVerification?: boolean;
+    metadata?: Record<string, any>;
 }
 export interface PrivyAuthResult {
     user: PrivyUser;
@@ -69,9 +70,9 @@ export interface PrivyLinkAccountRequest {
 export interface PrivyWalletData {
     address: string;
     chainType: 'ethereum' | 'solana';
-    chainId?: string;
-    walletClient?: string;
-    connectorType?: string;
+    chainId?: string | undefined;
+    walletClient?: string | undefined;
+    connectorType?: string | undefined;
 }
 export interface PrivyEmailData {
     email: string;
