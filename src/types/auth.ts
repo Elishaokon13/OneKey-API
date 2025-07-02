@@ -40,7 +40,7 @@ export interface AuthTokens {
 export interface JWTPayload {
   user_id: string;
   email: string;
-  wallet_address?: string;
+  wallet_address?: string | undefined;
   iat: number;
   exp: number;
   type: 'access' | 'refresh';
