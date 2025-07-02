@@ -12,9 +12,9 @@ export interface User {
 export interface CreateUserRequest {
     email: string;
     password: string;
-    wallet_address?: string;
-    passkey_id?: string;
-    metadata?: Record<string, any>;
+    wallet_address?: string | undefined;
+    passkey_id?: string | undefined;
+    metadata?: Record<string, any> | undefined;
 }
 export interface LoginRequest {
     email: string;
@@ -35,7 +35,7 @@ export interface AuthTokens {
 export interface JWTPayload {
     user_id: string;
     email: string;
-    wallet_address?: string;
+    wallet_address?: string | undefined;
     iat: number;
     exp: number;
     type: 'access' | 'refresh';
