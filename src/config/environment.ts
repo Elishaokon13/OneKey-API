@@ -166,8 +166,8 @@ const config: Config = {
     compressionEnabled: process.env.ENCRYPTION_COMPRESSION_ENABLED !== 'false',
     integrityCheckEnabled: process.env.ENCRYPTION_INTEGRITY_CHECK_ENABLED !== 'false',
     maxFileSize: parseInt(process.env.ENCRYPTION_MAX_FILE_SIZE || '52428800'), // 50MB
-    masterKey: process.env.ENCRYPTION_MASTER_KEY || crypto.randomBytes(32).toString('hex'),
-    saltSeed: process.env.ENCRYPTION_SALT_SEED || crypto.randomBytes(16).toString('hex')
+    masterKey: process.env.ENCRYPTION_MASTER_KEY || 'dev-master-key-change-in-production',
+    saltSeed: process.env.ENCRYPTION_SALT_SEED || 'dev-salt-seed-change-in-production'
   },
 };
 
