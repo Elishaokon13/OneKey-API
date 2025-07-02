@@ -75,7 +75,13 @@ app.use(sanitizeRequest);
 app.get('/health', async (req, res) => {
   try {
     const dbHealth = await checkDatabaseHealth();
-    const overallStatus = dbHealth.status === 'healthy' ? 'OK' : 'DEGRADED';
+    const privyHealth = privyService.getHealthStatus();
+    
+    // Determine overall status
+    let overallStatus = 'OK';
+    if (dbHealth.status !== 'healthy') {
+      overallStatus = 'DEGRADED';
+    }
     
     res.status(overallStatus === 'OK' ? 200 : 503).json({
       status: overallStatus,
@@ -84,7 +90,15 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       environment: config.server.nodeEnv,
       uptime: process.uptime(),
-      database: dbHealth,
+      components: {
+        database: dbHealth,
+        privy: {
+          status: privyHealth.configured && privyHealth.initialized ? 'operational' : 'disabled',
+          configured: privyHealth.configured,
+          initialized: privyHealth.initialized,
+          appId: privyHealth.appId
+        }
+      },
       requestId: req.headers['x-request-id']
     });
   } catch (error) {
@@ -95,7 +109,10 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       environment: config.server.nodeEnv,
       uptime: process.uptime(),
-      database: { status: 'error', error: (error as Error).message },
+      components: {
+        database: { status: 'error', error: (error as Error).message },
+        privy: { status: 'error', error: 'Health check failed' }
+      },
       requestId: req.headers['x-request-id']
     });
   }
