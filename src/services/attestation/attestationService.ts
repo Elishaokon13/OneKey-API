@@ -38,7 +38,7 @@ export class AttestationService {
       attesterAddress: config.blockchain.attesterAddress,
       defaultSchemaId: config.blockchain.easSchemaId,
       gasLimit: 500000,
-      gasPrice: undefined, // Will be estimated
+      gasPrice: '20', // Default gas price in gwei
       gasPriceStrategy: 'estimate',
       enableRevocation: true,
       defaultExpirationHours: 365 * 24, // 1 year
