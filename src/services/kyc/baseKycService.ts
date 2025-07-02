@@ -93,6 +93,10 @@ export abstract class BaseKycService implements IKycService {
     return `${this.provider}_${timestamp}_${random}`;
   }
 
+  getProviderConfig(): KycProviderConfig {
+    return this.config;
+  }
+
   protected abstract createProviderSession(session: KycSession, request: CreateKycSessionRequest): Promise<void>;
   protected abstract performVerification(session: KycSession): Promise<KycVerificationResult>;
   protected abstract checkProviderHealth(): Promise<Record<string, any>>;
