@@ -1,24 +1,21 @@
 "use strict";
 // OneKey KYC API - Onfido Service
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OnfidoService = void 0;
 const baseKycService_1 = require("./baseKycService");
 const kyc_1 = require("@/types/kyc");
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = require("../../config/environment");
 class OnfidoService extends baseKycService_1.BaseKycService {
     provider = 'onfido';
     constructor() {
         const providerConfig = {
             provider: 'onfido',
-            enabled: !!environment_1.default.kycProviders.onfido.apiKey,
+            enabled: !!environment_1.config.kycProviders.onfido.apiKey,
             priority: 2,
             config: {
-                apiKey: environment_1.default.kycProviders.onfido.apiKey,
+                apiKey: environment_1.config.kycProviders.onfido.apiKey,
                 baseUrl: 'https://api.onfido.com/v3.6',
-                testMode: environment_1.default.server.nodeEnv !== 'production'
+                testMode: environment_1.config.server.nodeEnv !== 'production'
             },
             capabilities: {
                 documentVerification: true,
@@ -121,7 +118,7 @@ class OnfidoService extends baseKycService_1.BaseKycService {
         return {
             status: this.config.enabled ? 'operational' : 'disabled',
             apiConnectivity: this.config.enabled,
-            configuration: !!environment_1.default.kycProviders.onfido.apiKey,
+            configuration: !!environment_1.config.kycProviders.onfido.apiKey,
             supportedCountries: this.config.supportedCountries.length,
             lastChecked: new Date().toISOString()
         };
