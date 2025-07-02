@@ -121,6 +121,28 @@ export const checkDatabaseHealth = async (): Promise<{
     };
   };
 }> => {
+  // Handle Supabase-only mode
+  if (isSupabaseConfigured() && !pool) {
+    const supabaseStatus = await checkSupabaseHealth();
+    return {
+      status: supabaseStatus.status === 'healthy' ? 'healthy' : 'unhealthy',
+      details: {
+        connected: supabaseStatus.details.connected,
+        totalConnections: 0, // N/A for Supabase mode
+        idleConnections: 0,  // N/A for Supabase mode
+        waitingConnections: 0, // N/A for Supabase mode
+        serverVersion: 'Supabase (managed)',
+        uptime: 'N/A (managed service)',
+        supabase: {
+          status: supabaseStatus.status,
+          publicClient: supabaseStatus.details.publicClient,
+          serviceClient: supabaseStatus.details.serviceClient,
+          ...(supabaseStatus.details.url && { url: supabaseStatus.details.url }),
+        },
+      },
+    };
+  }
+
   if (!pool) {
     return {
       status: 'disconnected',
