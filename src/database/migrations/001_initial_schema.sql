@@ -9,6 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255), -- Hashed password for email/password auth
     wallet_address VARCHAR(255) UNIQUE, -- Privy wallet address
     passkey_id VARCHAR(255), -- Alternative authentication
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
