@@ -1,5 +1,5 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
-import config from '@/config/environment';
+import { config } from './environment';
 import { initializeSupabase, checkSupabaseHealth, isSupabaseConfigured, closeSupabase } from '@/config/supabase';
 
 // Database connection pool
