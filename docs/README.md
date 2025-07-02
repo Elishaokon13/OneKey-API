@@ -115,6 +115,7 @@ All documentation files use MDX (Markdown + JSX), which allows you to:
 #### Code Examples
 ```mdx
 <CodeGroup>
+
 ```javascript JavaScript
 const response = await fetch('/api/endpoint');
 ```
@@ -122,6 +123,7 @@ const response = await fetch('/api/endpoint');
 ```python Python
 response = requests.get('/api/endpoint')
 ```
+
 </CodeGroup>
 ```
 
