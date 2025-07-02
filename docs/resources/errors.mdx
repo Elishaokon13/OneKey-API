@@ -1,1 +1,538 @@
- 
+---
+title: "Error Codes"
+description: "Complete reference for OneKey API error codes and troubleshooting"
+---
+
+## Overview
+
+OneKey API uses standard HTTP status codes and provides detailed error information to help developers identify and resolve issues quickly. All errors include a structured response with error codes, messages, and debugging information.
+
+<Note>
+All API responses follow a consistent error format with actionable error codes and detailed troubleshooting information.
+</Note>
+
+## Error Response Format
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed",
+    "details": {
+      "field": "email",
+      "issue": "Invalid email format",
+      "expected": "Valid email address"
+    },
+    "requestId": "req_123456789",
+    "timestamp": "2024-01-15T10:30:45.123Z",
+    "documentation": "https://docs.onekey.so/errors/validation"
+  }
+}
+```
+
+## HTTP Status Codes
+
+<CardGroup cols={2}>
+  <Card title="2xx Success" icon="check" color="#10B981">
+    **200-299**: Request successful
+    
+    - `200 OK`: Standard success
+    - `201 Created`: Resource created
+    - `202 Accepted`: Async operation started
+  </Card>
+  
+  <Card title="4xx Client Error" icon="exclamation-triangle" color="#F59E0B">
+    **400-499**: Client-side error
+    
+    - `400 Bad Request`: Invalid request data
+    - `401 Unauthorized`: Missing/invalid authentication
+    - `403 Forbidden`: Insufficient permissions
+    - `404 Not Found`: Resource not found
+    - `429 Too Many Requests`: Rate limit exceeded
+  </Card>
+  
+  <Card title="5xx Server Error" icon="x-circle" color="#EF4444">
+    **500-599**: Server-side error
+    
+    - `500 Internal Server Error`: Unexpected server error
+    - `502 Bad Gateway`: Upstream service error
+    - `503 Service Unavailable`: Service temporarily down
+  </Card>
+  
+  <Card title="Custom Codes" icon="code" color="#8B5CF6">
+    **OneKey-specific codes**
+    
+    - Error categories for different services
+    - Detailed error context
+    - Resolution recommendations
+  </Card>
+</CardGroup>
+
+## Error Categories
+
+<Tabs>
+  <Tab title="Authentication">
+    **AUTH_*** Error Codes**
+    
+    | Code | HTTP | Description | Resolution |
+    |------|------|-------------|------------|
+    | `AUTH_TOKEN_MISSING` | 401 | JWT token not provided | Include `Authorization: Bearer <token>` header |
+    | `AUTH_TOKEN_INVALID` | 401 | JWT token is malformed or expired | Generate new token using `/auth/token` |
+    | `AUTH_TOKEN_EXPIRED` | 401 | JWT token has expired | Refresh token or re-authenticate |
+    | `AUTH_INSUFFICIENT_PERMISSIONS` | 403 | User lacks required permissions | Contact support to upgrade permissions |
+    | `AUTH_ACCOUNT_SUSPENDED` | 403 | User account is suspended | Contact support for account review |
+    
+    ```javascript
+    // Example: Handling authentication errors
+    try {
+      const response = await fetch('/api/v1/kyc/sessions', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      if (error.code === 'AUTH_TOKEN_EXPIRED') {
+        // Refresh token and retry
+        token = await refreshToken();
+        // Retry request...
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Validation">
+    **VALIDATION_*** Error Codes**
+    
+    | Code | HTTP | Description | Resolution |
+    |------|------|-------------|------------|
+    | `VALIDATION_REQUIRED_FIELD` | 400 | Required field missing | Include all required fields in request |
+    | `VALIDATION_INVALID_FORMAT` | 400 | Field format is incorrect | Check field format requirements |
+    | `VALIDATION_OUT_OF_RANGE` | 400 | Value outside allowed range | Use values within specified limits |
+    | `VALIDATION_UNSUPPORTED_TYPE` | 400 | Unsupported file/data type | Use supported formats (see docs) |
+    | `VALIDATION_SIZE_EXCEEDED` | 400 | File/data size too large | Reduce size below limit |
+    
+    ```javascript
+    // Example: Handling validation errors
+    const createSession = async (userData) => {
+      try {
+        return await onekey.kyc.create(userData);
+      } catch (error) {
+        if (error.code === 'VALIDATION_REQUIRED_FIELD') {
+          console.error(`Missing field: ${error.details.field}`);
+          // Show user which field is missing
+        }
+      }
+    };
+    ```
+  </Tab>
+  
+  <Tab title="KYC">
+    **KYC_*** Error Codes**
+    
+    | Code | HTTP | Description | Resolution |
+    |------|------|-------------|------------|
+    | `KYC_SESSION_NOT_FOUND` | 404 | KYC session doesn't exist | Verify session ID is correct |
+    | `KYC_SESSION_EXPIRED` | 400 | KYC session has expired | Create new session |
+    | `KYC_PROVIDER_ERROR` | 502 | External KYC provider error | Retry or contact support |
+    | `KYC_INVALID_DOCUMENT` | 400 | Document format not supported | Use supported document types |
+    | `KYC_VERIFICATION_FAILED` | 400 | Identity verification failed | Review and resubmit documents |
+    
+    ```javascript
+    // Example: KYC error handling
+    const handleKYCError = (error) => {
+      switch (error.code) {
+        case 'KYC_SESSION_EXPIRED':
+          // Create new session
+          return createNewKYCSession();
+        case 'KYC_INVALID_DOCUMENT':
+          // Show supported formats
+          showDocumentRequirements();
+          break;
+        case 'KYC_VERIFICATION_FAILED':
+          // Show specific failure reasons
+          displayFailureReasons(error.details);
+          break;
+      }
+    };
+    ```
+  </Tab>
+  
+  <Tab title="Encryption">
+    **ENCRYPTION_*** Error Codes**
+    
+    | Code | HTTP | Description | Resolution |
+    |------|------|-------------|------------|
+    | `ENCRYPTION_KEY_INVALID` | 400 | Encryption key is invalid | Verify key format and strength |
+    | `ENCRYPTION_DECRYPTION_FAILED` | 400 | Decryption failed | Check password/key is correct |
+    | `ENCRYPTION_ALGORITHM_UNSUPPORTED` | 400 | Unsupported encryption algorithm | Use supported algorithms |
+    | `ENCRYPTION_DATA_CORRUPTED` | 400 | Encrypted data is corrupted | Re-encrypt and retry |
+    | `ENCRYPTION_KEY_EXPIRED` | 400 | Encryption key has expired | Generate new key |
+    
+    ```javascript
+    // Example: Encryption error handling
+    const handleEncryptionError = (error) => {
+      switch (error.code) {
+        case 'ENCRYPTION_DECRYPTION_FAILED':
+          // Prompt for correct password
+          promptPasswordCorrection();
+          break;
+        case 'ENCRYPTION_KEY_EXPIRED':
+          // Generate new key
+          await generateNewEncryptionKey();
+          break;
+      }
+    };
+    ```
+  </Tab>
+  
+  <Tab title="Attestation">
+    **ATTESTATION_*** Error Codes**
+    
+    | Code | HTTP | Description | Resolution |
+    |------|------|-------------|------------|
+    | `ATTESTATION_NOT_FOUND` | 404 | Attestation UID not found | Verify UID is correct |
+    | `ATTESTATION_CREATION_FAILED` | 500 | Failed to create attestation | Retry or contact support |
+    | `ATTESTATION_REVOKED` | 400 | Attestation has been revoked | Create new attestation |
+    | `ATTESTATION_EXPIRED` | 400 | Attestation has expired | Create new attestation |
+    | `ATTESTATION_INVALID_RECIPIENT` | 400 | Invalid recipient address | Use valid Ethereum address |
+    
+    ```javascript
+    // Example: Attestation error handling
+    const verifyAttestation = async (uid) => {
+      try {
+        return await onekey.attestations.verify(uid);
+      } catch (error) {
+        switch (error.code) {
+          case 'ATTESTATION_EXPIRED':
+            // Suggest renewal
+            return { valid: false, reason: 'expired', action: 'renew' };
+          case 'ATTESTATION_REVOKED':
+            // Require new verification
+            return { valid: false, reason: 'revoked', action: 'reverify' };
+        }
+      }
+    };
+    ```
+  </Tab>
+</Tabs>
+
+## Rate Limiting Errors
+
+### Rate Limit Response
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Rate limit exceeded for this endpoint",
+    "details": {
+      "limit": 30,
+      "window": "15 minutes",
+      "remaining": 0,
+      "resetTime": "2024-01-15T10:45:00.000Z"
+    }
+  },
+  "headers": {
+    "X-RateLimit-Limit": "30",
+    "X-RateLimit-Remaining": "0",
+    "X-RateLimit-Reset": "1705315500",
+    "Retry-After": "900"
+  }
+}
+```
+
+### Rate Limit Codes
+
+<AccordionGroup>
+  <Accordion title="RATE_LIMIT_EXCEEDED">
+    **Too many requests**
+    
+    - **Cause**: Exceeded the rate limit for an endpoint
+    - **Resolution**: Wait for rate limit reset or implement backoff
+    - **Prevention**: Implement client-side rate limiting
+    
+    ```javascript
+    // Rate limit handling with exponential backoff
+    const withRateLimit = async (request, maxRetries = 3) => {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          return await request();
+        } catch (error) {
+          if (error.code === 'RATE_LIMIT_EXCEEDED') {
+            const delay = Math.pow(2, i) * 1000; // Exponential backoff
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          throw error;
+        }
+      }
+      throw new Error('Max retries exceeded');
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="RATE_LIMIT_IP_BLOCKED">
+    **IP address blocked**
+    
+    - **Cause**: IP address temporarily blocked due to abuse
+    - **Resolution**: Contact support or wait for automatic unblock
+    - **Prevention**: Implement proper rate limiting and monitoring
+  </Accordion>
+</AccordionGroup>
+
+## Common Error Scenarios
+
+### Scenario 1: KYC Session Creation
+
+```javascript
+// Common errors during KYC session creation
+try {
+  const session = await onekey.kyc.createSession({
+    user: {
+      email: 'user@example.com',
+      // Missing required fields
+    },
+    country: 'US',
+    documentType: 'invalid_type' // Unsupported type
+  });
+} catch (error) {
+  switch (error.code) {
+    case 'VALIDATION_REQUIRED_FIELD':
+      // Error: Missing required user fields
+      console.error(`Missing field: ${error.details.field}`);
+      break;
+    case 'KYC_UNSUPPORTED_COUNTRY':
+      // Error: Country not supported
+      console.error('Country not supported for KYC');
+      break;
+    case 'KYC_INVALID_DOCUMENT_TYPE':
+      // Error: Document type not supported
+      console.error('Document type not supported');
+      break;
+  }
+}
+```
+
+### Scenario 2: Encryption Operations
+
+```javascript
+// Common encryption errors
+try {
+  const encrypted = await onekey.encryption.encrypt({
+    data: sensitiveData,
+    password: 'weak', // Password too weak
+    algorithm: 'unsupported_algorithm' // Not supported
+  });
+} catch (error) {
+  switch (error.code) {
+    case 'ENCRYPTION_WEAK_PASSWORD':
+      // Error: Password doesn't meet requirements
+      showPasswordRequirements();
+      break;
+    case 'ENCRYPTION_ALGORITHM_UNSUPPORTED':
+      // Error: Algorithm not supported
+      useDefaultAlgorithm();
+      break;
+  }
+}
+```
+
+### Scenario 3: Attestation Verification
+
+```javascript
+// Common attestation verification errors
+try {
+  const verification = await onekey.attestations.verify(attestationUID);
+} catch (error) {
+  switch (error.code) {
+    case 'ATTESTATION_NOT_FOUND':
+      // Error: Attestation doesn't exist
+      console.error('Attestation not found');
+      break;
+    case 'ATTESTATION_EXPIRED':
+      // Error: Attestation has expired
+      console.error('Attestation expired, renewal required');
+      break;
+    case 'BLOCKCHAIN_CONNECTION_ERROR':
+      // Error: Cannot connect to blockchain
+      console.error('Blockchain connection issue, retry later');
+      break;
+  }
+}
+```
+
+## Error Debugging
+
+### Debug Information
+
+```javascript
+// Enhanced error logging for debugging
+const logError = (error, context = {}) => {
+  console.error('OneKey API Error:', {
+    code: error.code,
+    message: error.message,
+    requestId: error.requestId,
+    timestamp: error.timestamp,
+    context,
+    stackTrace: error.stack,
+    userAgent: navigator.userAgent,
+    url: window.location.href
+  });
+  
+  // Send to error tracking service
+  errorTracker.captureException(error, { extra: context });
+};
+
+// Usage
+try {
+  await onekey.kyc.createSession(data);
+} catch (error) {
+  logError(error, { operation: 'kyc_session_creation', userData: data });
+}
+```
+
+### Error Recovery Patterns
+
+<AccordionGroup>
+  <Accordion title="Exponential Backoff">
+    **Retry with increasing delays**
+    
+    ```javascript
+    const exponentialBackoff = async (fn, maxRetries = 5) => {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          return await fn();
+        } catch (error) {
+          if (i === maxRetries - 1) throw error;
+          
+          // Only retry on specific errors
+          if (['RATE_LIMIT_EXCEEDED', 'SERVICE_UNAVAILABLE'].includes(error.code)) {
+            const delay = Math.min(1000 * Math.pow(2, i), 30000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          
+          throw error; // Don't retry on non-retryable errors
+        }
+      }
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Circuit Breaker">
+    **Prevent cascade failures**
+    
+    ```javascript
+    class CircuitBreaker {
+      constructor(threshold = 5, timeout = 60000) {
+        this.failureThreshold = threshold;
+        this.timeout = timeout;
+        this.failureCount = 0;
+        this.lastFailureTime = null;
+        this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+      }
+      
+      async call(fn) {
+        if (this.state === 'OPEN') {
+          if (Date.now() - this.lastFailureTime > this.timeout) {
+            this.state = 'HALF_OPEN';
+          } else {
+            throw new Error('Circuit breaker is OPEN');
+          }
+        }
+        
+        try {
+          const result = await fn();
+          this.onSuccess();
+          return result;
+        } catch (error) {
+          this.onFailure();
+          throw error;
+        }
+      }
+      
+      onSuccess() {
+        this.failureCount = 0;
+        this.state = 'CLOSED';
+      }
+      
+      onFailure() {
+        this.failureCount++;
+        this.lastFailureTime = Date.now();
+        
+        if (this.failureCount >= this.failureThreshold) {
+          this.state = 'OPEN';
+        }
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Error Monitoring
+
+### Error Analytics
+
+```javascript
+// Track error patterns and frequency
+class ErrorAnalytics {
+  constructor() {
+    this.errors = new Map();
+    this.alerts = new Set(['AUTH_TOKEN_EXPIRED', 'RATE_LIMIT_EXCEEDED']);
+  }
+  
+  track(error, metadata = {}) {
+    const key = `${error.code}:${error.details?.field || 'general'}`;
+    const entry = this.errors.get(key) || { count: 0, lastSeen: null, examples: [] };
+    
+    entry.count++;
+    entry.lastSeen = new Date();
+    entry.examples.push({
+      timestamp: new Date(),
+      requestId: error.requestId,
+      metadata
+    });
+    
+    // Keep only recent examples
+    entry.examples = entry.examples.slice(-10);
+    
+    this.errors.set(key, entry);
+    
+    // Trigger alerts for critical errors
+    if (this.alerts.has(error.code)) {
+      this.sendAlert(error, entry);
+    }
+  }
+  
+  getErrorReport() {
+    const report = {};
+    for (const [key, data] of this.errors) {
+      report[key] = {
+        count: data.count,
+        lastSeen: data.lastSeen,
+        frequency: this.calculateFrequency(data)
+      };
+    }
+    return report;
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Rate Limits" icon="clock" href="/resources/rate-limits">
+    Understanding OneKey API rate limiting policies
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/resources/webhooks">
+    Real-time notifications for events and errors
+  </Card>
+  <Card title="API Testing" icon="test-tube" href="/guides/testing">
+    Testing strategies and error simulation
+  </Card>
+  <Card title="Support" icon="life-ring" href="mailto:support@onekey.so">
+    Contact support for unresolved issues
+  </Card>
+</CardGroup> 
