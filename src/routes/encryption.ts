@@ -123,7 +123,7 @@ router.post('/decrypt',
   body('algorithm').notEmpty().withMessage('Algorithm is required'),
   handleValidationErrors,
   async (req, res) => {
-    const requestId = req.requestId || uuidv4();
+    const requestId = (req as any).requestId || uuidv4();
 
     try {
       const decryptionRequest: DecryptionRequest = {
@@ -152,11 +152,13 @@ router.post('/decrypt',
       res.json(response);
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
       const response: EncryptionApiResponse = {
         success: false,
         error: {
           code: error instanceof DecryptionError ? error.code : 'DECRYPTION_ERROR',
-          message: error.message
+          message: errorMessage
         },
         requestId,
         timestamp: Date.now()
