@@ -29,40 +29,25 @@ export const initializeDatabase = async (): Promise<void> => {
   try {
     console.log('🔗 Initializing database connection...');
     
-    // Check if Supabase is configured first
+        // Check if Supabase is configured first
     if (isSupabaseConfigured()) {
       console.log('🌐 Supabase configuration detected, initializing Supabase...');
       initializeSupabase();
+      console.log('🎯 Using Supabase-only configuration (recommended)');
       
-      // Also initialize PostgreSQL pool for direct database operations
-      if (config.database.url.includes('supabase') || process.env.SUPABASE_DB_URL) {
-        // Use Supabase database URL for direct connections
-        const supabaseDbUrl = process.env.SUPABASE_DB_URL || config.database.url;
-        pool = new Pool({
-          connectionString: supabaseDbUrl,
-          ssl: { rejectUnauthorized: false },
-          max: 20,
-          idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 10000,
-          statement_timeout: 30000,
-          query_timeout: 30000,
-          application_name: 'OneKey_KYC_API',
-        });
-      } else {
-        // Fallback to regular database config
-        pool = new Pool(dbConfig);
-      }
-      
-      console.log('🎯 Using Supabase + PostgreSQL hybrid configuration');
+      // Skip direct PostgreSQL connection when using Supabase
+      // All database operations will use Supabase clients
+      console.log('✅ Database initialization completed (Supabase mode)');
+      return;
     } else {
       console.log('🐘 Using direct PostgreSQL connection');
       pool = new Pool(dbConfig);
+      
+      // Test the connection only for direct PostgreSQL
+      const client = await pool.connect();
+      await client.query('SELECT NOW()');
+      client.release();
     }
-    
-    // Test the connection
-    const client = await pool.connect();
-    await client.query('SELECT NOW()');
-    client.release();
     
     console.log('✅ Database connection established successfully');
     
