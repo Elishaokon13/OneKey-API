@@ -212,12 +212,13 @@ export class EncryptionService implements IEncryptionService {
 
     } catch (error) {
       this.stats.errors++;
-      logger.error('Decryption failed', { error: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Decryption failed', { error: errorMessage });
       
       if (error instanceof DecryptionError) {
         throw error;
       }
-      throw new DecryptionError('Decryption failed', 'DECRYPTION_FAILED', { originalError: error.message });
+      throw new DecryptionError('Decryption failed', 'DECRYPTION_FAILED', { originalError: errorMessage });
     }
   }
 
@@ -245,22 +246,25 @@ export class EncryptionService implements IEncryptionService {
         salt,
         iterations: derivationConfig.iterations,
         createdAt: Date.now(),
-        expiresAt,
+        ...(expiresAt && { expiresAt }),
         usage: request.usage,
-        metadata: request.metadata
-      };
+        ...(request.metadata && { metadata: request.metadata })
+      } as EncryptionKey;
 
       this.keys.set(keyId, key);
 
-      return {
+      const response: KeyGenerationResponse = {
         keyId,
         salt,
         derivationConfig,
-        expiresAt
-      };
+        ...(expiresAt && { expiresAt })
+      } as KeyGenerationResponse;
+
+      return response;
 
     } catch (error) {
-      throw new KeyManagementError('Key generation failed', 'KEY_GENERATION_FAILED', { originalError: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new KeyManagementError('Key generation failed', 'KEY_GENERATION_FAILED', { originalError: errorMessage });
     }
   }
 
@@ -280,7 +284,7 @@ export class EncryptionService implements IEncryptionService {
         keyLength: 32,
         hashFunction: 'sha256'
       },
-      metadata: existingKey.metadata
+      ...(existingKey.metadata && { metadata: existingKey.metadata })
     };
 
     const newKey = await this.generateKey(newKeyRequest);
