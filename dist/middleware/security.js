@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateRequestSize = exports.validateContentType = exports.validateApiKey = exports.validateIp = exports.sanitizeRequest = exports.corsOptions = exports.securityHeaders = void 0;
 const helmet_1 = __importDefault(require("helmet"));
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = require("../config/environment");
 // Enhanced helmet configuration for KYC API
 exports.securityHeaders = (0, helmet_1.default)({
     // Content Security Policy
@@ -44,7 +44,7 @@ exports.corsOptions = {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin)
             return callback(null, true);
-        const allowedOrigins = environment_1.default.security.corsOrigin.split(',').map(o => o.trim());
+        const allowedOrigins = environment_1.config.security.corsOrigin.split(',').map((o) => o.trim());
         if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
             callback(null, true);
         }
