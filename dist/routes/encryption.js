@@ -64,16 +64,17 @@ router.post('/encrypt', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.encryp
         res.json(response);
     }
     catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logger_1.logger.error('Encryption endpoint error', {
             requestId,
             userId: req.user?.id,
-            error: error.message
+            error: errorMessage
         });
         const response = {
             success: false,
             error: {
                 code: error instanceof encryption_1.EncryptionError ? error.code : 'ENCRYPTION_ERROR',
-                message: error.message
+                message: errorMessage
             },
             requestId,
             timestamp: Date.now()
@@ -111,11 +112,12 @@ router.post('/decrypt', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.encryp
         res.json(response);
     }
     catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const response = {
             success: false,
             error: {
                 code: error instanceof encryption_1.DecryptionError ? error.code : 'DECRYPTION_ERROR',
-                message: error.message
+                message: errorMessage
             },
             requestId,
             timestamp: Date.now()
@@ -150,11 +152,12 @@ router.post('/keys/generate', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.
         res.json(response);
     }
     catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const response = {
             success: false,
             error: {
                 code: error instanceof encryption_1.KeyManagementError ? error.code : 'KEY_GENERATION_ERROR',
-                message: error.message
+                message: errorMessage
             },
             requestId,
             timestamp: Date.now()
@@ -179,11 +182,12 @@ router.get('/health', rateLimiter_1.rateLimiter.general, async (req, res) => {
         res.json(response);
     }
     catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const response = {
             success: false,
             error: {
                 code: 'HEALTH_CHECK_ERROR',
-                message: error.message
+                message: errorMessage
             },
             requestId,
             timestamp: Date.now()
