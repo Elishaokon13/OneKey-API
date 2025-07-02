@@ -174,16 +174,16 @@ export abstract class BaseAttestationService {
       
       // Zero-PII identity info
       userIdHash,
-      countryCode: kycResult.document?.country || '',
+      countryCode: '', // Will be extracted from metadata if needed
       documentType: kycResult.document?.type || '',
       
       // Verification checks
-      documentVerified: kycResult.checks?.documentAuthenticity?.status === 'passed',
-      biometricVerified: kycResult.checks?.faceMatch?.status === 'passed',
-      livenessVerified: kycResult.checks?.livenessDetection?.status === 'passed',
-      addressVerified: kycResult.checks?.addressVerification?.status === 'passed',
-      sanctionsCleared: kycResult.checks?.sanctions?.status === 'passed',
-      pepCleared: kycResult.checks?.pep?.status === 'passed',
+      documentVerified: kycResult.checks?.documentAuthenticity?.status === 'pass',
+      biometricVerified: kycResult.checks?.faceMatch?.status === 'pass',
+      livenessVerified: kycResult.checks?.livenessDetection?.status === 'pass',
+      addressVerified: kycResult.checks?.addressVerification?.status === 'pass',
+      sanctionsCleared: kycResult.checks?.sanctions?.status === 'pass',
+      pepCleared: kycResult.checks?.pep?.status === 'pass',
       
       // Risk assessment
       riskLevel: this.calculateRiskLevel(kycResult),
