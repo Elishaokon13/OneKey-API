@@ -391,6 +391,8 @@ Ready to proceed with **Task 2.1: JWT Authentication System**
 12. **Request Tracking**: UUID request IDs essential for debugging distributed systems
 13. **Supabase Integration**: Service role client needed for server-side operations
 14. **Module Resolution**: Path mapping in TypeScript requires post-compilation resolution for Node.js
+15. **Privy SDK Integration**: Privy server SDK integration requires careful type management and placeholder implementations during development
+16. **Hybrid Authentication**: Supporting both JWT and Web3 authentication requires flexible middleware architecture
 
 ### Security Lessons
 15. **Environment File Security**: Always remove .env files from git tracking using `git rm --cached .env` to prevent credential leaks
