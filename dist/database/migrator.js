@@ -6,7 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resetDatabase = exports.rollbackMigration = exports.createMigration = exports.getMigrationStatus = exports.runMigrations = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const database_1 = require("../config/database");
+const database_1 = require("@/config/database");
+const supabase_1 = require("@/config/supabase");
 // Get all migration files
 const getMigrationFiles = () => {
     const migrationsDir = path_1.default.join(__dirname, 'migrations');
@@ -58,6 +59,12 @@ const applyMigration = async (migration) => {
 // Run all pending migrations
 const runMigrations = async () => {
     console.log('🔄 Starting database migrations...');
+    // Skip migrations when using Supabase (tables already exist)
+    if ((0, supabase_1.isSupabaseConfigured)()) {
+        console.log('⏭️  Skipping migrations (Supabase mode - tables already exist)');
+        console.log('✅ Database schema is managed by Supabase');
+        return;
+    }
     try {
         // Ensure database connection is available
         const pool = (0, database_1.getDatabase)();
