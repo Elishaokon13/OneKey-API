@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.applyAttestationRateLimit = exports.attestationLimiter = exports.kycLimiter = exports.authLimiter = exports.generalLimiter = void 0;
+exports.rateLimiter = exports.fileEncryptionLimiter = exports.keyManagementLimiter = exports.encryptionOperationsLimiter = exports.applyAttestationRateLimit = exports.attestationLimiter = exports.kycLimiter = exports.authLimiter = exports.generalLimiter = void 0;
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const environment_1 = require("../config/environment");
 // General API rate limiter
@@ -75,4 +75,62 @@ exports.applyAttestationRateLimit = (0, express_rate_limit_1.default)({
         return `${req.ip}-${req.user?.id || 'anonymous'}`;
     }
 });
+// Encryption operation limiter (moderate limits due to computational cost)
+exports.encryptionOperationsLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 30, // 30 encryption/decryption operations per 15 minutes
+    message: {
+        error: 'Encryption Operation Rate Limited',
+        message: 'Too many encryption operations, please try again later.',
+        retryAfter: 15 * 60
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Use IP + User ID for more accurate rate limiting
+        return `${req.ip}-${req.user?.id || 'anonymous'}`;
+    }
+});
+// Key management limiter (restrictive due to security implications)
+exports.keyManagementLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 15, // Only 15 key operations per hour per user
+    message: {
+        error: 'Key Management Rate Limited',
+        message: 'Too many key management operations, please try again later.',
+        retryAfter: 60 * 60
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Use IP + User ID for more accurate rate limiting
+        return `${req.ip}-${req.user?.id || 'anonymous'}`;
+    }
+});
+// File encryption limiter (more restrictive due to potential large file sizes)
+exports.fileEncryptionLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 30 * 60 * 1000, // 30 minutes
+    max: 10, // Only 10 file encryption operations per 30 minutes
+    message: {
+        error: 'File Encryption Rate Limited',
+        message: 'Too many file encryption operations, please try again later.',
+        retryAfter: 30 * 60
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        return `${req.ip}-${req.user?.id || 'anonymous'}`;
+    }
+});
+// Export organized rate limiters for easy access
+exports.rateLimiter = {
+    general: exports.generalLimiter,
+    auth: exports.authLimiter,
+    kyc: exports.kycLimiter,
+    attestation: exports.attestationLimiter,
+    attestationOperations: exports.applyAttestationRateLimit,
+    encryptionOperations: exports.encryptionOperationsLimiter,
+    keyManagement: exports.keyManagementLimiter,
+    fileEncryption: exports.fileEncryptionLimiter
+};
 //# sourceMappingURL=rateLimiter.js.map
