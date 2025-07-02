@@ -140,9 +140,13 @@ app.get('/api/v1', (req, res) => {
         status: 'GET /api/v1/privy/status'
       },
       kyc: {
-        initiate: 'POST /api/v1/kyc/initiate',
-        status: 'GET /api/v1/kyc/status/:sessionId',
-        providers: 'GET /api/v1/kyc/providers'
+        createSession: 'POST /api/v1/kyc/sessions',
+        getSession: 'GET /api/v1/kyc/sessions/:sessionId',
+        startVerification: 'POST /api/v1/kyc/sessions/:sessionId/verify',
+        getResult: 'GET /api/v1/kyc/sessions/:sessionId/result',
+        listSessions: 'GET /api/v1/kyc/sessions',
+        providers: 'GET /api/v1/kyc/providers',
+        providersHealth: 'GET /api/v1/kyc/providers/health'
       },
       attestations: {
         create: 'POST /api/v1/attestations/create',
