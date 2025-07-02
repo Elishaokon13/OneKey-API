@@ -86,7 +86,7 @@ export const closeDatabase = async (): Promise<void> => {
     await closeSupabase();
   }
   
-  // Close PostgreSQL pool
+  // Close PostgreSQL pool (only if using direct PostgreSQL)
   if (pool) {
     await pool.end();
     pool = null;
