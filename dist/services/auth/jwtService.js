@@ -6,8 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.jwtService = exports.JWTService = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
-const environment_1 = __importDefault(require("@/config/environment"));
-const auth_1 = require("@/types/auth");
+const environment_1 = __importDefault(require("../../config/environment"));
+const auth_1 = require("../../types/auth");
 // Refresh token storage (in production, use Redis or database)
 const refreshTokens = new Map();
 class JWTService {
