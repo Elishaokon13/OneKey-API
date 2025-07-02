@@ -133,6 +133,11 @@ app.get('/api/v1', (req, res) => {
         refresh: 'POST /api/v1/auth/refresh',
         logout: 'POST /api/v1/auth/logout'
       },
+      privy: {
+        authenticate: 'POST /api/v1/privy/authenticate',
+        profile: 'GET /api/v1/privy/profile',
+        status: 'GET /api/v1/privy/status'
+      },
       kyc: {
         initiate: 'POST /api/v1/kyc/initiate',
         status: 'GET /api/v1/kyc/status/:sessionId',
