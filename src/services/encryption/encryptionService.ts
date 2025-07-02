@@ -318,7 +318,8 @@ export class EncryptionService implements IEncryptionService {
       return key.toString('base64');
 
     } catch (error) {
-      throw new KeyManagementError('Key derivation failed', 'KEY_DERIVATION_FAILED', { originalError: error.message });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new KeyManagementError('Key derivation failed', 'KEY_DERIVATION_FAILED', { originalError: errorMessage });
     }
   }
 
