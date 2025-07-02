@@ -3,8 +3,8 @@
     "version": "1.0.0",
     "scripts": {
       "dev": "mintlify dev",
-      "build": "mintlify build",
-      "start": "mintlify start"
+      "build": "echo 'Static files ready' && mkdir -p dist && cp -r . dist/",
+      "start": "mintlify dev"
     },
     "devDependencies": {
       "mintlify": "^4.0.0"
