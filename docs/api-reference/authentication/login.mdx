@@ -1,1 +1,446 @@
- 
+---
+title: "POST /auth/login"
+api: "POST https://api.onekey.so/api/v1/auth/login"
+description: "Generate a JWT access token for API authentication"
+---
+
+## Overview
+
+Generate a JWT access token using your API credentials. This token is required for all subsequent API requests and expires after 24 hours.
+
+<Note>
+API keys are different from JWT tokens. Use your API key to generate JWT tokens, then use JWT tokens for API requests.
+</Note>
+
+## Request
+
+### Headers
+
+```http
+Content-Type: application/json
+Accept: application/json
+```
+
+### Body Parameters
+
+<ParamField body="apiKey" type="string" required>
+  Your OneKey API key from the dashboard
+</ParamField>
+
+<ParamField body="apiSecret" type="string" required>
+  Your OneKey API secret from the dashboard
+</ParamField>
+
+<ParamField body="expiresIn" type="string" default="24h">
+  Token expiration time (e.g., "1h", "24h", "7d")
+</ParamField>
+
+<ParamField body="permissions" type="array">
+  Requested permissions for the token (optional, defaults to all available)
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.onekey.so/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "apiKey": "ok_live_...",
+    "apiSecret": "sk_live_...",
+    "expiresIn": "24h",
+    "permissions": ["kyc:read", "kyc:write", "attestations:create"]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.onekey.so/api/v1/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    apiKey: 'ok_live_...',
+    apiSecret: 'sk_live_...',
+    expiresIn: '24h',
+    permissions: ['kyc:read', 'kyc:write', 'attestations:create']
+  })
+});
+
+const data = await response.json();
+const accessToken = data.data.accessToken;
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.onekey.so/api/v1/auth/login',
+    headers={'Content-Type': 'application/json'},
+    json={
+        'apiKey': 'ok_live_...',
+        'apiSecret': 'sk_live_...',
+        'expiresIn': '24h',
+        'permissions': ['kyc:read', 'kyc:write', 'attestations:create']
+    }
+)
+
+data = response.json()
+access_token = data['data']['accessToken']
+```
+
+</CodeGroup>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="accessToken" type="string">
+      JWT access token for API authentication
+    </ResponseField>
+    
+    <ResponseField name="tokenType" type="string">
+      Token type (always "Bearer")
+    </ResponseField>
+    
+    <ResponseField name="expiresIn" type="number">
+      Token expiration time in seconds
+    </ResponseField>
+    
+    <ResponseField name="expiresAt" type="string">
+      Token expiration timestamp (ISO 8601)
+    </ResponseField>
+    
+    <ResponseField name="permissions" type="array">
+      Granted permissions for this token
+    </ResponseField>
+    
+    <ResponseField name="userId" type="string">
+      Your OneKey user identifier
+    </ResponseField>
+    
+    <ResponseField name="tier" type="string">
+      Your API tier (standard, professional, enterprise)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="requestId" type="string">
+  Unique request identifier for debugging
+</ResponseField>
+
+### Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 86400,
+    "expiresAt": "2024-01-16T10:30:45.123Z",
+    "permissions": [
+      "kyc:read",
+      "kyc:write", 
+      "attestations:create",
+      "encryption:use"
+    ],
+    "userId": "user_123456789",
+    "tier": "professional"
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+## Rate Limiting
+
+This endpoint is rate limited to **10 requests per minute** per IP address.
+
+<Warning>
+Do not generate new tokens frequently. Cache and reuse tokens until they expire.
+</Warning>
+
+## Error Responses
+
+<ResponseExample>
+
+```json 401 Invalid Credentials
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_INVALID_CREDENTIALS",
+    "message": "Invalid API key or secret",
+    "details": {
+      "reason": "API key not found or secret mismatch"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 403 Account Suspended
+{
+  "success": false,
+  "error": {
+    "code": "AUTH_ACCOUNT_SUSPENDED",
+    "message": "Account is suspended",
+    "details": {
+      "reason": "Contact support for account review",
+      "suspensionDate": "2024-01-10T00:00:00.000Z"
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 429 Rate Limited
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Too many login attempts",
+    "details": {
+      "limit": 10,
+      "window": "1 minute",
+      "retryAfter": 45
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+</ResponseExample>
+
+## Usage Examples
+
+### Basic Authentication
+
+```javascript
+class OneKeyAuth {
+  constructor(apiKey, apiSecret) {
+    this.apiKey = apiKey;
+    this.apiSecret = apiSecret;
+    this.accessToken = null;
+    this.expiresAt = null;
+  }
+  
+  async getAccessToken() {
+    // Check if current token is still valid
+    if (this.accessToken && this.expiresAt > new Date()) {
+      return this.accessToken;
+    }
+    
+    // Generate new token
+    const response = await fetch('https://api.onekey.so/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: this.apiKey,
+        apiSecret: this.apiSecret,
+        expiresIn: '24h'
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(`Authentication failed: ${data.error.message}`);
+    }
+    
+    this.accessToken = data.data.accessToken;
+    this.expiresAt = new Date(data.data.expiresAt);
+    
+    return this.accessToken;
+  }
+  
+  async makeAuthenticatedRequest(url, options = {}) {
+    const token = await this.getAccessToken();
+    
+    return fetch(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+  }
+}
+
+// Usage
+const auth = new OneKeyAuth('ok_live_...', 'sk_live_...');
+const response = await auth.makeAuthenticatedRequest('/api/v1/kyc/sessions');
+```
+
+### Permission-Based Tokens
+
+```javascript
+// Generate token with specific permissions
+const generateRestrictedToken = async (permissions) => {
+  const response = await fetch('https://api.onekey.so/api/v1/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiKey: process.env.ONEKEY_API_KEY,
+      apiSecret: process.env.ONEKEY_API_SECRET,
+      expiresIn: '1h', // Short-lived for security
+      permissions: permissions
+    })
+  });
+  
+  const data = await response.json();
+  return data.data.accessToken;
+};
+
+// Generate tokens for different operations
+const kycToken = await generateRestrictedToken(['kyc:read', 'kyc:write']);
+const attestationToken = await generateRestrictedToken(['attestations:create', 'attestations:verify']);
+```
+
+### Environment-Based Configuration
+
+```javascript
+const getAuthConfig = () => {
+  const env = process.env.NODE_ENV || 'development';
+  
+  const configs = {
+    development: {
+      baseUrl: 'https://api-sandbox.onekey.so/api/v1',
+      apiKey: process.env.ONEKEY_DEV_API_KEY,
+      apiSecret: process.env.ONEKEY_DEV_API_SECRET
+    },
+    production: {
+      baseUrl: 'https://api.onekey.so/api/v1',
+      apiKey: process.env.ONEKEY_API_KEY,
+      apiSecret: process.env.ONEKEY_API_SECRET
+    }
+  };
+  
+  return configs[env] || configs.development;
+};
+
+const auth = getAuthConfig();
+const tokenResponse = await fetch(`${auth.baseUrl}/auth/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    apiKey: auth.apiKey,
+    apiSecret: auth.apiSecret,
+    expiresIn: '24h'
+  })
+});
+```
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Credential Storage">
+    **Secure credential management**
+    
+    - Store API credentials in environment variables
+    - Never commit credentials to version control
+    - Use different credentials for different environments
+    - Rotate credentials regularly (recommended: every 90 days)
+    
+    ```bash
+    # .env file
+    ONEKEY_API_KEY=ok_live_...
+    ONEKEY_API_SECRET=sk_live_...
+    
+    # Development
+    ONEKEY_DEV_API_KEY=ok_test_...
+    ONEKEY_DEV_API_SECRET=sk_test_...
+    ```
+  </Accordion>
+  
+  <Accordion title="Token Management">
+    **JWT token security**
+    
+    - Cache tokens and reuse until expiration
+    - Use short-lived tokens for sensitive operations
+    - Implement automatic token refresh
+    - Never log or expose tokens in client-side code
+    
+    ```javascript
+    // Good: Server-side token management
+    const tokenCache = new Map();
+    
+    const getCachedToken = async (cacheKey) => {
+      const cached = tokenCache.get(cacheKey);
+      if (cached && cached.expiresAt > new Date()) {
+        return cached.token;
+      }
+      
+      // Generate new token
+      const newToken = await generateToken();
+      tokenCache.set(cacheKey, {
+        token: newToken.accessToken,
+        expiresAt: new Date(newToken.expiresAt)
+      });
+      
+      return newToken.accessToken;
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Network Security">
+    **Secure communication**
+    
+    - Always use HTTPS for authentication
+    - Implement request timeout handling
+    - Use certificate pinning in production
+    - Monitor for authentication anomalies
+    
+    ```javascript
+    const authenticateWithRetry = async (maxRetries = 3) => {
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const response = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            timeout: 30000, // 30 second timeout
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(credentials)
+          });
+          
+          if (response.ok) return response;
+          
+        } catch (error) {
+          console.error(`Auth attempt ${i + 1} failed:`, error);
+          if (i === maxRetries - 1) throw error;
+          
+          // Exponential backoff
+          await new Promise(resolve => 
+            setTimeout(resolve, Math.pow(2, i) * 1000)
+          );
+        }
+      }
+    };
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Privy Authentication" icon="wallet" href="/api-reference/authentication/privy-verify">
+    Authenticate Web3 users with Privy wallet verification
+  </Card>
+  <Card title="Token Refresh" icon="refresh" href="/api-reference/authentication/refresh">
+    Refresh expired tokens without re-authentication
+  </Card>
+  <Card title="KYC Sessions" icon="id-card" href="/api-reference/kyc/create-session">
+    Create identity verification sessions
+  </Card>
+  <Card title="Error Handling" icon="exclamation-triangle" href="/resources/errors">
+    Handle authentication errors gracefully
+  </Card>
+</CardGroup> 
