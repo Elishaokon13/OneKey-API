@@ -5,7 +5,7 @@ exports.KycService = void 0;
 const smileIdentityService_1 = require("./smileIdentityService");
 const onfidoService_1 = require("./onfidoService");
 const truliooService_1 = require("./truliooService");
-const kyc_1 = require("../../types/kyc");
+const kyc_1 = require("@/types/kyc");
 class KycService {
     providers = new Map();
     constructor() {
