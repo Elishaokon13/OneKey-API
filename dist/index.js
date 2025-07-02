@@ -6,15 +6,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const environment_1 = __importDefault(require("@/config/environment"));
-const database_1 = require("@/config/database");
-const migrator_1 = require("@/database/migrator");
+const environment_1 = __importDefault(require("./config/environment"));
+const database_1 = require("./config/database");
+const migrator_1 = require("./database/migrator");
 // Import routes
-const auth_1 = __importDefault(require("@/routes/auth"));
+const auth_1 = __importDefault(require("./routes/auth"));
 // Import custom middleware
-const rateLimiter_1 = require("@/middleware/rateLimiter");
-const errorHandler_1 = require("@/middleware/errorHandler");
-const security_1 = require("@/middleware/security");
+const rateLimiter_1 = require("./middleware/rateLimiter");
+const errorHandler_1 = require("./middleware/errorHandler");
+const security_1 = require("./middleware/security");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
