@@ -47,7 +47,7 @@ router.post('/authenticate', authLimiter, async (req: Request, res: Response): P
 
     const result = await privyService.authenticateWithPrivy({
       accessToken,
-      metadata
+      metadata: metadata || undefined
     });
 
     res.status(200).json({
