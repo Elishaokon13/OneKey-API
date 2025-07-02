@@ -1,1 +1,797 @@
- 
+---
+title: "Webhooks"
+description: "Real-time notifications for OneKey events and status updates"
+---
+
+## Overview
+
+OneKey webhooks provide real-time notifications for important events in your application. Instead of polling API endpoints, webhooks deliver event data directly to your application when events occur, reducing latency and API calls.
+
+<Note>
+Webhooks are delivered as HTTP POST requests to your specified endpoint URLs with cryptographic signatures for verification.
+</Note>
+
+## Supported Events
+
+<CardGroup cols={2}>
+  <Card title="KYC Events" icon="id-card">
+    **Identity verification updates**
+    
+    - Session created
+    - Verification completed
+    - Status changed
+    - Provider switched
+  </Card>
+  
+  <Card title="Attestation Events" icon="shield">
+    **Blockchain attestation updates**
+    
+    - Attestation created
+    - Verification completed
+    - Revocation events
+    - Blockchain confirmations
+  </Card>
+  
+  <Card title="Encryption Events" icon="lock">
+    **Data processing updates**
+    
+    - Encryption completed
+    - Key rotation events
+    - Batch operations
+    - Error notifications
+  </Card>
+  
+  <Card title="System Events" icon="server">
+    **Service status updates**
+    
+    - Service maintenance
+    - Provider availability
+    - Rate limit warnings
+    - Security alerts
+  </Card>
+</CardGroup>
+
+## Event Types
+
+### KYC Events
+
+<Tabs>
+  <Tab title="kyc.session.created">
+    **New KYC session initiated**
+    
+    ```json
+    {
+      "id": "evt_123456789",
+      "type": "kyc.session.created",
+      "created": 1640995200,
+      "data": {
+        "sessionId": "kyc_session_abc123",
+        "userId": "user_456",
+        "country": "US",
+        "documentType": "passport",
+        "provider": "smile_identity",
+        "status": "pending",
+        "createdAt": "2024-01-15T10:30:45.123Z"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="kyc.verification.completed">
+    **KYC verification finished**
+    
+    ```json
+    {
+      "id": "evt_123456790",
+      "type": "kyc.verification.completed",
+      "created": 1640995800,
+      "data": {
+        "sessionId": "kyc_session_abc123",
+        "userId": "user_456",
+        "status": "pass",
+        "confidence": 95,
+        "checks": {
+          "documentVerified": true,
+          "biometricVerified": true,
+          "livenessVerified": true,
+          "addressVerified": false
+        },
+        "riskLevel": "low",
+        "completedAt": "2024-01-15T10:45:30.456Z"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="kyc.status.changed">
+    **Status update for existing session**
+    
+    ```json
+    {
+      "id": "evt_123456791",
+      "type": "kyc.status.changed",
+      "created": 1640995900,
+      "data": {
+        "sessionId": "kyc_session_abc123",
+        "userId": "user_456",
+        "previousStatus": "review",
+        "newStatus": "pass",
+        "reason": "manual_review_approved",
+        "updatedAt": "2024-01-15T11:00:15.789Z"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Attestation Events
+
+<Tabs>
+  <Tab title="attestation.created">
+    **New attestation on blockchain**
+    
+    ```json
+    {
+      "id": "evt_123456792",
+      "type": "attestation.created",
+      "created": 1640996000,
+      "data": {
+        "uid": "0x1234567890abcdef...",
+        "schemaId": "0xabcdef1234567890...",
+        "attester": "0x742d35Cc6634C0532925a3b8D400EeA9615F8327",
+        "recipient": "0x123456789abcdef0123456789abcdef012345678",
+        "transactionHash": "0xfedcba0987654321...",
+        "blockNumber": 18500000,
+        "chainId": 1,
+        "kycSessionId": "kyc_session_abc123",
+        "createdAt": "2024-01-15T11:15:22.123Z"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="attestation.verified">
+    **Attestation verification completed**
+    
+    ```json
+    {
+      "id": "evt_123456793",
+      "type": "attestation.verified",
+      "created": 1640996100,
+      "data": {
+        "uid": "0x1234567890abcdef...",
+        "recipient": "0x123456789abcdef0123456789abcdef012345678",
+        "valid": true,
+        "verificationDetails": {
+          "onChain": true,
+          "notExpired": true,
+          "notRevoked": true,
+          "schemaValid": true
+        },
+        "verifiedAt": "2024-01-15T11:20:45.567Z"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="attestation.revoked">
+    **Attestation revoked**
+    
+    ```json
+    {
+      "id": "evt_123456794",
+      "type": "attestation.revoked",
+      "created": 1640996200,
+      "data": {
+        "uid": "0x1234567890abcdef...",
+        "reason": "user_request",
+        "revokedBy": "0x742d35Cc6634C0532925a3b8D400EeA9615F8327",
+        "transactionHash": "0x9876543210fedcba...",
+        "revokedAt": "2024-01-15T11:25:30.890Z"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Webhook Configuration
+
+### Creating Webhooks
+
+```javascript
+// Create a new webhook endpoint
+const webhook = await onekey.webhooks.create({
+  url: 'https://your-app.com/webhooks/onekey',
+  events: [
+    'kyc.verification.completed',
+    'attestation.created',
+    'attestation.verified'
+  ],
+  description: 'Production KYC and attestation events',
+  secret: 'your_webhook_secret_key'
+});
+
+console.log('Webhook created:', webhook.id);
+```
+
+### Webhook Management
+
+<AccordionGroup>
+  <Accordion title="List Webhooks">
+    **Get all configured webhooks**
+    
+    ```javascript
+    const webhooks = await onekey.webhooks.list();
+    
+    webhooks.data.forEach(webhook => {
+      console.log(`${webhook.id}: ${webhook.url}`);
+      console.log(`Events: ${webhook.events.join(', ')}`);
+      console.log(`Status: ${webhook.status}`);
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Update Webhook">
+    **Modify webhook configuration**
+    
+    ```javascript
+    const updatedWebhook = await onekey.webhooks.update('webhook_123', {
+      events: [
+        'kyc.verification.completed',
+        'kyc.status.changed',
+        'attestation.created'
+      ],
+      url: 'https://your-app.com/api/webhooks/onekey-v2'
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Delete Webhook">
+    **Remove webhook endpoint**
+    
+    ```javascript
+    await onekey.webhooks.delete('webhook_123');
+    console.log('Webhook deleted successfully');
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Webhook Security
+
+### Signature Verification
+
+All webhook payloads are signed with HMAC-SHA256. Verify signatures to ensure authenticity:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload, 'utf8')
+    .digest('hex');
+  
+  const providedSignature = signature.replace('sha256=', '');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedSignature, 'hex'),
+    Buffer.from(providedSignature, 'hex')
+  );
+}
+
+// Express.js webhook handler
+app.post('/webhooks/onekey', express.raw({ type: 'application/json' }), (req, res) => {
+  const signature = req.headers['x-onekey-signature'];
+  const payload = req.body;
+  
+  if (!verifyWebhookSignature(payload, signature, process.env.WEBHOOK_SECRET)) {
+    return res.status(401).send('Invalid signature');
+  }
+  
+  const event = JSON.parse(payload);
+  console.log('Verified webhook event:', event.type);
+  
+  // Process the event
+  processWebhookEvent(event);
+  
+  res.status(200).send('OK');
+});
+```
+
+### Webhook Headers
+
+```http
+POST /webhooks/onekey HTTP/1.1
+Host: your-app.com
+Content-Type: application/json
+Content-Length: 1234
+X-OneKey-Event: kyc.verification.completed
+X-OneKey-Signature: sha256=abcdef1234567890...
+X-OneKey-Delivery: 12345678-1234-1234-1234-123456789012
+X-OneKey-Timestamp: 1640995200
+User-Agent: OneKey-Webhooks/1.0
+```
+
+## Implementation Examples
+
+### Express.js Handler
+
+```javascript
+const express = require('express');
+const crypto = require('crypto');
+
+const app = express();
+
+// Webhook middleware for signature verification
+const verifyWebhook = (req, res, next) => {
+  const signature = req.headers['x-onekey-signature'];
+  const timestamp = req.headers['x-onekey-timestamp'];
+  const payload = req.body;
+  
+  // Verify timestamp (prevent replay attacks)
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - parseInt(timestamp)) > 300) { // 5 minutes
+    return res.status(401).send('Request too old');
+  }
+  
+  // Verify signature
+  if (!verifyWebhookSignature(payload, signature, process.env.WEBHOOK_SECRET)) {
+    return res.status(401).send('Invalid signature');
+  }
+  
+  next();
+};
+
+// Webhook endpoint
+app.post('/webhooks/onekey', 
+  express.raw({ type: 'application/json' }), 
+  verifyWebhook, 
+  async (req, res) => {
+    try {
+      const event = JSON.parse(req.body);
+      
+      switch (event.type) {
+        case 'kyc.verification.completed':
+          await handleKYCCompleted(event.data);
+          break;
+          
+        case 'attestation.created':
+          await handleAttestationCreated(event.data);
+          break;
+          
+        case 'kyc.status.changed':
+          await handleKYCStatusChanged(event.data);
+          break;
+          
+        default:
+          console.log('Unhandled event type:', event.type);
+      }
+      
+      res.status(200).send('Event processed');
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      res.status(500).send('Processing failed');
+    }
+  }
+);
+
+// Event handlers
+async function handleKYCCompleted(data) {
+  console.log(`KYC completed for session ${data.sessionId}: ${data.status}`);
+  
+  // Update user record in database
+  await updateUserKYCStatus(data.userId, {
+    status: data.status,
+    confidence: data.confidence,
+    checks: data.checks,
+    completedAt: data.completedAt
+  });
+  
+  // Send notification to user
+  if (data.status === 'pass') {
+    await sendSuccessNotification(data.userId);
+  } else {
+    await sendFailureNotification(data.userId, data.reason);
+  }
+}
+
+async function handleAttestationCreated(data) {
+  console.log(`Attestation created: ${data.uid}`);
+  
+  // Store attestation reference
+  await storeAttestationReference({
+    uid: data.uid,
+    recipient: data.recipient,
+    transactionHash: data.transactionHash,
+    kycSessionId: data.kycSessionId
+  });
+  
+  // Enable features for verified user
+  await enableVerifiedFeatures(data.recipient);
+}
+```
+
+### Next.js API Route
+
+```javascript
+// pages/api/webhooks/onekey.js
+import crypto from 'crypto';
+
+function verifySignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payload, 'utf8')
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedSignature, 'hex'),
+    Buffer.from(signature.replace('sha256=', ''), 'hex')
+  );
+}
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  
+  const signature = req.headers['x-onekey-signature'];
+  const payload = JSON.stringify(req.body);
+  
+  if (!verifySignature(payload, signature, process.env.WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  try {
+    switch (event.type) {
+      case 'kyc.verification.completed':
+        await processKYCEvent(event.data);
+        break;
+        
+      case 'attestation.created':
+        await processAttestationEvent(event.data);
+        break;
+        
+      default:
+        console.log('Unhandled webhook event:', event.type);
+    }
+    
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+}
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
+  },
+};
+```
+
+## Error Handling and Retry Logic
+
+### Webhook Delivery
+
+<CardGroup cols={2}>
+  <Card title="Delivery Guarantees" icon="shield-check">
+    **Reliable delivery mechanisms**
+    
+    - Automatic retries with exponential backoff
+    - 7-day retry window
+    - Dead letter queue for failed deliveries
+    - Delivery status tracking
+  </Card>
+  
+  <Card title="Failure Handling" icon="exclamation-triangle">
+    **Robust error recovery**
+    
+    - HTTP 2xx responses considered successful
+    - 5 retry attempts for failed deliveries
+    - Webhook disabling after persistent failures
+    - Alert notifications for delivery issues
+  </Card>
+</CardGroup>
+
+### Retry Strategy
+
+```javascript
+// OneKey webhook retry logic (illustrative)
+const retrySchedule = [
+  1000,    // 1 second
+  5000,    // 5 seconds
+  30000,   // 30 seconds
+  300000,  // 5 minutes
+  1800000  // 30 minutes
+];
+
+async function deliverWebhook(webhook, event, attempt = 0) {
+  try {
+    const response = await fetch(webhook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-OneKey-Event': event.type,
+        'X-OneKey-Signature': generateSignature(event, webhook.secret),
+        'X-OneKey-Delivery': event.deliveryId,
+        'X-OneKey-Timestamp': Math.floor(Date.now() / 1000)
+      },
+      body: JSON.stringify(event),
+      timeout: 30000 // 30 second timeout
+    });
+    
+    if (response.ok) {
+      console.log('Webhook delivered successfully');
+      return true;
+    }
+    
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    
+  } catch (error) {
+    console.error(`Webhook delivery attempt ${attempt + 1} failed:`, error.message);
+    
+    if (attempt < retrySchedule.length - 1) {
+      const delay = retrySchedule[attempt];
+      console.log(`Retrying in ${delay}ms`);
+      
+      setTimeout(() => {
+        deliverWebhook(webhook, event, attempt + 1);
+      }, delay);
+    } else {
+      console.error('Max retries exceeded, webhook delivery failed');
+      await handleDeliveryFailure(webhook, event);
+    }
+  }
+}
+```
+
+### Idempotency
+
+```javascript
+// Handle duplicate webhook deliveries
+const processedEvents = new Set();
+
+function processWebhookEvent(event) {
+  // Check if event already processed
+  if (processedEvents.has(event.id)) {
+    console.log('Event already processed:', event.id);
+    return;
+  }
+  
+  try {
+    // Process the event
+    switch (event.type) {
+      case 'kyc.verification.completed':
+        handleKYCCompleted(event.data);
+        break;
+      // ... other event types
+    }
+    
+    // Mark as processed
+    processedEvents.add(event.id);
+    
+    // Clean up old events (prevent memory leak)
+    if (processedEvents.size > 10000) {
+      const oldEvents = Array.from(processedEvents).slice(0, 5000);
+      oldEvents.forEach(id => processedEvents.delete(id));
+    }
+    
+  } catch (error) {
+    console.error('Event processing failed:', error);
+    // Don't mark as processed so it can be retried
+  }
+}
+```
+
+## Testing Webhooks
+
+### Local Development
+
+```javascript
+// Use ngrok or similar tool for local testing
+// npm install -g ngrok
+// ngrok http 3000
+
+const express = require('express');
+const app = express();
+
+app.use(express.json());
+
+app.post('/webhooks/onekey', (req, res) => {
+  console.log('Received webhook:', req.body);
+  res.status(200).send('OK');
+});
+
+app.listen(3000, () => {
+  console.log('Webhook server running on port 3000');
+  console.log('Use ngrok to expose: ngrok http 3000');
+});
+```
+
+### Test Event Simulation
+
+```javascript
+// Simulate webhook events for testing
+const simulateWebhookEvent = async (eventType, data) => {
+  const event = {
+    id: `evt_test_${Date.now()}`,
+    type: eventType,
+    created: Math.floor(Date.now() / 1000),
+    data: data
+  };
+  
+  const payload = JSON.stringify(event);
+  const signature = 'sha256=' + crypto
+    .createHmac('sha256', 'test_secret')
+    .update(payload)
+    .digest('hex');
+  
+  const response = await fetch('http://localhost:3000/webhooks/onekey', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-OneKey-Signature': signature,
+      'X-OneKey-Event': eventType
+    },
+    body: payload
+  });
+  
+  console.log('Test webhook delivered:', response.status);
+};
+
+// Test KYC completion
+await simulateWebhookEvent('kyc.verification.completed', {
+  sessionId: 'test_session_123',
+  userId: 'test_user_456',
+  status: 'pass',
+  confidence: 95
+});
+```
+
+## Monitoring and Analytics
+
+### Webhook Dashboard
+
+```javascript
+class WebhookMonitor {
+  constructor() {
+    this.stats = {
+      totalDeliveries: 0,
+      successfulDeliveries: 0,
+      failedDeliveries: 0,
+      averageResponseTime: 0,
+      eventTypeBreakdown: new Map(),
+      statusCodeBreakdown: new Map()
+    };
+  }
+  
+  recordDelivery(event, statusCode, responseTime) {
+    this.stats.totalDeliveries++;
+    
+    if (statusCode >= 200 && statusCode < 300) {
+      this.stats.successfulDeliveries++;
+    } else {
+      this.stats.failedDeliveries++;
+    }
+    
+    // Update average response time
+    const total = this.stats.totalDeliveries;
+    this.stats.averageResponseTime = 
+      ((this.stats.averageResponseTime * (total - 1)) + responseTime) / total;
+    
+    // Track event types
+    const eventCount = this.stats.eventTypeBreakdown.get(event.type) || 0;
+    this.stats.eventTypeBreakdown.set(event.type, eventCount + 1);
+    
+    // Track status codes
+    const statusCount = this.stats.statusCodeBreakdown.get(statusCode) || 0;
+    this.stats.statusCodeBreakdown.set(statusCode, statusCount + 1);
+  }
+  
+  getReport() {
+    const successRate = (this.stats.successfulDeliveries / this.stats.totalDeliveries) * 100;
+    
+    return {
+      summary: {
+        totalDeliveries: this.stats.totalDeliveries,
+        successRate: successRate.toFixed(2) + '%',
+        averageResponseTime: this.stats.averageResponseTime.toFixed(0) + 'ms'
+      },
+      eventTypes: Array.from(this.stats.eventTypeBreakdown.entries()),
+      statusCodes: Array.from(this.stats.statusCodeBreakdown.entries())
+    };
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Endpoint Security">
+    **Secure webhook endpoints**
+    
+    - Always verify webhook signatures
+    - Use HTTPS for webhook URLs
+    - Implement rate limiting
+    - Validate timestamp to prevent replay attacks
+    - Use strong, unique webhook secrets
+    
+    ```javascript
+    const secureWebhookHandler = (req, res, next) => {
+      // Check HTTPS
+      if (req.headers['x-forwarded-proto'] !== 'https') {
+        return res.status(400).send('HTTPS required');
+      }
+      
+      // Verify signature
+      if (!verifySignature(req.body, req.headers['x-onekey-signature'])) {
+        return res.status(401).send('Invalid signature');
+      }
+      
+      // Check timestamp
+      const timestamp = parseInt(req.headers['x-onekey-timestamp']);
+      if (Math.abs(Date.now() / 1000 - timestamp) > 300) {
+        return res.status(401).send('Request too old');
+      }
+      
+      next();
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Reliable Processing">
+    **Handle events reliably**
+    
+    - Process events idempotently
+    - Return 2xx status codes for successful processing
+    - Implement event deduplication
+    - Handle processing errors gracefully
+    - Log all webhook events for debugging
+    
+    ```javascript
+    const reliableEventProcessor = async (event) => {
+      const eventId = event.id;
+      
+      // Check if already processed
+      const processed = await isEventProcessed(eventId);
+      if (processed) {
+        return { status: 'already_processed' };
+      }
+      
+      try {
+        // Process event in database transaction
+        await db.transaction(async (trx) => {
+          await processEvent(event, trx);
+          await markEventProcessed(eventId, trx);
+        });
+        
+        return { status: 'success' };
+      } catch (error) {
+        logger.error('Event processing failed', { eventId, error });
+        throw error; // Let webhook retry
+      }
+    };
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Webhook Setup Guide" icon="wrench" href="/guides/webhook-setup">
+    Step-by-step webhook implementation guide
+  </Card>
+  <Card title="Event Reference" icon="list" href="/api-reference/webhooks/events">
+    Complete webhook event schema documentation
+  </Card>
+  <Card title="Error Handling" icon="exclamation-triangle" href="/resources/errors">
+    Handle webhook errors and delivery failures
+  </Card>
+  <Card title="Rate Limits" icon="clock" href="/resources/rate-limits">
+    Understand webhook delivery rate limits
+  </Card>
+</CardGroup> 
