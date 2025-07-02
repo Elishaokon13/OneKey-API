@@ -178,7 +178,7 @@ export class EncryptionService implements IEncryptionService {
       const encrypted = Buffer.from(request.encryptedData, 'base64');
       const authTag = Buffer.from(request.authTag, 'base64');
 
-      const decipher = crypto.createDecipher('aes-256-gcm', Buffer.from(decryptionKey, 'base64'));
+      const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(decryptionKey, 'base64'), iv);
       (decipher as any).setAuthTag(authTag);
 
       let decrypted: Buffer;
