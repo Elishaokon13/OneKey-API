@@ -62,6 +62,7 @@ interface Config {
     rateLimitMaxRequests: number;
     encryptionKey: string;
     encryptionIv: string;
+    hashSalt: string;
   };
 }
 
