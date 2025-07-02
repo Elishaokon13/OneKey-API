@@ -528,7 +528,7 @@ export class AttestationService {
     kycResult: KycVerificationResult
   ): Promise<EasAttestation | null> {
     try {
-      if (kycResult.status !== 'verified') {
+      if (kycResult.status !== 'completed') {
         logger.info('KYC not verified, skipping auto-attestation', {
           sessionId: kycResult.sessionId,
           status: kycResult.status
