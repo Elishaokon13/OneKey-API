@@ -237,17 +237,7 @@ app.get('/api/v1/docs', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/privy', privyRoutes);
 app.use('/api/v1/kyc', kycRoutes);
-
-// KYC routes now implemented - see /src/routes/kyc.ts
-
-app.use('/api/v1/attestations', (req, res) => {
-  res.status(501).json({
-    error: 'NOT_IMPLEMENTED',
-    message: 'Attestation endpoints not yet implemented',
-    availableIn: 'Task 5.2',
-    requestId: req.headers['x-request-id']
-  });
-});
+app.use('/api/v1/attestations', attestationRoutes);
 
 app.use('/api/v1/storage', (req, res) => {
   res.status(501).json({
