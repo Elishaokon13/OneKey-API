@@ -104,7 +104,7 @@ export const authenticatePrivy = async (
     req.privyUser = verification.user;
     req.privyContext = privyContext;
     req.privyToken = token;
-    req.user = internalUser; // May be null if user doesn't exist in our system yet
+    (req as any).user = internalUser; // May be null if user doesn't exist in our system yet
     
     next();
   } catch (error) {
