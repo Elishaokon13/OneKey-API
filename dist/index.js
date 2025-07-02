@@ -10,11 +10,13 @@ const environment_1 = require("./config/environment");
 const database_1 = require("./config/database");
 const migrator_1 = require("./database/migrator");
 // Import routes
-const auth_1 = __importDefault(require("./routes/auth"));
-const privy_1 = __importDefault(require("./routes/privy"));
-const kyc_1 = __importDefault(require("./routes/kyc"));
-const attestation_1 = require("./routes/attestation");
+const auth_1 = __importDefault(require("@/routes/auth"));
+const privy_1 = __importDefault(require("@/routes/privy"));
+const kyc_1 = __importDefault(require("@/routes/kyc"));
+const attestation_1 = require("@/routes/attestation");
+const encryption_1 = __importDefault(require("@/routes/encryption"));
 const privyService_1 = require("./services/auth/privyService");
+const encryptionService_1 = require("@/services/encryption/encryptionService");
 // Import custom middleware
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -58,9 +60,10 @@ app.get('/health', async (req, res) => {
         const dbHealth = await (0, database_1.checkDatabaseHealth)();
         const privyHealth = privyService_1.privyService.getHealthStatus();
         const attestationHealth = await attestation_1.attestationService.getHealthStatus();
+        const encryptionHealth = encryptionService_1.encryptionService.getHealthStatus();
         // Determine overall status
         let overallStatus = 'OK';
-        if (dbHealth.status !== 'healthy' || attestationHealth.status === 'unhealthy') {
+        if (dbHealth.status !== 'healthy' || attestationHealth.status === 'unhealthy' || encryptionHealth.status === 'unhealthy') {
             overallStatus = 'DEGRADED';
         }
         res.status(overallStatus === 'OK' ? 200 : 503).json({
@@ -84,6 +87,15 @@ app.get('/health', async (req, res) => {
                     chainId: attestationHealth.services.eas.details.chainId,
                     attesterAddress: attestationHealth.services.eas.details.attesterAddress,
                     cacheSize: attestationHealth.details.cacheSize
+                },
+                encryption: {
+                    status: encryptionHealth.status,
+                    algorithm: encryptionHealth.algorithm,
+                    activeKeys: encryptionHealth.activeKeys,
+                    expiredKeys: encryptionHealth.expiredKeys,
+                    averageLatency: `${encryptionHealth.encryptionLatency}ms`,
+                    errorRate: `${encryptionHealth.errorRate}%`,
+                    uptime: encryptionHealth.uptime
                 }
             },
             requestId: req.headers['x-request-id']
@@ -100,7 +112,8 @@ app.get('/health', async (req, res) => {
             components: {
                 database: { status: 'error', error: error.message },
                 privy: { status: 'error', error: 'Health check failed' },
-                attestations: { status: 'error', error: 'Health check failed' }
+                attestations: { status: 'error', error: 'Health check failed' },
+                encryption: { status: 'error', error: 'Health check failed' }
             },
             requestId: req.headers['x-request-id']
         });
@@ -145,6 +158,17 @@ app.get('/api/v1', (req, res) => {
                 health: 'GET /api/v1/attestations/health',
                 stats: 'GET /api/v1/attestations/stats'
             },
+            encryption: {
+                encrypt: 'POST /api/v1/encryption/encrypt',
+                decrypt: 'POST /api/v1/encryption/decrypt',
+                generateKey: 'POST /api/v1/encryption/keys/generate',
+                rotateKey: 'POST /api/v1/encryption/keys/:keyId/rotate',
+                fileEncrypt: 'POST /api/v1/encryption/files/encrypt',
+                fileDecrypt: 'POST /api/v1/encryption/files/decrypt',
+                validateIntegrity: 'POST /api/v1/encryption/validate-integrity',
+                health: 'GET /api/v1/encryption/health',
+                config: 'GET /api/v1/encryption/config'
+            },
             storage: {
                 encrypt: 'POST /api/v1/storage/encrypt',
                 decrypt: 'POST /api/v1/storage/decrypt',
@@ -159,6 +183,7 @@ app.get('/api/v1', (req, res) => {
         features: [
             'Multi-provider KYC verification',
             'Zero PII storage architecture',
+            'Client-side AES-256-GCM encryption',
             'EAS attestation creation',
             'Decentralized storage (Filecoin/Arweave)',
             'Selective disclosure with ZKPs',
@@ -193,7 +218,10 @@ app.get('/api/v1/docs', (req, res) => {
             general: '100 requests per 15 minutes',
             authentication: '10 requests per 15 minutes',
             kyc: '5 requests per hour',
-            attestations: '50 requests per 5 minutes (queries), 10 per hour (operations)'
+            attestations: '50 requests per 5 minutes (queries), 10 per hour (operations)',
+            encryption: '30 operations per 15 minutes',
+            keyManagement: '15 operations per hour',
+            fileEncryption: '10 operations per 30 minutes'
         },
         errorCodes: {
             'VALIDATION_ERROR': 'Request validation failed',
@@ -201,6 +229,10 @@ app.get('/api/v1/docs', (req, res) => {
             'AUTHORIZATION_ERROR': 'Insufficient permissions',
             'KYC_VERIFICATION_ERROR': 'KYC verification failed',
             'ATTESTATION_ERROR': 'Attestation creation/verification failed',
+            'ENCRYPTION_ERROR': 'Data encryption failed',
+            'DECRYPTION_ERROR': 'Data decryption failed',
+            'KEY_MANAGEMENT_ERROR': 'Key generation/management failed',
+            'INTEGRITY_ERROR': 'Data integrity verification failed',
             'STORAGE_ERROR': 'Decentralized storage error',
             'RATE_LIMITED': 'Too many requests'
         },
@@ -213,6 +245,7 @@ app.use('/api/v1/auth', auth_1.default);
 app.use('/api/v1/privy', privy_1.default);
 app.use('/api/v1/kyc', kyc_1.default);
 app.use('/api/v1/attestations', attestation_1.attestationRoutes);
+app.use('/api/v1/encryption', encryption_1.default);
 app.use('/api/v1/storage', (req, res) => {
     res.status(501).json({
         error: 'NOT_IMPLEMENTED',
