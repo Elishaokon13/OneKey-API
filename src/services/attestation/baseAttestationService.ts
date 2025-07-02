@@ -341,7 +341,7 @@ export abstract class BaseAttestationService {
       successRate: 0,
       averageConfidenceScore: 0,
       providerStats: {
-        'smile-identity': { count: 0, successRate: 0, averageScore: 0 },
+        'smile_identity': { count: 0, successRate: 0, averageScore: 0 },
         'onfido': { count: 0, successRate: 0, averageScore: 0 },
         'trulioo': { count: 0, successRate: 0, averageScore: 0 }
       },
