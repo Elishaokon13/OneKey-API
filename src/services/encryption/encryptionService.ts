@@ -110,7 +110,7 @@ export class EncryptionService implements IEncryptionService {
 
       // Generate IV and encrypt
       const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipher('aes-256-gcm', Buffer.from(encryptionKey, 'base64'));
+      const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(encryptionKey, 'base64'), iv);
       
       const encrypted = Buffer.concat([
         cipher.update(dataToEncrypt),
