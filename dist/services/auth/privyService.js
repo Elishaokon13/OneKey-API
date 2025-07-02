@@ -6,10 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.privyService = exports.PrivyService = void 0;
 // import { PrivyApi } from '@privy-io/server-auth';
 // TODO: Update import when we have correct Privy SDK export name
-const environment_1 = __importDefault(require("../../config/environment"));
+const environment_1 = __importDefault(require("@/config/environment"));
 const authService_1 = require("./authService");
 const jwtService_1 = require("./jwtService");
-const privy_1 = require("../../types/privy");
+const privy_1 = require("@/types/privy");
 const uuid_1 = require("uuid");
 class PrivyService {
     privy = null; // Placeholder until we get correct SDK
