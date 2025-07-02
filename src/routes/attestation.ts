@@ -165,7 +165,7 @@ router.post(
       const kycResult = await kycService.getVerificationResult(kycSessionId);
       
       if (!kycResult) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: {
             code: 'KYC_SESSION_NOT_FOUND',
@@ -174,11 +174,12 @@ router.post(
           requestId: req.headers['x-request-id'],
           timestamp: new Date().toISOString()
         });
+        return;
       }
 
       // Verify user owns the KYC session
-      if (kycResult.userId !== req.user!.id) {
-        return res.status(403).json({
+      if (kycResult.user.id !== req.user!.id) {
+        res.status(403).json({
           success: false,
           error: {
             code: 'KYC_SESSION_ACCESS_DENIED',
@@ -187,6 +188,7 @@ router.post(
           requestId: req.headers['x-request-id'],
           timestamp: new Date().toISOString()
         });
+        return;
       }
 
       // Create attestation
