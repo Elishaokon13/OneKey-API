@@ -1,4 +1,4 @@
-import { JWTPayload, AuthTokens, User } from '../../types/auth';
+import { JWTPayload, AuthTokens, User } from '@/types/auth';
 export declare class JWTService {
     private readonly accessTokenSecret;
     private readonly refreshTokenSecret;
