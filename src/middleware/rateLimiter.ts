@@ -57,4 +57,21 @@ export const attestationLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+// Attestation creation/modification limiter (very restrictive due to blockchain costs)
+export const applyAttestationRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Only 10 attestation operations per hour per IP
+  message: {
+    error: 'Attestation Operation Rate Limited',
+    message: 'Too many attestation operations, please try again later.',
+    retryAfter: 60 * 60
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => {
+    // Use IP + User ID for more accurate rate limiting
+    return `${req.ip}-${req.user?.id || 'anonymous'}`;
+  }
 }); 
