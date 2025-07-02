@@ -6,8 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resetDatabase = exports.rollbackMigration = exports.createMigration = exports.getMigrationStatus = exports.runMigrations = void 0;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const database_1 = require("@/config/database");
-const supabase_1 = require("@/config/supabase");
+const database_1 = require("../config/database");
+const supabase_1 = require("../config/supabase");
 // Get all migration files
 const getMigrationFiles = () => {
     const migrationsDir = path_1.default.join(__dirname, 'migrations');
