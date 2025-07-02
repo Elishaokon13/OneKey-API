@@ -274,6 +274,10 @@ const startServer = async () => {
     // Run database migrations
     await runMigrations();
     
+    // Initialize attestation service
+    console.log('🔗 Initializing attestation service...');
+    await attestationService.initialize();
+    
     // Start HTTP server
     const server = app.listen(PORT, () => {
       console.log('🚀 OneKey KYC API Server Started');
