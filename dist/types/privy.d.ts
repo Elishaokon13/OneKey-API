@@ -26,10 +26,10 @@ export interface PrivyLinkedAccount {
 }
 export interface PrivyAuthRequest {
     accessToken: string;
-    idToken?: string;
-    sessionToken?: string;
-    clientSideVerification?: boolean;
-    metadata?: Record<string, any>;
+    idToken?: string | undefined;
+    sessionToken?: string | undefined;
+    clientSideVerification?: boolean | undefined;
+    metadata?: Record<string, any> | undefined;
 }
 export interface PrivyAuthResult {
     user: PrivyUser;
