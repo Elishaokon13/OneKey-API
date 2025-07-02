@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { query, getDatabase } from '@/config/database';
+import { isSupabaseConfigured } from '@/config/supabase';
 
 interface Migration {
   version: string;
