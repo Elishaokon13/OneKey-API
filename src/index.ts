@@ -186,9 +186,6 @@ app.get('/api/v1/docs', (req, res) => {
   });
 });
 
-// Import route modules
-import authRoutes from '@/routes/auth';
-
 // API route handlers
 app.use('/api/v1/auth', authRoutes);
 
