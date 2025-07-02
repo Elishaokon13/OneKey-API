@@ -81,10 +81,11 @@ app.get('/health', async (req, res) => {
     const dbHealth = await checkDatabaseHealth();
     const privyHealth = privyService.getHealthStatus();
     const attestationHealth = await attestationService.getHealthStatus();
+    const encryptionHealth = encryptionService.getHealthStatus();
     
     // Determine overall status
     let overallStatus = 'OK';
-    if (dbHealth.status !== 'healthy' || attestationHealth.status === 'unhealthy') {
+    if (dbHealth.status !== 'healthy' || attestationHealth.status === 'unhealthy' || encryptionHealth.status === 'unhealthy') {
       overallStatus = 'DEGRADED';
     }
     
