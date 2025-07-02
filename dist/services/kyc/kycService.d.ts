@@ -7,6 +7,7 @@ export declare class KycService {
     selectProvider(request: CreateKycSessionRequest): KycProvider;
     createSession(request: CreateKycSessionRequest): Promise<KycSession>;
     startVerification(sessionId: string): Promise<KycVerificationResult>;
+    getVerificationResult(sessionId: string): Promise<KycVerificationResult | null>;
     getAvailableProviders(): KycProviderConfig[];
     getProvidersHealth(): Promise<Record<KycProvider, any>>;
     getProviderService(provider: KycProvider): BaseKycService;
