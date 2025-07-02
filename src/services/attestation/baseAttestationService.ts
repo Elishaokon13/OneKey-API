@@ -216,15 +216,14 @@ export abstract class BaseAttestationService {
   }
 
   protected calculateRiskLevel(kycResult: KycVerificationResult): 'low' | 'medium' | 'high' | 'critical' {
-    const riskScore = kycResult.riskScore || 0;
-    const confidenceScore = kycResult.confidenceScore;
+    const confidenceScore = kycResult.confidence;
     
-    // Risk calculation logic
-    if (riskScore > 70 || confidenceScore < 60) {
+    // Risk calculation based on confidence and check results
+    if (confidenceScore < 60) {
       return 'critical';
-    } else if (riskScore > 40 || confidenceScore < 80) {
+    } else if (confidenceScore < 80) {
       return 'high';
-    } else if (riskScore > 20 || confidenceScore < 90) {
+    } else if (confidenceScore < 90) {
       return 'medium';
     } else {
       return 'low';
