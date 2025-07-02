@@ -171,7 +171,7 @@ export class AttestationService {
         error: {
           code: error instanceof AttestationError ? error.code : 'ATTESTATION_CREATION_FAILED',
           message: error instanceof Error ? error.message : 'Unknown error occurred',
-          details: error instanceof AttestationError ? error.details : undefined
+          ...(error instanceof AttestationError && error.details && { details: error.details })
         },
         requestId,
         timestamp: new Date().toISOString()
