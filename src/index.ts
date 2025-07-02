@@ -7,10 +7,11 @@ import { initializeDatabase, closeDatabase, checkDatabaseHealth } from './config
 import { runMigrations } from './database/migrator';
 
 // Import routes
-import authRoutes from './routes/auth';
-import privyRoutes from './routes/privy';
-import kycRoutes from './routes/kyc';
-import { attestationRoutes, attestationService } from './routes/attestation';
+import authRoutes from '@/routes/auth';
+import privyRoutes from '@/routes/privy';
+import kycRoutes from '@/routes/kyc';
+import attestationRoutes from '@/routes/attestation';
+import encryptionRoutes from '@/routes/encryption';
 import { privyService } from './services/auth/privyService';
 
 // Import custom middleware
@@ -238,6 +239,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/privy', privyRoutes);
 app.use('/api/v1/kyc', kycRoutes);
 app.use('/api/v1/attestations', attestationRoutes);
+app.use('/api/v1/encryption', encryptionRoutes);
 
 app.use('/api/v1/storage', (req, res) => {
   res.status(501).json({
