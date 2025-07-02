@@ -52,7 +52,12 @@ export class KycService {
       throw new KycProviderUnavailableError('smile_identity', 'No KYC providers are enabled');
     }
 
-    return availableProviders[0][0];
+    const selectedProvider = availableProviders[0];
+    if (!selectedProvider) {
+      throw new KycProviderUnavailableError('smile_identity', 'No KYC providers are enabled');
+    }
+    
+    return selectedProvider[0];
   }
 
   async createSession(request: CreateKycSessionRequest): Promise<KycSession> {
