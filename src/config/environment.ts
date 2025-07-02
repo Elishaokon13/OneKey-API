@@ -104,6 +104,12 @@ const config: Config = {
   blockchain: {
     privyAppId: process.env.PRIVY_APP_ID || '',
     privyAppSecret: process.env.PRIVY_APP_SECRET || '',
+    chainId: parseInt(process.env.BLOCKCHAIN_CHAIN_ID || '84532', 10), // Base Sepolia
+    rpcUrl: process.env.BLOCKCHAIN_RPC_URL || 'https://sepolia.base.org',
+    easContractAddress: process.env.EAS_CONTRACT_ADDRESS || '0x4200000000000000000000000000000000000021',
+    easSchemaRegistryAddress: process.env.EAS_SCHEMA_REGISTRY_ADDRESS || '0x4200000000000000000000000000000000000020',
+    attesterPrivateKey: process.env.ATTESTER_PRIVATE_KEY || '',
+    attesterAddress: process.env.ATTESTER_ADDRESS || '',
     easSchemaId: process.env.EAS_SCHEMA_ID || '',
     easAttestationUrl: process.env.EAS_ATTESTATION_URL || 'https://base-sepolia.easscan.org',
   },
