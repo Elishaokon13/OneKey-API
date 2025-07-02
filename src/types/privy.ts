@@ -31,6 +31,7 @@ export interface PrivyAuthRequest {
   idToken?: string;
   sessionToken?: string;
   clientSideVerification?: boolean;
+  metadata?: Record<string, any>;
 }
 
 export interface PrivyAuthResult {
