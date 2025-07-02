@@ -6,13 +6,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const environment_1 = __importDefault(require("./config/environment"));
+const environment_1 = require("./config/environment");
 const database_1 = require("./config/database");
 const migrator_1 = require("./database/migrator");
 // Import routes
 const auth_1 = __importDefault(require("./routes/auth"));
 const privy_1 = __importDefault(require("./routes/privy"));
 const kyc_1 = __importDefault(require("./routes/kyc"));
+const attestation_1 = require("./routes/attestation");
 const privyService_1 = require("./services/auth/privyService");
 // Import custom middleware
 const rateLimiter_1 = require("./middleware/rateLimiter");
@@ -21,7 +22,7 @@ const security_1 = require("./middleware/security");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
-const PORT = environment_1.default.server.port;
+const PORT = environment_1.config.server.port;
 // Trust proxy (important for rate limiting and IP detection)
 app.set('trust proxy', 1);
 // Request ID generation (must be first)
@@ -56,9 +57,10 @@ app.get('/health', async (req, res) => {
     try {
         const dbHealth = await (0, database_1.checkDatabaseHealth)();
         const privyHealth = privyService_1.privyService.getHealthStatus();
+        const attestationHealth = await attestation_1.attestationService.getHealthStatus();
         // Determine overall status
         let overallStatus = 'OK';
-        if (dbHealth.status !== 'healthy') {
+        if (dbHealth.status !== 'healthy' || attestationHealth.status === 'unhealthy') {
             overallStatus = 'DEGRADED';
         }
         res.status(overallStatus === 'OK' ? 200 : 503).json({
@@ -66,7 +68,7 @@ app.get('/health', async (req, res) => {
             service: 'OneKey KYC API',
             version: '1.0.0',
             timestamp: new Date().toISOString(),
-            environment: environment_1.default.server.nodeEnv,
+            environment: environment_1.config.server.nodeEnv,
             uptime: process.uptime(),
             components: {
                 database: dbHealth,
@@ -75,6 +77,13 @@ app.get('/health', async (req, res) => {
                     configured: privyHealth.configured,
                     initialized: privyHealth.initialized,
                     appId: privyHealth.appId
+                },
+                attestations: {
+                    status: attestationHealth.status,
+                    initialized: attestationHealth.details.initialized,
+                    chainId: attestationHealth.services.eas.details.chainId,
+                    attesterAddress: attestationHealth.services.eas.details.attesterAddress,
+                    cacheSize: attestationHealth.details.cacheSize
                 }
             },
             requestId: req.headers['x-request-id']
@@ -86,11 +95,12 @@ app.get('/health', async (req, res) => {
             service: 'OneKey KYC API',
             version: '1.0.0',
             timestamp: new Date().toISOString(),
-            environment: environment_1.default.server.nodeEnv,
+            environment: environment_1.config.server.nodeEnv,
             uptime: process.uptime(),
             components: {
                 database: { status: 'error', error: error.message },
-                privy: { status: 'error', error: 'Health check failed' }
+                privy: { status: 'error', error: 'Health check failed' },
+                attestations: { status: 'error', error: 'Health check failed' }
             },
             requestId: req.headers['x-request-id']
         });
@@ -126,9 +136,14 @@ app.get('/api/v1', (req, res) => {
                 providersHealth: 'GET /api/v1/kyc/providers/health'
             },
             attestations: {
-                create: 'POST /api/v1/attestations/create',
+                create: 'POST /api/v1/attestations',
+                get: 'GET /api/v1/attestations/:uid',
                 verify: 'POST /api/v1/attestations/verify',
-                query: 'GET /api/v1/attestations/:userId'
+                list: 'GET /api/v1/attestations',
+                revoke: 'POST /api/v1/attestations/revoke',
+                estimateCost: 'POST /api/v1/attestations/estimate-cost',
+                health: 'GET /api/v1/attestations/health',
+                stats: 'GET /api/v1/attestations/stats'
             },
             storage: {
                 encrypt: 'POST /api/v1/storage/encrypt',
@@ -178,7 +193,7 @@ app.get('/api/v1/docs', (req, res) => {
             general: '100 requests per 15 minutes',
             authentication: '10 requests per 15 minutes',
             kyc: '5 requests per hour',
-            attestations: '50 requests per 5 minutes'
+            attestations: '50 requests per 5 minutes (queries), 10 per hour (operations)'
         },
         errorCodes: {
             'VALIDATION_ERROR': 'Request validation failed',
@@ -197,15 +212,7 @@ app.get('/api/v1/docs', (req, res) => {
 app.use('/api/v1/auth', auth_1.default);
 app.use('/api/v1/privy', privy_1.default);
 app.use('/api/v1/kyc', kyc_1.default);
-// KYC routes now implemented - see /src/routes/kyc.ts
-app.use('/api/v1/attestations', (req, res) => {
-    res.status(501).json({
-        error: 'NOT_IMPLEMENTED',
-        message: 'Attestation endpoints not yet implemented',
-        availableIn: 'Task 5.2',
-        requestId: req.headers['x-request-id']
-    });
-});
+app.use('/api/v1/attestations', attestation_1.attestationRoutes);
 app.use('/api/v1/storage', (req, res) => {
     res.status(501).json({
         error: 'NOT_IMPLEMENTED',
@@ -234,12 +241,15 @@ const startServer = async () => {
         await (0, database_1.initializeDatabase)();
         // Run database migrations
         await (0, migrator_1.runMigrations)();
+        // Initialize attestation service
+        console.log('🔗 Initializing attestation service...');
+        await attestation_1.attestationService.initialize();
         // Start HTTP server
         const server = app.listen(PORT, () => {
             console.log('🚀 OneKey KYC API Server Started');
             console.log('=====================================');
             console.log(`📍 Server URL: http://localhost:${PORT}`);
-            console.log(`📊 Environment: ${environment_1.default.server.nodeEnv}`);
+            console.log(`📊 Environment: ${environment_1.config.server.nodeEnv}`);
             console.log(`🏥 Health Check: http://localhost:${PORT}/health`);
             console.log(`📖 API Documentation: http://localhost:${PORT}/api/v1/docs`);
             console.log(`🔗 API Base: http://localhost:${PORT}/api/v1`);
