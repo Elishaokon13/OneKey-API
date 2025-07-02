@@ -1,12 +1,9 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.privyService = exports.PrivyService = void 0;
 // import { PrivyApi } from '@privy-io/server-auth';
 // TODO: Update import when we have correct Privy SDK export name
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = require("../../config/environment");
 const authService_1 = require("./authService");
 const jwtService_1 = require("./jwtService");
 const privy_1 = require("@/types/privy");
@@ -22,7 +19,7 @@ class PrivyService {
      */
     initialize() {
         try {
-            if (!environment_1.default.blockchain.privyAppId || !environment_1.default.blockchain.privyAppSecret) {
+            if (!environment_1.config.blockchain.privyAppId || !environment_1.config.blockchain.privyAppSecret) {
                 console.warn('Privy credentials not configured. Privy integration will be disabled.');
                 return;
             }
@@ -306,9 +303,9 @@ class PrivyService {
      */
     getHealthStatus() {
         return {
-            configured: !!environment_1.default.blockchain.privyAppId && !!environment_1.default.blockchain.privyAppSecret,
+            configured: !!environment_1.config.blockchain.privyAppId && !!environment_1.config.blockchain.privyAppSecret,
             initialized: this.isInitialized,
-            appId: environment_1.default.blockchain.privyAppId ? environment_1.default.blockchain.privyAppId.substring(0, 8) + '...' : null
+            appId: environment_1.config.blockchain.privyAppId ? environment_1.config.blockchain.privyAppId.substring(0, 8) + '...' : null
         };
     }
 }
