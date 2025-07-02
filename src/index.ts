@@ -8,6 +8,7 @@ import { runMigrations } from '@/database/migrator';
 
 // Import routes
 import authRoutes from '@/routes/auth';
+import privyRoutes from '@/routes/privy';
 
 // Import custom middleware
 import { generalLimiter } from '@/middleware/rateLimiter';
