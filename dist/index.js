@@ -6,15 +6,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const environment_1 = __importDefault(require("./config/environment"));
-const database_1 = require("./config/database");
-const migrator_1 = require("./database/migrator");
+const environment_1 = __importDefault(require("@/config/environment"));
+const database_1 = require("@/config/database");
+const migrator_1 = require("@/database/migrator");
 // Import routes
-const auth_1 = __importDefault(require("./routes/auth"));
+const auth_1 = __importDefault(require("@/routes/auth"));
+const privy_1 = __importDefault(require("@/routes/privy"));
+const privyService_1 = require("@/services/auth/privyService");
 // Import custom middleware
-const rateLimiter_1 = require("./middleware/rateLimiter");
-const errorHandler_1 = require("./middleware/errorHandler");
-const security_1 = require("./middleware/security");
+const rateLimiter_1 = require("@/middleware/rateLimiter");
+const errorHandler_1 = require("@/middleware/errorHandler");
+const security_1 = require("@/middleware/security");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -52,7 +54,12 @@ app.use(security_1.sanitizeRequest);
 app.get('/health', async (req, res) => {
     try {
         const dbHealth = await (0, database_1.checkDatabaseHealth)();
-        const overallStatus = dbHealth.status === 'healthy' ? 'OK' : 'DEGRADED';
+        const privyHealth = privyService_1.privyService.getHealthStatus();
+        // Determine overall status
+        let overallStatus = 'OK';
+        if (dbHealth.status !== 'healthy') {
+            overallStatus = 'DEGRADED';
+        }
         res.status(overallStatus === 'OK' ? 200 : 503).json({
             status: overallStatus,
             service: 'OneKey KYC API',
@@ -60,7 +67,15 @@ app.get('/health', async (req, res) => {
             timestamp: new Date().toISOString(),
             environment: environment_1.default.server.nodeEnv,
             uptime: process.uptime(),
-            database: dbHealth,
+            components: {
+                database: dbHealth,
+                privy: {
+                    status: privyHealth.configured && privyHealth.initialized ? 'operational' : 'disabled',
+                    configured: privyHealth.configured,
+                    initialized: privyHealth.initialized,
+                    appId: privyHealth.appId
+                }
+            },
             requestId: req.headers['x-request-id']
         });
     }
@@ -72,7 +87,10 @@ app.get('/health', async (req, res) => {
             timestamp: new Date().toISOString(),
             environment: environment_1.default.server.nodeEnv,
             uptime: process.uptime(),
-            database: { status: 'error', error: error.message },
+            components: {
+                database: { status: 'error', error: error.message },
+                privy: { status: 'error', error: 'Health check failed' }
+            },
             requestId: req.headers['x-request-id']
         });
     }
@@ -91,6 +109,11 @@ app.get('/api/v1', (req, res) => {
                 register: 'POST /api/v1/auth/register',
                 refresh: 'POST /api/v1/auth/refresh',
                 logout: 'POST /api/v1/auth/logout'
+            },
+            privy: {
+                authenticate: 'POST /api/v1/privy/authenticate',
+                profile: 'GET /api/v1/privy/profile',
+                status: 'GET /api/v1/privy/status'
             },
             kyc: {
                 initiate: 'POST /api/v1/kyc/initiate',
@@ -167,6 +190,7 @@ app.get('/api/v1/docs', (req, res) => {
 });
 // API route handlers
 app.use('/api/v1/auth', auth_1.default);
+app.use('/api/v1/privy', privy_1.default);
 app.use('/api/v1/kyc', (req, res) => {
     res.status(501).json({
         error: 'NOT_IMPLEMENTED',
