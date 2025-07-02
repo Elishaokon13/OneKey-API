@@ -297,21 +297,26 @@ Ready to proceed with **Task 2.1: JWT Authentication System**
 
 ## Lessons
 
-### Technical Lessons Learned
-1. **Express.js Version Compatibility**: Express.js 5.x has breaking changes - use version 4.21.0 for stability
-2. **Port Conflict Resolution**: Default port 3000 often conflicts - use 3001 for development
-3. **TypeScript Path Mapping**: Proper tsconfig.json path mapping crucial for `@/` imports
-4. **Database Connection Pooling**: Use connection pooling with proper limits (20 max connections)
-5. **Migration File Naming**: Consistent naming pattern (001_description.sql) essential for proper ordering
-6. **Graceful Shutdown**: Always close database connections during application shutdown
-7. **Health Check Design**: Include all critical system components (database, external services) in health endpoints
-8. **Error Handling Patterns**: Use typed error classes with request ID tracking for better debugging
-9. **Rate Limiting Strategy**: Implement tiered rate limiting based on operation cost (KYC = 5/hour vs general = 100/15min)
-10. **TypeScript Strict Typing**: Handle undefined values explicitly when parsing strings or extracting data
-11. **Supabase Integration**: Use hybrid approach with both Supabase client and direct PostgreSQL pool for flexibility
-12. **Supabase Client Types**: Use type casting for Supabase clients to avoid TypeScript exact optional property errors
-13. **Environment Detection**: Auto-detect database configuration and gracefully fallback to alternatives
-14. **Real-time Subscriptions**: Supabase provides excellent real-time capabilities for KYC status updates
+### Technical Lessons
+1. **Express.js Compatibility**: Express.js 5.x has breaking changes - use 4.21.0 for stability
+2. **Port Management**: Default port 3000 often conflicts - use 3001 for development
+3. **TypeScript Path Mapping**: Requires tsc-alias for production builds when using @ alias
+4. **Database Architecture**: Hybrid Supabase + PostgreSQL approach provides flexibility and fallback options
+5. **Rate Limiting Strategy**: KYC operations need specialized rate limits (5/hour) due to cost sensitivity
+6. **Migration Patterns**: Database migrations should be compatible with both Supabase and PostgreSQL
+7. **JWT Security**: Separate secrets for access and refresh tokens enhance security
+8. **TypeScript Strict Mode**: exactOptionalPropertyTypes requires explicit undefined handling
+9. **Password Security**: bcrypt with 12+ rounds provides adequate security for 2024
+10. **Error Handling**: Custom error classes with specific codes improve API usability
+11. **Environment Detection**: Auto-detection of database configuration simplifies deployment
+12. **Request Tracking**: UUID request IDs essential for debugging distributed systems
+13. **Supabase Integration**: Service role client needed for server-side operations
+14. **Module Resolution**: Path mapping in TypeScript requires post-compilation resolution for Node.js
+
+### Security Lessons
+15. **Environment File Security**: Always remove .env files from git tracking using `git rm --cached .env` to prevent credential leaks
+16. **Git Ignore Patterns**: Use `.env*` in .gitignore to catch all environment file variations
+17. **Repository Security**: Existing .env files in git history require removal from tracking before continuing development
 
 ### OneKey-Specific Architecture Insights
 1. **Zero PII Storage**: Database schema designed to store only hashes and references, never raw PII
