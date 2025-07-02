@@ -2,24 +2,25 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import config from '@/config/environment';
-import { initializeDatabase, closeDatabase, checkDatabaseHealth } from '@/config/database';
-import { runMigrations } from '@/database/migrator';
+import { config } from './config/environment';
+import { initializeDatabase, closeDatabase, checkDatabaseHealth } from './config/database';
+import { runMigrations } from './database/migrator';
 
 // Import routes
-import authRoutes from '@/routes/auth';
-import privyRoutes from '@/routes/privy';
-import kycRoutes from '@/routes/kyc';
-import { privyService } from '@/services/auth/privyService';
+import authRoutes from './routes/auth';
+import privyRoutes from './routes/privy';
+import kycRoutes from './routes/kyc';
+import { attestationRoutes, attestationService } from './routes/attestation';
+import { privyService } from './services/auth/privyService';
 
 // Import custom middleware
-import { generalLimiter } from '@/middleware/rateLimiter';
+import { generalLimiter } from './middleware/rateLimiter';
 import { 
   requestId, 
   requestLogger, 
   errorHandler, 
   notFoundHandler 
-} from '@/middleware/errorHandler';
+} from './middleware/errorHandler';
 import { 
   securityHeaders, 
   corsOptions, 
@@ -27,7 +28,7 @@ import {
   validateIp, 
   validateContentType, 
   validateRequestSize 
-} from '@/middleware/security';
+} from './middleware/security';
 
 // Load environment variables
 dotenv.config();
