@@ -71,6 +71,13 @@ const applyMigration = async (migration: Migration): Promise<void> => {
 export const runMigrations = async (): Promise<void> => {
   console.log('🔄 Starting database migrations...');
   
+  // Skip migrations when using Supabase (tables already exist)
+  if (isSupabaseConfigured()) {
+    console.log('⏭️  Skipping migrations (Supabase mode - tables already exist)');
+    console.log('✅ Database schema is managed by Supabase');
+    return;
+  }
+  
   try {
     // Ensure database connection is available
     const pool = getDatabase();
