@@ -10,9 +10,10 @@ import { runMigrations } from './database/migrator';
 import authRoutes from '@/routes/auth';
 import privyRoutes from '@/routes/privy';
 import kycRoutes from '@/routes/kyc';
-import attestationRoutes from '@/routes/attestation';
+import { attestationRoutes, attestationService } from '@/routes/attestation';
 import encryptionRoutes from '@/routes/encryption';
 import { privyService } from './services/auth/privyService';
+import { encryptionService } from '@/services/encryption/encryptionService';
 
 // Import custom middleware
 import { generalLimiter } from './middleware/rateLimiter';
