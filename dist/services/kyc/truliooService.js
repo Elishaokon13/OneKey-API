@@ -1,24 +1,21 @@
 "use strict";
 // OneKey KYC API - Trulioo Service
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TruliooService = void 0;
 const baseKycService_1 = require("./baseKycService");
 const kyc_1 = require("@/types/kyc");
-const environment_1 = __importDefault(require("@/config/environment"));
+const environment_1 = require("../../config/environment");
 class TruliooService extends baseKycService_1.BaseKycService {
     provider = 'trulioo';
     constructor() {
         const providerConfig = {
             provider: 'trulioo',
-            enabled: !!environment_1.default.kycProviders.trulioo.apiKey,
+            enabled: !!environment_1.config.kycProviders.trulioo.apiKey,
             priority: 3,
             config: {
-                apiKey: environment_1.default.kycProviders.trulioo.apiKey,
+                apiKey: environment_1.config.kycProviders.trulioo.apiKey,
                 baseUrl: 'https://api.globaldatacompany.com',
-                testMode: environment_1.default.server.nodeEnv !== 'production'
+                testMode: environment_1.config.server.nodeEnv !== 'production'
             },
             capabilities: {
                 documentVerification: false,
@@ -154,7 +151,7 @@ class TruliooService extends baseKycService_1.BaseKycService {
         return {
             status: this.config.enabled ? 'operational' : 'disabled',
             apiConnectivity: this.config.enabled,
-            configuration: !!environment_1.default.kycProviders.trulioo.apiKey,
+            configuration: !!environment_1.config.kycProviders.trulioo.apiKey,
             capabilities: {
                 identityVerification: true,
                 sanctionsScreening: true,
