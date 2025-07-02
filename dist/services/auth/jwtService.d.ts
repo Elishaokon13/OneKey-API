@@ -22,6 +22,39 @@ export declare class JWTService {
      */
     private parseExpiry;
     /**
+     * Refresh access token using a valid refresh token
+     */
+    refreshAccessToken(refreshToken: string, user: User): AuthTokens;
+    /**
+     * Revoke a refresh token
+     */
+    revokeRefreshToken(token: string): void;
+    /**
+     * Revoke all refresh tokens for a user
+     */
+    revokeAllUserTokens(userId: string): void;
+    /**
+     * Generate a secure random nonce for wallet authentication
+     */
+    generateNonce(): string;
+    /**
+     * Create a message for wallet signature verification
+     */
+    createWalletMessage(nonce: string, domain?: string): string;
+    /**
+     * Verify wallet signature (basic implementation - extend for specific wallets)
+     */
+    verifyWalletSignature(message: string, signature: string, walletAddress: string): boolean;
+    /**
+     * Get token expiry information
+     */
+    getTokenInfo(token: string, type?: 'access' | 'refresh'): {
+        valid: boolean;
+        expired: boolean;
+        payload?: JWTPayload;
+        expiresAt?: Date;
+    };
+    /**
      * Store refresh token metadata
      */
     private storeRefreshToken;
