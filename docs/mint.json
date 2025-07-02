@@ -1,1 +1,174 @@
- 
+{
+  "name": "OneKey KYC API",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0D9373",
+    "anchors": {
+      "from": "#0D9373",
+      "to": "#07C983"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@onekey.so"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://dashboard.onekey.so"
+  },
+  "tabs": [
+    {
+      "name": "API Reference",
+      "url": "api-reference"
+    },
+    {
+      "name": "SDKs",
+      "url": "sdks"
+    },
+    {
+      "name": "Guides",
+      "url": "guides"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "Documentation",
+      "icon": "book-open-cover",
+      "url": "https://docs.onekey.so"
+    },
+    {
+      "name": "Community",
+      "icon": "slack",
+      "url": "https://slack.onekey.so"
+    },
+    {
+      "name": "Blog",
+      "icon": "newspaper",
+      "url": "https://blog.onekey.so"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "authentication"
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "concepts/kyc-flow",
+        "concepts/encryption",
+        "concepts/attestations",
+        "concepts/privacy"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/getting-started",
+        "guides/kyc-integration",
+        "guides/web3-auth",
+        "guides/encryption-setup",
+        "guides/attestation-creation",
+        "guides/error-handling"
+      ]
+    },
+    {
+      "group": "API Documentation",
+      "pages": [
+        "api-reference/introduction",
+        {
+          "group": "Authentication",
+          "pages": [
+            "api-reference/authentication/login",
+            "api-reference/authentication/privy-verify",
+            "api-reference/authentication/refresh"
+          ]
+        },
+        {
+          "group": "KYC",
+          "pages": [
+            "api-reference/kyc/create-session",
+            "api-reference/kyc/get-session",
+            "api-reference/kyc/upload-documents",
+            "api-reference/kyc/get-providers",
+            "api-reference/kyc/health"
+          ]
+        },
+        {
+          "group": "Encryption",
+          "pages": [
+            "api-reference/encryption/encrypt",
+            "api-reference/encryption/decrypt",
+            "api-reference/encryption/generate-key",
+            "api-reference/encryption/rotate-key",
+            "api-reference/encryption/encrypt-file",
+            "api-reference/encryption/decrypt-file",
+            "api-reference/encryption/validate-integrity",
+            "api-reference/encryption/health",
+            "api-reference/encryption/config"
+          ]
+        },
+        {
+          "group": "Attestations",
+          "pages": [
+            "api-reference/attestations/create",
+            "api-reference/attestations/get",
+            "api-reference/attestations/verify",
+            "api-reference/attestations/list",
+            "api-reference/attestations/revoke",
+            "api-reference/attestations/estimate-cost",
+            "api-reference/attestations/health",
+            "api-reference/attestations/stats"
+          ]
+        },
+        {
+          "group": "System",
+          "pages": [
+            "api-reference/system/health"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "SDKs",
+      "pages": [
+        "sdks/javascript",
+        "sdks/python",
+        "sdks/react"
+      ]
+    },
+    {
+      "group": "Resources",
+      "pages": [
+        "resources/errors",
+        "resources/webhooks",
+        "resources/rate-limits",
+        "resources/changelog"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/onekeyhq",
+    "github": "https://github.com/onekey-sec",
+    "linkedin": "https://www.linkedin.com/company/onekey"
+  },
+  "api": {
+    "baseUrl": "https://api.onekey.so/v1",
+    "auth": {
+      "method": "bearer"
+    }
+  },
+  "openapi": "/openapi.json"
+} 
