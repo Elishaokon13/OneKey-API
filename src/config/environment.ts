@@ -70,6 +70,9 @@ interface Config {
 }
 
 const config: Config = {
+  api: {
+    version: process.env.API_VERSION || '1.0.0',
+  },
   server: {
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
