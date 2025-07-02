@@ -9,7 +9,7 @@ import {
   KycProviderConfig,
   KycProviderError
 } from '@/types/kyc';
-import config from '@/config/environment';
+import { config } from '../../config/environment';
 
 export class TruliooService extends BaseKycService {
   provider: KycProvider = 'trulioo';
