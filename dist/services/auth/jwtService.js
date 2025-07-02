@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.jwtService = exports.JWTService = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = __importDefault(require("crypto"));
 const environment_1 = __importDefault(require("@/config/environment"));
 const auth_1 = require("@/types/auth");
 // Refresh token storage (in production, use Redis or database)
@@ -121,6 +122,95 @@ class JWTService {
             case 'h': return value * 60 * 60;
             case 'd': return value * 24 * 60 * 60;
             default: return parseInt(expiry); // Assume seconds if no unit
+        }
+    }
+    /**
+     * Refresh access token using a valid refresh token
+     */
+    refreshAccessToken(refreshToken, user) {
+        // Verify the refresh token
+        const decoded = this.verifyRefreshToken(refreshToken);
+        // Ensure the refresh token belongs to the user
+        if (decoded.user_id !== user.id) {
+            throw new auth_1.InvalidTokenError('Refresh token does not belong to user');
+        }
+        // Generate new tokens
+        return this.generateTokens(user);
+    }
+    /**
+     * Revoke a refresh token
+     */
+    revokeRefreshToken(token) {
+        const tokenData = refreshTokens.get(token);
+        if (tokenData) {
+            tokenData.revoked = true;
+            refreshTokens.set(token, tokenData);
+        }
+    }
+    /**
+     * Revoke all refresh tokens for a user
+     */
+    revokeAllUserTokens(userId) {
+        for (const [token, data] of refreshTokens.entries()) {
+            if (data.user_id === userId) {
+                data.revoked = true;
+                refreshTokens.set(token, data);
+            }
+        }
+    }
+    /**
+     * Generate a secure random nonce for wallet authentication
+     */
+    generateNonce() {
+        return crypto_1.default.randomBytes(32).toString('hex');
+    }
+    /**
+     * Create a message for wallet signature verification
+     */
+    createWalletMessage(nonce, domain = 'onekey-kyc.com') {
+        return `Sign this message to authenticate with OneKey KYC:\n\nNonce: ${nonce}\nDomain: ${domain}\nTimestamp: ${new Date().toISOString()}`;
+    }
+    /**
+     * Verify wallet signature (basic implementation - extend for specific wallets)
+     */
+    verifyWalletSignature(message, signature, walletAddress) {
+        // TODO: Implement actual signature verification based on wallet type
+        // This is a placeholder implementation
+        console.warn('Wallet signature verification not fully implemented');
+        return signature.length > 0 && walletAddress.length > 0;
+    }
+    /**
+     * Get token expiry information
+     */
+    getTokenInfo(token, type = 'access') {
+        try {
+            const secret = type === 'access' ? this.accessTokenSecret : this.refreshTokenSecret;
+            const decoded = jsonwebtoken_1.default.verify(token, secret);
+            return {
+                valid: true,
+                expired: false,
+                payload: decoded,
+                expiresAt: new Date(decoded.exp * 1000)
+            };
+        }
+        catch (error) {
+            if (error instanceof jsonwebtoken_1.default.TokenExpiredError) {
+                // Try to decode expired token to get info
+                try {
+                    const secret = type === 'access' ? this.accessTokenSecret : this.refreshTokenSecret;
+                    const decoded = jsonwebtoken_1.default.decode(token);
+                    return {
+                        valid: false,
+                        expired: true,
+                        payload: decoded,
+                        expiresAt: new Date(decoded.exp * 1000)
+                    };
+                }
+                catch {
+                    return { valid: false, expired: true };
+                }
+            }
+            return { valid: false, expired: false };
         }
     }
     /**
