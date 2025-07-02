@@ -97,6 +97,9 @@ export const closeDatabase = async (): Promise<void> => {
 
 // Get database connection from pool
 export const getDatabase = (): Pool => {
+  if (isSupabaseConfigured() && !pool) {
+    throw new Error('Using Supabase-only mode. Use getSupabaseClient() or getSupabaseServiceClient() instead.');
+  }
   if (!pool) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
