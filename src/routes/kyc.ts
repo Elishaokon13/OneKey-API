@@ -69,8 +69,8 @@ router.post('/sessions',
  * POST /api/v1/kyc/sessions/:sessionId/verify - Start verification
  */
 router.post('/sessions/:sessionId/verify',
-  authenticate,
-  applyRateLimit('kyc'),
+  authenticateJWT,
+  kycLimiter,
   async (req: Request, res: Response) => {
     const requestId = uuidv4();
     
