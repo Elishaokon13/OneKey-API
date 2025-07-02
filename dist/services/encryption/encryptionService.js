@@ -88,7 +88,7 @@ class EncryptionService {
             }
             // Generate IV and encrypt
             const iv = crypto_1.default.randomBytes(16);
-            const cipher = crypto_1.default.createCipher('aes-256-gcm', Buffer.from(encryptionKey, 'base64'));
+            const cipher = crypto_1.default.createCipheriv('aes-256-gcm', Buffer.from(encryptionKey, 'base64'), iv);
             const encrypted = Buffer.concat([
                 cipher.update(dataToEncrypt),
                 cipher.final()
@@ -108,7 +108,7 @@ class EncryptionService {
                 salt,
                 authTag,
                 algorithm,
-                keyId,
+                ...(keyId && { keyId }),
                 metadata
             };
             this.stats.totalEncryptions++;
@@ -117,11 +117,12 @@ class EncryptionService {
         }
         catch (error) {
             this.stats.errors++;
-            logger_1.logger.error('Encryption failed', { error: error.message });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logger_1.logger.error('Encryption failed', { error: errorMessage });
             if (error instanceof encryption_1.EncryptionError) {
                 throw error;
             }
-            throw new encryption_1.EncryptionError('Encryption failed', 'ENCRYPTION_FAILED', { originalError: error.message });
+            throw new encryption_1.EncryptionError('Encryption failed', 'ENCRYPTION_FAILED', { originalError: errorMessage });
         }
     }
     async decrypt(request) {
@@ -146,7 +147,7 @@ class EncryptionService {
             const iv = Buffer.from(request.iv, 'base64');
             const encrypted = Buffer.from(request.encryptedData, 'base64');
             const authTag = Buffer.from(request.authTag, 'base64');
-            const decipher = crypto_1.default.createDecipher('aes-256-gcm', Buffer.from(decryptionKey, 'base64'));
+            const decipher = crypto_1.default.createDecipheriv('aes-256-gcm', Buffer.from(decryptionKey, 'base64'), iv);
             decipher.setAuthTag(authTag);
             let decrypted;
             try {
@@ -177,11 +178,12 @@ class EncryptionService {
         }
         catch (error) {
             this.stats.errors++;
-            logger_1.logger.error('Decryption failed', { error: error.message });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            logger_1.logger.error('Decryption failed', { error: errorMessage });
             if (error instanceof encryption_1.DecryptionError) {
                 throw error;
             }
-            throw new encryption_1.DecryptionError('Decryption failed', 'DECRYPTION_FAILED', { originalError: error.message });
+            throw new encryption_1.DecryptionError('Decryption failed', 'DECRYPTION_FAILED', { originalError: errorMessage });
         }
     }
     async generateKey(request) {
@@ -205,20 +207,22 @@ class EncryptionService {
                 salt,
                 iterations: derivationConfig.iterations,
                 createdAt: Date.now(),
-                expiresAt,
+                ...(expiresAt && { expiresAt }),
                 usage: request.usage,
-                metadata: request.metadata
+                ...(request.metadata && { metadata: request.metadata })
             };
             this.keys.set(keyId, key);
-            return {
+            const response = {
                 keyId,
                 salt,
                 derivationConfig,
-                expiresAt
+                ...(expiresAt && { expiresAt })
             };
+            return response;
         }
         catch (error) {
-            throw new encryption_1.KeyManagementError('Key generation failed', 'KEY_GENERATION_FAILED', { originalError: error.message });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            throw new encryption_1.KeyManagementError('Key generation failed', 'KEY_GENERATION_FAILED', { originalError: errorMessage });
         }
     }
     async rotateKey(keyId) {
@@ -236,7 +240,7 @@ class EncryptionService {
                 keyLength: 32,
                 hashFunction: 'sha256'
             },
-            metadata: existingKey.metadata
+            ...(existingKey.metadata && { metadata: existingKey.metadata })
         };
         const newKey = await this.generateKey(newKeyRequest);
         existingKey.expiresAt = Date.now();
@@ -264,7 +268,8 @@ class EncryptionService {
             return key.toString('base64');
         }
         catch (error) {
-            throw new encryption_1.KeyManagementError('Key derivation failed', 'KEY_DERIVATION_FAILED', { originalError: error.message });
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            throw new encryption_1.KeyManagementError('Key derivation failed', 'KEY_DERIVATION_FAILED', { originalError: errorMessage });
         }
     }
     validateIntegrity(data, checksum) {
