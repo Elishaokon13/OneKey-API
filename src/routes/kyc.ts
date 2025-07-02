@@ -49,7 +49,7 @@ router.post('/sessions',
     try {
       const createRequest: CreateKycSessionRequest = {
         ...req.body,
-        user: { ...req.body.user, id: req.user.id },
+        user: { ...req.body.user, id: req.user!.id },
         metadata: { ...req.body.metadata, ipAddress: req.ip, userAgent: req.get('User-Agent') }
       };
 
