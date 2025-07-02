@@ -4,14 +4,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.privyService = exports.PrivyService = void 0;
-const server_auth_1 = require("@privy-io/server-auth");
+// import { PrivyApi } from '@privy-io/server-auth';
+// TODO: Update import when we have correct Privy SDK export name
 const environment_1 = __importDefault(require("@/config/environment"));
 const authService_1 = require("./authService");
 const jwtService_1 = require("./jwtService");
 const privy_1 = require("@/types/privy");
 const uuid_1 = require("uuid");
 class PrivyService {
-    privy = null;
+    privy = null; // Placeholder until we get correct SDK
     isInitialized = false;
     constructor() {
         this.initialize();
@@ -25,12 +26,13 @@ class PrivyService {
                 console.warn('Privy credentials not configured. Privy integration will be disabled.');
                 return;
             }
-            this.privy = new server_auth_1.PrivyApi({
-                appId: environment_1.default.blockchain.privyAppId,
-                appSecret: environment_1.default.blockchain.privyAppSecret,
-            });
-            this.isInitialized = true;
-            console.log('✅ Privy service initialized successfully');
+            // TODO: Initialize actual Privy SDK when import is fixed
+            // this.privy = new PrivyApi({
+            //   appId: config.blockchain.privyAppId,
+            //   appSecret: config.blockchain.privyAppSecret,
+            // });
+            this.isInitialized = false; // Set to false until actual SDK is integrated
+            console.log('⚠️ Privy service placeholder initialized (SDK integration pending)');
         }
         catch (error) {
             console.error('❌ Failed to initialize Privy service:', error);
@@ -51,20 +53,10 @@ class PrivyService {
             throw new privy_1.PrivyVerificationError('Privy service not configured');
         }
         try {
-            const verificationResult = await this.privy.verifyAuthToken(accessToken);
-            if (!verificationResult.userId) {
-                throw new privy_1.PrivyVerificationError('Invalid access token');
-            }
-            // Get user details from Privy
-            const user = await this.privy.getUser(verificationResult.userId);
-            return {
-                userId: verificationResult.userId,
-                appId: verificationResult.appId,
-                sessionId: verificationResult.sessionId || '',
-                isValid: true,
-                isExpired: false,
-                user: user
-            };
+            // TODO: Implement actual Privy SDK verification
+            // const verificationResult = await this.privy!.verifyAuthToken(accessToken);
+            // Placeholder implementation
+            throw new privy_1.PrivyVerificationError('Privy SDK integration pending');
         }
         catch (error) {
             console.error('Privy token verification failed:', error);
@@ -178,8 +170,11 @@ class PrivyService {
             return null;
         }
         try {
-            const user = await this.privy.getUser(privyUserId);
-            return user;
+            // TODO: Implement actual Privy SDK user fetching
+            // const user = await this.privy!.getUser(privyUserId);
+            // return user as PrivyUser;
+            console.log('Privy getUserByPrivyId placeholder called for:', privyUserId);
+            return null;
         }
         catch (error) {
             console.error('Failed to get Privy user:', error);
