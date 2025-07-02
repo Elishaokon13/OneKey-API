@@ -343,8 +343,7 @@ export class EasService extends BaseAttestationService {
         data: { uid, value: 0n }
       });
 
-      await tx.wait();
-      const txHash = tx.hash;
+      const txHash = await tx.wait();
 
       // Get the actual receipt from provider
       const receipt = await this.provider.getTransactionReceipt(txHash);
