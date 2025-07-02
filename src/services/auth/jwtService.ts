@@ -148,6 +148,112 @@ export class JWTService {
   }
 
   /**
+   * Refresh access token using a valid refresh token
+   */
+  public refreshAccessToken(refreshToken: string, user: User): AuthTokens {
+    // Verify the refresh token
+    const decoded = this.verifyRefreshToken(refreshToken);
+    
+    // Ensure the refresh token belongs to the user
+    if (decoded.user_id !== user.id) {
+      throw new InvalidTokenError('Refresh token does not belong to user');
+    }
+
+    // Generate new tokens
+    return this.generateTokens(user);
+  }
+
+  /**
+   * Revoke a refresh token
+   */
+  public revokeRefreshToken(token: string): void {
+    const tokenData = refreshTokens.get(token);
+    if (tokenData) {
+      tokenData.revoked = true;
+      refreshTokens.set(token, tokenData);
+    }
+  }
+
+  /**
+   * Revoke all refresh tokens for a user
+   */
+  public revokeAllUserTokens(userId: string): void {
+    for (const [token, data] of refreshTokens.entries()) {
+      if (data.user_id === userId) {
+        data.revoked = true;
+        refreshTokens.set(token, data);
+      }
+    }
+  }
+
+  /**
+   * Generate a secure random nonce for wallet authentication
+   */
+  public generateNonce(): string {
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  /**
+   * Create a message for wallet signature verification
+   */
+  public createWalletMessage(nonce: string, domain: string = 'onekey-kyc.com'): string {
+    return `Sign this message to authenticate with OneKey KYC:\n\nNonce: ${nonce}\nDomain: ${domain}\nTimestamp: ${new Date().toISOString()}`;
+  }
+
+  /**
+   * Verify wallet signature (basic implementation - extend for specific wallets)
+   */
+  public verifyWalletSignature(
+    message: string, 
+    signature: string, 
+    walletAddress: string
+  ): boolean {
+    // TODO: Implement actual signature verification based on wallet type
+    // This is a placeholder implementation
+    console.warn('Wallet signature verification not fully implemented');
+    return signature.length > 0 && walletAddress.length > 0;
+  }
+
+  /**
+   * Get token expiry information
+   */
+  public getTokenInfo(token: string, type: 'access' | 'refresh' = 'access'): {
+    valid: boolean;
+    expired: boolean;
+    payload?: JWTPayload;
+    expiresAt?: Date;
+  } {
+    try {
+      const secret = type === 'access' ? this.accessTokenSecret : this.refreshTokenSecret;
+      const decoded = jwt.verify(token, secret) as JWTPayload;
+      
+      return {
+        valid: true,
+        expired: false,
+        payload: decoded,
+        expiresAt: new Date(decoded.exp * 1000)
+      };
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        // Try to decode expired token to get info
+        try {
+          const secret = type === 'access' ? this.accessTokenSecret : this.refreshTokenSecret;
+          const decoded = jwt.decode(token) as JWTPayload;
+          return {
+            valid: false,
+            expired: true,
+            payload: decoded,
+            expiresAt: new Date(decoded.exp * 1000)
+          };
+        } catch {
+          return { valid: false, expired: true };
+        }
+      }
+      return { valid: false, expired: false };
+    }
+  }
+
+  /**
    * Store refresh token metadata
    */
   private storeRefreshToken(token: string, userId: string, expiresAt: number): void {
