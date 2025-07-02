@@ -1,108 +1,322 @@
 ---
-title: "Create KYC Session"
-api: "POST https://api.onekey.so/v1/kyc/sessions"
-description: "Create a new KYC verification session with automatic provider selection"
+title: "POST /kyc/sessions"
+api: "POST https://api.onekey.so/api/v1/kyc/sessions"
+description: "Create a new KYC verification session for identity verification"
 ---
 
 ## Overview
 
-Creates a new KYC (Know Your Customer) verification session for identity verification. OneKey automatically selects the optimal KYC provider based on the document type, country, and provider availability.
+Create a new KYC (Know Your Customer) verification session to begin the identity verification process. This endpoint initializes a session with a chosen KYC provider and returns session details for client-side integration.
 
 <Note>
-Each KYC session is unique and tied to a specific user. Sessions expire after 24 hours if not completed.
+KYC sessions are the starting point for identity verification. The session coordinates the entire verification flow including document upload, biometric verification, and compliance checks.
 </Note>
 
-## Authentication
+## Request
 
-<ParamField header="Authorization" type="string" required>
-  Bearer JWT token obtained from the authentication endpoint
-</ParamField>
+### Headers
 
-## Request Body
+```http
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+Accept: application/json
+```
+
+### Body Parameters
 
 <ParamField body="user" type="object" required>
-  User information for the KYC session
-  
-  <Expandable title="user properties">
-    <ParamField body="user.id" type="string" required>
-      Unique identifier for the user in your system
+  <Expandable title="User information">
+    <ParamField body="email" type="string" required>
+      User's email address
     </ParamField>
     
-    <ParamField body="user.email" type="string" required>
-      User's email address for notifications
+    <ParamField body="firstName" type="string" required>
+      User's first name
     </ParamField>
     
-    <ParamField body="user.firstName" type="string">
-      User's first name (optional, improves verification accuracy)
+    <ParamField body="lastName" type="string" required>
+      User's last name
     </ParamField>
     
-    <ParamField body="user.lastName" type="string">
-      User's last name (optional, improves verification accuracy)
+    <ParamField body="dateOfBirth" type="string">
+      Date of birth (YYYY-MM-DD format)
     </ParamField>
     
-    <ParamField body="user.dateOfBirth" type="string">
-      User's date of birth in YYYY-MM-DD format
+    <ParamField body="phoneNumber" type="string">
+      Phone number with country code (e.g., +1234567890)
     </ParamField>
     
-    <ParamField body="user.phone" type="string">
-      User's phone number with country code
+    <ParamField body="address" type="object">
+      <Expandable title="Address details">
+        <ParamField body="street" type="string">
+          Street address
+        </ParamField>
+        
+        <ParamField body="city" type="string">
+          City
+        </ParamField>
+        
+        <ParamField body="state" type="string">
+          State or province
+        </ParamField>
+        
+        <ParamField body="postalCode" type="string">
+          Postal or ZIP code
+        </ParamField>
+        
+        <ParamField body="country" type="string">
+          Country code (ISO 3166-1 alpha-2)
+        </ParamField>
+      </Expandable>
     </ParamField>
   </Expandable>
 </ParamField>
 
-<ParamField body="documentType" type="string" required>
-  Type of identity document to verify. Options: `passport`, `national_id`, `drivers_license`, `residence_permit`
+<ParamField body="country" type="string" required>
+  Country of residence (ISO 3166-1 alpha-2 code, e.g., "US", "GB")
 </ParamField>
 
-<ParamField body="country" type="string" required>
-  ISO 3166-1 alpha-2 country code (e.g., "US", "GB", "NG")
+<ParamField body="documentType" type="string" required>
+  Type of identity document to verify
+  
+  **Options:** `passport`, `national_id`, `drivers_license`, `residence_permit`
 </ParamField>
 
 <ParamField body="provider" type="string">
-  Preferred KYC provider. Options: `smile_identity`, `onfido`, `trulioo`. If not specified, OneKey auto-selects the best provider
-</ParamField>
-
-<ParamField body="redirectUrl" type="string">
-  URL to redirect user after completing verification (for hosted flows)
-</ParamField>
-
-<ParamField body="webhookUrl" type="string">
-  URL to receive real-time verification status updates
+  Preferred KYC provider (if not specified, optimal provider will be selected)
+  
+  **Options:** `smile_identity`, `onfido`, `trulioo`
 </ParamField>
 
 <ParamField body="options" type="object">
-  Additional configuration options
-  
-  <Expandable title="options properties">
-    <ParamField body="options.enableBiometric" type="boolean" default="true">
-      Enable biometric verification (facial recognition)
+  <Expandable title="Session options">
+    <ParamField body="verificationLevel" type="string" default="standard">
+      Level of verification required
+      
+      **Options:** `basic`, `standard`, `enhanced`
     </ParamField>
     
-    <ParamField body="options.enableLiveness" type="boolean" default="true">
-      Enable liveness detection during biometric verification
+    <ParamField body="biometricVerification" type="boolean" default="true">
+      Whether to include biometric verification
     </ParamField>
     
-    <ParamField body="options.enableAddressVerification" type="boolean" default="false">
-      Enable address verification (requires additional documents)
+    <ParamField body="livenessCheck" type="boolean" default="true">
+      Whether to perform liveness detection
     </ParamField>
     
-    <ParamField body="options.strictMode" type="boolean" default="false">
-      Enable strict verification mode (higher security, lower pass rate)
+    <ParamField body="addressVerification" type="boolean" default="false">
+      Whether to verify address information
     </ParamField>
     
-    <ParamField body="options.sessionTimeout" type="number" default="1440">
-      Session timeout in minutes (max 1440 = 24 hours)
+    <ParamField body="sanctionsCheck" type="boolean" default="true">
+      Whether to perform sanctions screening
     </ParamField>
     
-    <ParamField body="options.language" type="string" default="en">
-      Language code for user-facing elements (e.g., "en", "es", "fr")
+    <ParamField body="pepCheck" type="boolean" default="true">
+      Whether to perform PEP (Politically Exposed Person) screening
+    </ParamField>
+    
+    <ParamField body="callbackUrl" type="string">
+      Webhook URL for status updates
+    </ParamField>
+    
+    <ParamField body="successUrl" type="string">
+      Redirect URL after successful verification
+    </ParamField>
+    
+    <ParamField body="failureUrl" type="string">
+      Redirect URL after failed verification
+    </ParamField>
+    
+    <ParamField body="expiresIn" type="number" default="3600">
+      Session expiration time in seconds
     </ParamField>
   </Expandable>
 </ParamField>
 
 <ParamField body="metadata" type="object">
-  Custom metadata to associate with the session (key-value pairs)
+  <Expandable title="Optional metadata">
+    <ParamField body="source" type="string">
+      Source of the verification request (e.g., "mobile_app", "web_portal")
+    </ParamField>
+    
+    <ParamField body="userAgent" type="string">
+      User agent string of the client
+    </ParamField>
+    
+    <ParamField body="ipAddress" type="string">
+      IP address of the user
+    </ParamField>
+    
+    <ParamField body="referenceId" type="string">
+      External reference ID for tracking
+    </ParamField>
+    
+    <ParamField body="tags" type="array">
+      Array of tags for categorization
+    </ParamField>
+  </Expandable>
 </ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.onekey.so/api/v1/kyc/sessions \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user": {
+      "email": "john.doe@example.com",
+      "firstName": "John",
+      "lastName": "Doe",
+      "dateOfBirth": "1990-01-15",
+      "phoneNumber": "+1234567890",
+      "address": {
+        "street": "123 Main St",
+        "city": "New York",
+        "state": "NY",
+        "postalCode": "10001",
+        "country": "US"
+      }
+    },
+    "country": "US",
+    "documentType": "passport",
+    "provider": "smile_identity",
+    "options": {
+      "verificationLevel": "enhanced",
+      "biometricVerification": true,
+      "livenessCheck": true,
+      "addressVerification": true,
+      "callbackUrl": "https://yourapp.com/webhooks/kyc"
+    },
+    "metadata": {
+      "source": "web_portal",
+      "referenceId": "ref_123456",
+      "tags": ["premium_user", "high_value"]
+    }
+  }'
+```
+
+```javascript JavaScript
+const createKycSession = async (userData, options = {}) => {
+  const response = await fetch('/api/v1/kyc/sessions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      user: userData,
+      country: userData.country || 'US',
+      documentType: 'passport',
+      provider: 'smile_identity',
+      options: {
+        verificationLevel: 'standard',
+        biometricVerification: true,
+        livenessCheck: true,
+        callbackUrl: process.env.KYC_WEBHOOK_URL,
+        expiresIn: 3600,
+        ...options
+      },
+      metadata: {
+        source: 'web_app',
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString()
+      }
+    })
+  });
+  
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(`KYC session creation failed: ${result.error.message}`);
+  }
+  
+  return result.data;
+};
+
+// Usage
+const userData = {
+  email: 'john.doe@example.com',
+  firstName: 'John',
+  lastName: 'Doe',
+  dateOfBirth: '1990-01-15',
+  phoneNumber: '+1234567890'
+};
+
+const session = await createKycSession(userData, {
+  verificationLevel: 'enhanced',
+  callbackUrl: 'https://yourapp.com/webhooks/kyc'
+});
+
+console.log('Session ID:', session.sessionId);
+console.log('Verification URL:', session.verificationUrl);
+```
+
+```python Python
+import requests
+from datetime import datetime
+
+def create_kyc_session(user_data, access_token, options=None):
+    if options is None:
+        options = {}
+    
+    payload = {
+        'user': user_data,
+        'country': user_data.get('country', 'US'),
+        'documentType': 'passport',
+        'provider': 'smile_identity',
+        'options': {
+            'verificationLevel': 'standard',
+            'biometricVerification': True,
+            'livenessCheck': True,
+            'callbackUrl': 'https://yourapp.com/webhooks/kyc',
+            'expiresIn': 3600,
+            **options
+        },
+        'metadata': {
+            'source': 'python_sdk',
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        }
+    }
+    
+    response = requests.post(
+        'https://api.onekey.so/api/v1/kyc/sessions',
+        headers={
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        },
+        json=payload
+    )
+    
+    data = response.json()
+    
+    if not data['success']:
+        raise Exception(f"KYC session creation failed: {data['error']['message']}")
+    
+    return data['data']
+
+# Usage
+user_data = {
+    'email': 'john.doe@example.com',
+    'firstName': 'John',
+    'lastName': 'Doe',
+    'dateOfBirth': '1990-01-15',
+    'phoneNumber': '+1234567890'
+}
+
+session = create_kyc_session(user_data, access_token, {
+    'verificationLevel': 'enhanced',
+    'callbackUrl': 'https://yourapp.com/webhooks/kyc'
+})
+
+print(f"Session ID: {session['sessionId']}")
+print(f"Verification URL: {session['verificationUrl']}")
+```
+
+</CodeGroup>
 
 ## Response
 
@@ -111,447 +325,525 @@ Each KYC session is unique and tied to a specific user. Sessions expire after 24
 </ResponseField>
 
 <ResponseField name="data" type="object">
-  The created KYC session data
-  
-  <Expandable title="data properties">
+  <Expandable title="Session details">
     <ResponseField name="sessionId" type="string">
-      Unique identifier for the KYC session
-    </ResponseField>
-    
-    <ResponseField name="provider" type="string">
-      Selected KYC provider for this session
+      Unique session identifier
     </ResponseField>
     
     <ResponseField name="status" type="string">
-      Current session status: `created`, `pending`, `in_progress`, `completed`, `failed`, `expired`
+      Current session status (initiated, pending, completed, failed, expired)
+    </ResponseField>
+    
+    <ResponseField name="provider" type="string">
+      Selected KYC provider
     </ResponseField>
     
     <ResponseField name="user" type="object">
-      User information associated with the session
-      
-      <Expandable title="user properties">
+      <Expandable title="User information">
         <ResponseField name="id" type="string">
-          User ID in your system
+          OneKey user identifier
         </ResponseField>
         
         <ResponseField name="email" type="string">
           User's email address
         </ResponseField>
+        
+        <ResponseField name="firstName" type="string">
+          User's first name
+        </ResponseField>
+        
+        <ResponseField name="lastName" type="string">
+          User's last name
+        </ResponseField>
       </Expandable>
     </ResponseField>
     
-    <ResponseField name="documentType" type="string">
-      Type of document to be verified
+    <ResponseField name="verificationDetails" type="object">
+      <Expandable title="Verification configuration">
+        <ResponseField name="documentType" type="string">
+          Required document type
+        </ResponseField>
+        
+        <ResponseField name="verificationLevel" type="string">
+          Level of verification
+        </ResponseField>
+        
+        <ResponseField name="checksEnabled" type="object">
+          <Expandable title="Enabled verification checks">
+            <ResponseField name="biometric" type="boolean">
+              Biometric verification enabled
+            </ResponseField>
+            
+            <ResponseField name="liveness" type="boolean">
+              Liveness detection enabled
+            </ResponseField>
+            
+            <ResponseField name="address" type="boolean">
+              Address verification enabled
+            </ResponseField>
+            
+            <ResponseField name="sanctions" type="boolean">
+              Sanctions screening enabled
+            </ResponseField>
+            
+            <ResponseField name="pep" type="boolean">
+              PEP screening enabled
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
     </ResponseField>
     
-    <ResponseField name="country" type="string">
-      Country code for the verification
+    <ResponseField name="integration" type="object">
+      <Expandable title="Integration details">
+        <ResponseField name="verificationUrl" type="string">
+          URL for user to complete verification
+        </ResponseField>
+        
+        <ResponseField name="sdkToken" type="string">
+          Token for client-side SDK integration
+        </ResponseField>
+        
+        <ResponseField name="providerSessionId" type="string">
+          Provider-specific session identifier
+        </ResponseField>
+        
+        <ResponseField name="iframeUrl" type="string">
+          URL for iframe integration (if supported)
+        </ResponseField>
+      </Expandable>
     </ResponseField>
     
-    <ResponseField name="verificationUrl" type="string">
-      URL for hosted verification flow (if applicable)
+    <ResponseField name="timestamps" type="object">
+      <Expandable title="Session timestamps">
+        <ResponseField name="createdAt" type="string">
+          Session creation timestamp (ISO 8601)
+        </ResponseField>
+        
+        <ResponseField name="expiresAt" type="string">
+          Session expiration timestamp (ISO 8601)
+        </ResponseField>
+        
+        <ResponseField name="updatedAt" type="string">
+          Last update timestamp (ISO 8601)
+        </ResponseField>
+      </Expandable>
     </ResponseField>
     
-    <ResponseField name="uploadEndpoint" type="string">
-      API endpoint for uploading encrypted documents
-    </ResponseField>
-    
-    <ResponseField name="expiresAt" type="string">
-      ISO 8601 timestamp when the session expires
-    </ResponseField>
-    
-    <ResponseField name="createdAt" type="string">
-      ISO 8601 timestamp when the session was created
-    </ResponseField>
-    
-    <ResponseField name="options" type="object">
-      Configuration options for the session
-    </ResponseField>
-    
-    <ResponseField name="metadata" type="object">
-      Custom metadata associated with the session
+    <ResponseField name="webhooks" type="object">
+      <Expandable title="Webhook configuration">
+        <ResponseField name="callbackUrl" type="string">
+          Configured callback URL
+        </ResponseField>
+        
+        <ResponseField name="events" type="array">
+          Subscribed webhook events
+        </ResponseField>
+      </Expandable>
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-<ResponseField name="requestId" type="string">
-  Unique identifier for this API request
-</ResponseField>
+### Example Response
 
-<ResponseField name="timestamp" type="string">
-  ISO 8601 timestamp of the response
-</ResponseField>
-
-## Example
-
-<RequestExample>
-
-```bash cURL
-curl -X POST https://api.onekey.so/v1/kyc/sessions \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user": {
-      "id": "user_12345",
-      "email": "john.doe@example.com",
-      "firstName": "John",
-      "lastName": "Doe",
-      "dateOfBirth": "1990-05-15",
-      "phone": "+1234567890"
-    },
-    "documentType": "passport",
-    "country": "US",
-    "provider": "smile_identity",
-    "redirectUrl": "https://yourapp.com/kyc/complete",
-    "webhookUrl": "https://yourapp.com/webhooks/kyc",
-    "options": {
-      "enableBiometric": true,
-      "enableLiveness": true,
-      "strictMode": false,
-      "sessionTimeout": 720,
-      "language": "en"
-    },
-    "metadata": {
-      "userTier": "premium",
-      "source": "mobile_app",
-      "campaignId": "summer2024"
-    }
-  }'
-```
-
-```javascript JavaScript
-const response = await fetch('https://api.onekey.so/v1/kyc/sessions', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer YOUR_JWT_TOKEN',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    user: {
-      id: 'user_12345',
-      email: 'john.doe@example.com',
-      firstName: 'John',
-      lastName: 'Doe',
-      dateOfBirth: '1990-05-15',
-      phone: '+1234567890'
-    },
-    documentType: 'passport',
-    country: 'US',
-    provider: 'smile_identity',
-    redirectUrl: 'https://yourapp.com/kyc/complete',
-    webhookUrl: 'https://yourapp.com/webhooks/kyc',
-    options: {
-      enableBiometric: true,
-      enableLiveness: true,
-      strictMode: false,
-      sessionTimeout: 720,
-      language: 'en'
-    },
-    metadata: {
-      userTier: 'premium',
-      source: 'mobile_app',
-      campaignId: 'summer2024'
-    }
-  })
-});
-
-const result = await response.json();
-console.log('KYC session created:', result.data.sessionId);
-```
-
-```python Python
-import requests
-
-headers = {
-    'Authorization': 'Bearer YOUR_JWT_TOKEN',
-    'Content-Type': 'application/json'
-}
-
-data = {
-    'user': {
-        'id': 'user_12345',
-        'email': 'john.doe@example.com',
-        'firstName': 'John',
-        'lastName': 'Doe',
-        'dateOfBirth': '1990-05-15',
-        'phone': '+1234567890'
-    },
-    'documentType': 'passport',
-    'country': 'US',
-    'provider': 'smile_identity',
-    'redirectUrl': 'https://yourapp.com/kyc/complete',
-    'webhookUrl': 'https://yourapp.com/webhooks/kyc',
-    'options': {
-        'enableBiometric': True,
-        'enableLiveness': True,
-        'strictMode': False,
-        'sessionTimeout': 720,
-        'language': 'en'
-    },
-    'metadata': {
-        'userTier': 'premium',
-        'source': 'mobile_app',
-        'campaignId': 'summer2024'
-    }
-}
-
-response = requests.post(
-    'https://api.onekey.so/v1/kyc/sessions',
-    headers=headers,
-    json=data
-)
-
-result = response.json()
-print(f"KYC session created: {result['data']['sessionId']}")
-```
-
-</RequestExample>
-
-<ResponseExample>
-
-```json Success Response
+```json
 {
   "success": true,
   "data": {
-    "sessionId": "kyc_session_1a2b3c4d5e6f",
+    "sessionId": "kyc_session_1a2b3c4d5e",
+    "status": "initiated",
     "provider": "smile_identity",
-    "status": "created",
     "user": {
-      "id": "user_12345",
-      "email": "john.doe@example.com"
+      "id": "user_9f8e7d6c5b",
+      "email": "john.doe@example.com",
+      "firstName": "John",
+      "lastName": "Doe"
     },
-    "documentType": "passport",
-    "country": "US",
-    "verificationUrl": "https://verify.onekey.so/sessions/kyc_session_1a2b3c4d5e6f",
-    "uploadEndpoint": "https://api.onekey.so/v1/kyc/sessions/kyc_session_1a2b3c4d5e6f/upload",
-    "expiresAt": "2024-01-16T10:30:45.123Z",
-    "createdAt": "2024-01-15T10:30:45.123Z",
-    "options": {
-      "enableBiometric": true,
-      "enableLiveness": true,
-      "enableAddressVerification": false,
-      "strictMode": false,
-      "sessionTimeout": 720,
-      "language": "en"
+    "verificationDetails": {
+      "documentType": "passport",
+      "verificationLevel": "enhanced",
+      "checksEnabled": {
+        "biometric": true,
+        "liveness": true,
+        "address": true,
+        "sanctions": true,
+        "pep": true
+      }
     },
-    "metadata": {
-      "userTier": "premium",
-      "source": "mobile_app",
-      "campaignId": "summer2024"
+    "integration": {
+      "verificationUrl": "https://verify.smile.onekey.so/sessions/kyc_session_1a2b3c4d5e",
+      "sdkToken": "sdk_token_abcdef123456",
+      "providerSessionId": "smile_session_xyz789",
+      "iframeUrl": "https://verify.smile.onekey.so/iframe/kyc_session_1a2b3c4d5e"
+    },
+    "timestamps": {
+      "createdAt": "2024-01-15T10:30:45.123Z",
+      "expiresAt": "2024-01-15T11:30:45.123Z",
+      "updatedAt": "2024-01-15T10:30:45.123Z"
+    },
+    "webhooks": {
+      "callbackUrl": "https://yourapp.com/webhooks/kyc",
+      "events": [
+        "kyc.session.updated",
+        "kyc.verification.completed",
+        "kyc.verification.failed"
+      ]
     }
   },
-  "requestId": "req_9f8e7d6c5b4a3918",
+  "requestId": "req_123456789",
   "timestamp": "2024-01-15T10:30:45.123Z"
 }
 ```
 
-```json Error Response
+## Client Integration
+
+### Web Integration (Redirect)
+
+```javascript
+// Redirect-based integration
+const initiateKycVerification = async (userData) => {
+  try {
+    // Create KYC session
+    const session = await createKycSession(userData, {
+      verificationLevel: 'standard',
+      successUrl: `${window.location.origin}/kyc/success`,
+      failureUrl: `${window.location.origin}/kyc/failure`,
+      callbackUrl: 'https://yourapp.com/webhooks/kyc'
+    });
+    
+    // Store session ID for later reference
+    localStorage.setItem('kycSessionId', session.sessionId);
+    
+    // Redirect user to verification URL
+    window.location.href = session.integration.verificationUrl;
+    
+  } catch (error) {
+    console.error('KYC initiation failed:', error);
+    // Handle error appropriately
+  }
+};
+
+// Handle return from verification
+const handleKycReturn = () => {
+  const sessionId = localStorage.getItem('kycSessionId');
+  const urlParams = new URLSearchParams(window.location.search);
+  const status = urlParams.get('status');
+  
+  if (status === 'completed') {
+    console.log('KYC verification completed successfully');
+    // Poll for final results or wait for webhook
+    pollKycStatus(sessionId);
+  } else if (status === 'failed') {
+    console.log('KYC verification failed');
+    // Handle failure case
+  }
+};
+```
+
+### SDK Integration (Embedded)
+
+```javascript
+// SDK-based integration for embedded experience
+class KycSDKIntegration {
+  constructor(containerId) {
+    this.containerId = containerId;
+    this.session = null;
+  }
+  
+  async initialize(userData, options = {}) {
+    try {
+      // Create session
+      this.session = await createKycSession(userData, {
+        ...options,
+        callbackUrl: 'https://yourapp.com/webhooks/kyc'
+      });
+      
+      // Load provider SDK
+      await this.loadProviderSDK();
+      
+      // Initialize SDK with session token
+      await this.initializeProviderSDK();
+      
+    } catch (error) {
+      console.error('KYC SDK initialization failed:', error);
+      throw error;
+    }
+  }
+  
+  async loadProviderSDK() {
+    if (this.session.provider === 'smile_identity') {
+      return this.loadSmileSDK();
+    } else if (this.session.provider === 'onfido') {
+      return this.loadOnfidoSDK();
+    }
+    // Add other providers as needed
+  }
+  
+  async loadSmileSDK() {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.smileidentity.com/js/smile-sdk.js';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+  
+  async initializeProviderSDK() {
+    const container = document.getElementById(this.containerId);
+    
+    if (this.session.provider === 'smile_identity') {
+      window.SmileSDK.init({
+        token: this.session.integration.sdkToken,
+        container: container,
+        onComplete: (result) => this.handleComplete(result),
+        onError: (error) => this.handleError(error),
+        onClose: () => this.handleClose()
+      });
+    }
+    // Add other provider initializations
+  }
+  
+  handleComplete(result) {
+    console.log('KYC verification completed:', result);
+    // Verification completed, wait for webhook or poll status
+    this.pollStatus();
+  }
+  
+  handleError(error) {
+    console.error('KYC verification error:', error);
+    // Handle error appropriately
+  }
+  
+  handleClose() {
+    console.log('KYC verification closed by user');
+    // Handle user closing the verification flow
+  }
+  
+  async pollStatus() {
+    const maxAttempts = 30;
+    let attempts = 0;
+    
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/v1/kyc/sessions/${this.session.sessionId}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        
+        const data = await response.json();
+        const status = data.data.status;
+        
+        if (status === 'completed' || status === 'failed') {
+          this.handleFinalStatus(status, data.data);
+          return;
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 2000); // Poll every 2 seconds
+        } else {
+          console.warn('KYC status polling timeout');
+        }
+        
+      } catch (error) {
+        console.error('KYC status polling error:', error);
+      }
+    };
+    
+    poll();
+  }
+  
+  handleFinalStatus(status, sessionData) {
+    if (status === 'completed') {
+      console.log('KYC verification successful:', sessionData);
+      // Handle successful verification
+      this.onSuccess?.(sessionData);
+    } else {
+      console.log('KYC verification failed:', sessionData);
+      // Handle failed verification
+      this.onFailure?.(sessionData);
+    }
+  }
+}
+
+// Usage
+const kycIntegration = new KycSDKIntegration('kyc-container');
+
+kycIntegration.onSuccess = (sessionData) => {
+  console.log('User successfully verified');
+  // Update UI, enable features, etc.
+};
+
+kycIntegration.onFailure = (sessionData) => {
+  console.log('User verification failed');
+  // Show error message, suggest retry, etc.
+};
+
+await kycIntegration.initialize({
+  email: 'john.doe@example.com',
+  firstName: 'John',
+  lastName: 'Doe'
+}, {
+  verificationLevel: 'standard'
+});
+```
+
+## Error Responses
+
+<ResponseExample>
+
+```json 400 Invalid User Data
 {
   "success": false,
   "error": {
-    "code": "INVALID_COUNTRY",
-    "message": "The specified country is not supported by any available KYC provider",
+    "code": "KYC_INVALID_USER_DATA",
+    "message": "User data validation failed",
     "details": {
-      "country": "XX",
-      "supportedCountries": ["US", "GB", "NG", "KE", "GH"],
-      "suggestion": "Use a supported country code or contact support for coverage expansion"
+      "field": "email",
+      "issue": "Invalid email format",
+      "received": "invalid-email"
     }
   },
-  "requestId": "req_9f8e7d6c5b4a3918",
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 400 Unsupported Country
+{
+  "success": false,
+  "error": {
+    "code": "KYC_UNSUPPORTED_COUNTRY",
+    "message": "KYC verification not available in specified country",
+    "details": {
+      "country": "XX",
+      "supportedCountries": ["US", "GB", "CA", "AU", "NG", "KE", "ZA"]
+    }
+  },
+  "requestId": "req_123456789",
+  "timestamp": "2024-01-15T10:30:45.123Z"
+}
+```
+
+```json 429 Rate Limited
+{
+  "success": false,
+  "error": {
+    "code": "KYC_RATE_LIMIT_EXCEEDED",
+    "message": "Too many KYC sessions created",
+    "details": {
+      "limit": 30,
+      "window": "15 minutes",
+      "retryAfter": 900
+    }
+  },
+  "requestId": "req_123456789",
   "timestamp": "2024-01-15T10:30:45.123Z"
 }
 ```
 
 </ResponseExample>
 
-## Provider Selection Logic
+## Provider Selection
 
-OneKey automatically selects the best KYC provider based on several factors:
+OneKey automatically selects the optimal KYC provider based on:
 
 <AccordionGroup>
   <Accordion title="Geographic Coverage">
-    - **Smile Identity**: Optimized for African markets (Nigeria, Kenya, Ghana, etc.)
-    - **Onfido**: Global coverage with strong presence in Europe and Americas
-    - **Trulioo**: Comprehensive global coverage with focus on emerging markets
+    **Regional optimization**
+    
+    - **Smile Identity**: Africa (Nigeria, Kenya, South Africa, Ghana, etc.)
+    - **Onfido**: Global coverage with EU/US focus
+    - **Trulioo**: Global coverage with emerging markets focus
+    
+    ```javascript
+    // Provider selection based on country
+    const getOptimalProvider = (country) => {
+      const africanCountries = ['NG', 'KE', 'ZA', 'GH', 'UG', 'TZ'];
+      const euCountries = ['GB', 'DE', 'FR', 'IT', 'ES', 'NL'];
+      
+      if (africanCountries.includes(country)) {
+        return 'smile_identity';
+      } else if (euCountries.includes(country)) {
+        return 'onfido';
+      } else {
+        return 'trulioo'; // Global fallback
+      }
+    };
+    ```
   </Accordion>
   
-  <Accordion title="Document Type Support">
-    - **Passport**: Supported by all providers globally
-    - **National ID**: Provider selected based on country-specific coverage
-    - **Driver's License**: Varies by country and provider capabilities
-    - **Residence Permit**: Limited provider support, auto-selection crucial
+  <Accordion title="Document Support">
+    **Document type compatibility**
+    
+    Each provider has different document support:
+    
+    - **Passport**: All providers
+    - **National ID**: Varies by country
+    - **Driver's License**: Varies by country
+    - **Residence Permit**: Limited support
+    
+    ```javascript
+    // Check document support before creating session
+    const checkDocumentSupport = async (country, documentType) => {
+      const response = await fetch(`/api/v1/kyc/providers/support?country=${country}&document=${documentType}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      
+      const data = await response.json();
+      return data.data.supportedProviders;
+    };
+    ```
   </Accordion>
   
-  <Accordion title="Performance Metrics">
-    - **Success Rate**: Historical verification success rates
-    - **Processing Time**: Average time to complete verification
-    - **Availability**: Real-time provider health and capacity
-    - **Cost**: Optimized for best value based on verification requirements
+  <Accordion title="Verification Features">
+    **Feature availability by provider**
+    
+    - **Biometric matching**: All providers
+    - **Liveness detection**: All providers
+    - **Address verification**: Onfido, Trulioo
+    - **Sanctions screening**: Trulioo (comprehensive)
+    - **PEP screening**: Trulioo (comprehensive)
+    
+    ```javascript
+    // Configure session based on required features
+    const createSessionWithFeatures = async (userData, requiredFeatures) => {
+      const availableProviders = await checkFeatureSupport(requiredFeatures);
+      
+      return createKycSession(userData, {
+        provider: availableProviders[0], // Use best available
+        options: {
+          biometricVerification: requiredFeatures.includes('biometric'),
+          addressVerification: requiredFeatures.includes('address'),
+          sanctionsCheck: requiredFeatures.includes('sanctions')
+        }
+      });
+    };
+    ```
   </Accordion>
 </AccordionGroup>
 
-## Session States
+## Rate Limiting
 
-<Tabs>
-  <Tab title="Created">
-    **Initial State**
-    - Session created successfully
-    - Ready to receive document uploads
-    - User can begin verification process
-    - No verification attempt made yet
-  </Tab>
-  
-  <Tab title="Pending">
-    **Documents Uploaded**
-    - Documents submitted for verification
-    - Processing has not started yet
-    - May be queued due to provider capacity
-    - Expected to move to `in_progress` soon
-  </Tab>
-  
-  <Tab title="In Progress">
-    **Verification Running**
-    - KYC provider actively processing documents
-    - Biometric and document checks in progress
-    - May include manual review steps
-    - Cannot be cancelled at this stage
-  </Tab>
-  
-  <Tab title="Completed">
-    **Verification Finished**
-    - All verification checks completed
-    - Results available via API or webhook
-    - Session data retained for compliance
-    - Ready for attestation creation
-  </Tab>
-  
-  <Tab title="Failed">
-    **Verification Failed**
-    - Verification did not pass requirements
-    - Detailed failure reasons provided
-    - May be eligible for retry with different documents
-    - Session can be archived or retried
-  </Tab>
-  
-  <Tab title="Expired">
-    **Session Timeout**
-    - Session exceeded configured timeout
-    - No verification attempt was completed
-    - Cannot be resumed or retried
-    - New session required for verification
-  </Tab>
-</Tabs>
+This endpoint is rate limited to **30 requests per 15 minutes** per user.
 
-## Rate Limits
+<Warning>
+Each KYC session incurs costs. Implement proper user flows to avoid unnecessary session creation.
+</Warning>
 
-This endpoint is subject to the following rate limits:
-
-<ResponseField name="Session Creation" type="limit">
-  **10 sessions per minute** per user
-</ResponseField>
-
-<ResponseField name="Daily Limit" type="limit">
-  **100 sessions per day** per account (varies by plan)
-</ResponseField>
-
-<ResponseField name="Concurrent Sessions" type="limit">
-  **25 active sessions** per user simultaneously
-</ResponseField>
-
-<Tip>
-Higher rate limits are available for enterprise customers. Contact sales for custom limits.
-</Tip>
-
-## Error Codes
-
-| Code | Description | Resolution |
-|------|-------------|------------|
-| `INVALID_COUNTRY` | Country not supported by any provider | Use a supported country or contact support |
-| `INVALID_DOCUMENT_TYPE` | Document type not supported in country | Choose a different document type |
-| `PROVIDER_UNAVAILABLE` | Requested provider is currently unavailable | Let OneKey auto-select or try different provider |
-| `USER_EXISTS` | User already has active session | Complete or cancel existing session first |
-| `INVALID_EMAIL` | Email format is invalid | Provide a valid email address |
-| `RATE_LIMIT_EXCEEDED` | Too many session creation requests | Wait before creating more sessions |
-| `INSUFFICIENT_CREDITS` | Account has insufficient credits | Add credits or upgrade plan |
-
-## Webhook Events
-
-When you provide a `webhookUrl`, OneKey will send real-time updates for session state changes:
-
-<CodeGroup>
-
-```json Session Created
-{
-  "event": "kyc.session.created",
-  "data": {
-    "sessionId": "kyc_session_1a2b3c4d5e6f",
-    "status": "created",
-    "userId": "user_12345",
-    "provider": "smile_identity"
-  },
-  "timestamp": "2024-01-15T10:30:45.123Z"
-}
-```
-
-```json Verification Complete
-{
-  "event": "kyc.session.completed",
-  "data": {
-    "sessionId": "kyc_session_1a2b3c4d5e6f",
-    "status": "completed",
-    "userId": "user_12345",
-    "provider": "smile_identity",
-    "result": {
-      "status": "pass",
-      "confidence": 0.96,
-      "checks": {
-        "document": "pass",
-        "biometric": "pass",
-        "liveness": "pass"
-      }
-    }
-  },
-  "timestamp": "2024-01-15T10:35:22.456Z"
-}
-```
-
-</CodeGroup>
-
-## Best Practices
+## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="User Information" icon="user">
-    - Provide as much user info as possible for better accuracy
-    - Ensure email addresses are valid for notifications
-    - Use consistent user IDs across your system
-    - Include phone numbers for SMS verification
+  <Card title="Session Status" icon="clock" href="/api-reference/kyc/get-session">
+    Check the status of a KYC verification session
   </Card>
-  
-  <Card title="Session Management" icon="clock">
-    - Set appropriate session timeouts based on your UX
-    - Monitor session status via webhooks
-    - Clean up expired sessions regularly
-    - Handle multiple sessions per user carefully
+  <Card title="Upload Documents" icon="upload" href="/api-reference/kyc/upload-documents">
+    Upload identity documents for verification
   </Card>
-  
-  <Card title="Provider Selection" icon="globe">
-    - Let OneKey auto-select for best results
-    - Specify provider only when required by business logic
-    - Monitor provider performance and availability
-    - Have fallback logic for provider failures
+  <Card title="Create Attestation" icon="shield" href="/api-reference/attestations/create">
+    Create blockchain attestation after successful KYC
   </Card>
-  
-  <Card title="Error Handling" icon="exclamation-triangle">
-    - Implement retry logic for transient errors
-    - Provide clear error messages to users
-    - Log session IDs for debugging
-    - Handle rate limits gracefully
+  <Card title="KYC Integration Guide" icon="book" href="/guides/kyc-integration">
+    Complete KYC integration guide with examples
   </Card>
-</CardGroup>
-
-## Related Endpoints
-
-- [Get KYC Session](/api-reference/kyc/get-session) - Retrieve session details and status
-- [Upload Documents](/api-reference/kyc/upload-documents) - Upload encrypted documents to session
-- [List KYC Sessions](/api-reference/kyc/list-sessions) - Get all sessions for a user
-- [Create Attestation](/api-reference/attestations/create) - Create blockchain attestation from completed KYC 
+</CardGroup> 
