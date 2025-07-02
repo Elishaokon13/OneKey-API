@@ -3,9 +3,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const express_validator_1 = require("express-validator");
-const auth_1 = require("../middleware/auth");
-const rateLimiter_1 = require("../middleware/rateLimiter");
-const kycService_1 = require("../services/kyc/kycService");
+const auth_1 = require("@/middleware/auth");
+const rateLimiter_1 = require("@/middleware/rateLimiter");
+const kycService_1 = require("@/services/kyc/kycService");
 const uuid_1 = require("uuid");
 const router = (0, express_1.Router)();
 const kycService = new kycService_1.KycService();
