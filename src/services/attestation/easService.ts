@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 
 import { BaseAttestationService } from './baseAttestationService';
+import { SchemaManager } from './schemaManager';
 import {
   EasAttestation,
   CreateAttestationRequest,
@@ -19,7 +20,8 @@ import {
   GasEstimate,
   EasConfig,
   AttestationData,
-  AttestationStatus
+  AttestationStatus,
+  SchemaConfig
 } from '../../types/attestation';
 import { config } from '../../config/environment';
 import { logger } from '../../utils/logger';
@@ -27,6 +29,7 @@ import { logger } from '../../utils/logger';
 export class EasService extends BaseAttestationService {
   private eas!: EAS;
   private schemaEncoder!: SchemaEncoder;
+  private schemaManager!: SchemaManager;
   private readonly SCHEMA_DEFINITION = 
     'string kycProvider,string kycSessionId,string verificationStatus,uint256 verificationTimestamp,uint256 confidenceScore,string userIdHash,string countryCode,string documentType,bool documentVerified,bool biometricVerified,bool livenessVerified,bool addressVerified,bool sanctionsCleared,bool pepCleared,string riskLevel,uint256 riskScore,string schemaVersion,string apiVersion,string attestationStandard';
 
@@ -63,6 +66,24 @@ export class EasService extends BaseAttestationService {
       // Initialize schema encoder
       this.schemaEncoder = new SchemaEncoder(this.SCHEMA_DEFINITION);
 
+      // Initialize schema manager
+      const schemaConfig: SchemaConfig = {
+        rpcUrl: this.config.rpcUrl,
+        registryAddress: this.config.schemaRegistryAddress,
+        privateKey: this.config.attesterPrivateKey,
+        defaultResolver: this.config.contractAddress,
+        caching: {
+          enabled: true,
+          ttl: 3600 // 1 hour
+        }
+      };
+      
+      this.schemaManager = new SchemaManager(schemaConfig);
+      await this.schemaManager.initialize();
+
+      // Verify schema exists and is valid
+      await this.validateDefaultSchema();
+
       // Verify network connection
       const network = await this.provider.getNetwork();
       if (Number(network.chainId) !== this.config.chainId) {
@@ -81,6 +102,38 @@ export class EasService extends BaseAttestationService {
         'EAS provider initialization failed',
         this.config.chainId,
         undefined,
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+    }
+  }
+
+  // ===== Schema Management =====
+
+  private async validateDefaultSchema(): Promise<void> {
+    try {
+      const validation = await this.schemaManager.validateSchema(this.config.defaultSchemaId);
+      
+      if (!validation.valid) {
+        throw new AttestationError(
+          'Default schema validation failed',
+          'SCHEMA_VALIDATION_FAILED',
+          {
+            schemaId: this.config.defaultSchemaId,
+            errors: validation.errors,
+            warnings: validation.warnings
+          }
+        );
+      }
+
+      logger.info('Default schema validated successfully', {
+        schemaId: this.config.defaultSchemaId,
+        version: validation.version
+      });
+    } catch (error) {
+      logger.error('Schema validation failed', { error });
+      throw new AttestationError(
+        'Schema validation failed',
+        'SCHEMA_VALIDATION_FAILED',
         { error: error instanceof Error ? error.message : String(error) }
       );
     }
@@ -117,19 +170,11 @@ export class EasService extends BaseAttestationService {
         revocable: attestationRequest.data.revocable
       });
 
-      // Create the attestation on-chain
-      const tx = await this.eas.attest(attestationRequest);
-      const txHash = await tx.wait();
-
-      if (!txHash) {
-        throw new AttestationCreationError('Transaction hash not available');
-      }
-
-      // Get the actual receipt from provider
-      const receipt = await this.provider.getTransactionReceipt(txHash);
-      if (!receipt) {
-        throw new AttestationCreationError('Transaction receipt not available');
-      }
+      // Create the attestation with retry mechanism
+      const { transaction: tx, receipt } = await this.executeWithRetry(
+        () => this.eas.attest(attestationRequest),
+        'Attestation creation'
+      );
 
       // Extract attestation UID from transaction logs
       const uid = await this.extractAttestationUid(receipt);
@@ -173,7 +218,7 @@ export class EasService extends BaseAttestationService {
         gasUsed: receipt.gasUsed.toString()
       });
 
-      // Store attestation in database (placeholder - would be implemented)
+      // Store attestation in database
       await this.storeAttestation(attestation);
 
       return attestation;
@@ -195,6 +240,71 @@ export class EasService extends BaseAttestationService {
         { error: error instanceof Error ? error.message : String(error) }
       );
     }
+  }
+
+  // ===== Transaction Retry Logic =====
+
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    maxRetries: number = 3,
+    initialDelay: number = 1000
+  ): Promise<{ transaction: T; receipt: ethers.TransactionReceipt }> {
+    let lastError: Error | undefined;
+    let delay = initialDelay;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const tx = await operation();
+        if (!tx) {
+          throw new Error(`${operationName} returned null transaction`);
+        }
+
+        // Wait for transaction confirmation
+        const receipt = await (tx as any).wait();
+        if (!receipt) {
+          throw new Error(`${operationName} receipt not available`);
+        }
+
+        return { transaction: tx, receipt };
+      } catch (error) {
+        lastError = error as Error;
+        
+        // Check if we should retry
+        if (this.shouldRetry(error) && attempt < maxRetries) {
+          logger.warn(`${operationName} attempt ${attempt} failed, retrying in ${delay}ms`, {
+            error: error instanceof Error ? error.message : String(error)
+          });
+
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2; // Exponential backoff
+          continue;
+        }
+
+        break;
+      }
+    }
+
+    throw new AttestationError(
+      `${operationName} failed after ${maxRetries} attempts`,
+      'MAX_RETRIES_EXCEEDED',
+      { lastError: lastError?.message }
+    );
+  }
+
+  private shouldRetry(error: any): boolean {
+    // Retry on network errors, nonce issues, or gas price errors
+    const retryableErrors = [
+      'nonce',
+      'replacement fee too low',
+      'network error',
+      'timeout',
+      'transaction underpriced',
+      'already known'
+    ];
+
+    const errorMessage = error?.message?.toLowerCase() || '';
+    return retryableErrors.some(msg => errorMessage.includes(msg));
   }
 
   // ===== Attestation Verification =====
