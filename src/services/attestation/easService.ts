@@ -36,6 +36,14 @@ interface ExtendedMultiAttestationRequest extends MultiAttestationRequest {
   _requestMetadata: RequestMetadata;
 }
 
+interface AttestationMetadata {
+  gasUsed: string;
+  gasPrice: string;
+  requestId: string;
+  batchIndex: string;
+  arweaveTransactionId?: string;
+}
+
 export class EasService extends BaseAttestationService {
   private eas!: EAS;
   private schemaEncoder!: SchemaEncoder;
@@ -367,7 +375,7 @@ export class EasService extends BaseAttestationService {
       }
 
       // Ensure metadata has required string values
-      const metadata = {
+      const metadata: AttestationMetadata = {
         gasUsed: receipt.gasUsed.toString(),
         gasPrice,
         requestId: request._requestMetadata.requestId || crypto.randomUUID(),
@@ -821,10 +829,11 @@ export class EasService extends BaseAttestationService {
         });
 
         // Update attestation with Arweave transaction ID
-        attestation.metadata = {
+        const updatedMetadata: AttestationMetadata = {
           ...attestation.metadata,
           arweaveTransactionId: arweaveData.transactionId
         };
+        attestation.metadata = updatedMetadata;
         await this.updateAttestationInDb(attestation);
 
         logger.info('Attestation stored in Arweave', {
