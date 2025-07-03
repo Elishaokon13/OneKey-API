@@ -11,6 +11,7 @@ import authRoutes from '@/routes/auth';
 import privyRoutes from '@/routes/privy';
 import kycRoutes from '@/routes/kyc';
 import { attestationRoutes, attestationService } from '@/routes/attestation';
+import arweaveRoutes from '@/routes/arweave';
 import encryptionRoutes from '@/routes/encryption';
 import { privyService } from './services/auth/privyService';
 import { encryptionService } from '@/services/encryption/encryptionService';
@@ -271,6 +272,7 @@ app.use('/api/v1/privy', privyRoutes);
 app.use('/api/v1/kyc', kycRoutes);
 app.use('/api/v1/attestations', attestationRoutes);
 app.use('/api/v1/encryption', encryptionRoutes);
+app.use('/api/v1/arweave', arweaveRoutes);
 
 app.use('/api/v1/storage', (req, res) => {
   res.status(501).json({
