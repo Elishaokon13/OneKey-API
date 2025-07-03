@@ -1,4 +1,4 @@
-import { KycSession, KycVerificationResult, CreateKycSessionRequest, UpdateKycSessionRequest, KycProvider, KycProviderConfig } from '@/types/kyc';
+import { KycSession, KycVerificationResult, CreateKycSessionRequest, UpdateKycSessionRequest, KycProvider, KycProviderConfig } from '../../types/kyc';
 export interface IKycService {
     provider: KycProvider;
     createSession(request: CreateKycSessionRequest): Promise<KycSession>;
