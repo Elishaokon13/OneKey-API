@@ -686,7 +686,12 @@ HASH_SALT=your-hash-salt-for-privacy-preserving-hashes
 4. **Audit Trail Requirements**: Comprehensive audit logging essential for compliance and security
 5. **Consent Management**: Fine-grained consent tracking needed for GDPR compliance and user privacy
 6. **Storage References**: Track decentralized storage locations without storing actual encrypted data
-7. **Session Management**: KYC sessions need proper state tracking across potentially long verification processes 
+7. **Session Management**: KYC sessions need proper state tracking across potentially long verification processes
+8. **Privy-First Architecture**: Web3-native authentication eliminates traditional user/password complexity
+9. **Client-Side Encryption**: All PII encrypted before transmission, server only handles encrypted data
+10. **Decentralized Storage Integration**: Filecoin/Arweave storage references linked to attestations
+11. **Production Deployment**: Vercel serverless functions suitable for OneKey API with proper configuration
+12. **Authentication Consistency**: Single Privy authentication method across all OneKey services
 
 ### 🎉 MAJOR MILESTONE: Task 4.1 (Client-side Encryption) - COMPLETED ✅
 
