@@ -1,4 +1,4 @@
-import { User, CreateUserRequest, LoginRequest, AuthResponse, AuthTokens, WalletLoginRequest } from '../../types/auth';
+import { User, CreateUserRequest, LoginRequest, AuthResponse, AuthTokens, WalletLoginRequest } from '@/types/auth';
 export declare class AuthService {
     private readonly saltRounds;
     /**
