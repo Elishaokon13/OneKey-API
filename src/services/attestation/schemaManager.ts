@@ -107,7 +107,7 @@ export class SchemaManager {
         throw new SchemaError("Transaction receipt not available");
       }
       // Fix: Check if logs exist and are in the correct format
-      if (!receipt || typeof receipt === 'string' || !receipt.logs || !Array.isArray(receipt.logs)) {
+      if (!receipt.logs || !Array.isArray(receipt.logs)) {
         throw new SchemaError("Transaction logs not available");
       }
 
