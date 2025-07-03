@@ -114,7 +114,7 @@ router.post('/encrypt',
  * Decrypt data using stored keys or provided password
  */
 router.post('/decrypt',
-  authenticateJWT,
+  authenticatePrivy,
   rateLimiter.encryptionOperations,
   body('encryptedData').notEmpty().withMessage('Encrypted data is required'),
   body('iv').notEmpty().withMessage('IV is required'),
