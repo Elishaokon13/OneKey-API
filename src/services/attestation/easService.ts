@@ -830,7 +830,10 @@ export class EasService extends BaseAttestationService {
 
         // Update attestation with Arweave transaction ID
         const updatedMetadata: AttestationMetadata = {
-          ...attestation.metadata,
+          gasUsed: attestation.metadata.gasUsed,
+          gasPrice: attestation.metadata.gasPrice,
+          requestId: attestation.metadata.requestId,
+          batchIndex: attestation.metadata.batchIndex,
           arweaveTransactionId: arweaveData.transactionId
         };
         attestation.metadata = updatedMetadata;
