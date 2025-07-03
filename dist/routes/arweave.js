@@ -3,10 +3,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const express_validator_1 = require("express-validator");
-const privyAuth_1 = require("@/middleware/privyAuth");
-const rateLimiter_1 = require("@/middleware/rateLimiter");
-const arweaveService_1 = require("@/services/storage/arweaveService");
-const environment_1 = require("@/config/environment");
+const privyAuth_1 = require("../middleware/privyAuth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const arweaveService_1 = require("../services/storage/arweaveService");
+const environment_1 = require("../config/environment");
 const uuid_1 = require("uuid");
 const router = (0, express_1.Router)();
 // Initialize Arweave service
@@ -97,7 +97,7 @@ router.get('/retrieve/:transactionId', privyAuth_1.authenticatePrivy, arweaveRet
             transactionId: req.params.transactionId,
             decrypt: req.query.decrypt === 'true',
             verifyIntegrity: req.query.verifyIntegrity === 'true',
-            preferredGateway: typeof req.query.preferredGateway === 'string' ? req.query.preferredGateway : undefined
+            ...(typeof req.query.preferredGateway === 'string' && { preferredGateway: req.query.preferredGateway })
         };
         const result = await arweaveService.retrieveData(retrievalRequest);
         const response = {
