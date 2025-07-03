@@ -127,7 +127,7 @@ router.get('/retrieve/:transactionId',
 
     try {
       const retrievalRequest: ArweaveRetrievalRequest = {
-        transactionId: req.params.transactionId,
+        transactionId: req.params.transactionId!,
         decrypt: req.query.decrypt === 'true',
         verifyIntegrity: req.query.verifyIntegrity === 'true',
         preferredGateway: typeof req.query.preferredGateway === 'string' ? req.query.preferredGateway : undefined
@@ -260,7 +260,7 @@ router.post('/attestation/:attestationId/store',
     const requestId = uuidv4();
 
     try {
-      const attestationId = req.params.attestationId;
+      const attestationId = req.params.attestationId!;
       const { metadata, documents } = req.body;
 
       // Convert base64 documents to buffers
@@ -311,7 +311,7 @@ router.post('/kyc/:sessionId/store',
     const requestId = uuidv4();
 
     try {
-      const sessionId = req.params.sessionId;
+      const sessionId = req.params.sessionId!;
       const { encryptedData, documents } = req.body;
 
       // Convert base64 data to buffers
