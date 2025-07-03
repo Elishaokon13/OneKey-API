@@ -161,7 +161,7 @@ class ArweaveService {
             // Sign transaction
             await this.arweave.transactions.sign(transaction, this.wallet);
             // Get cost
-            const cost = await this.arweave.transactions.getPrice(transaction.data_size);
+            const cost = await this.arweave.transactions.getPrice(parseInt(transaction.data_size));
             // Submit transaction
             const uploader = await this.arweave.transactions.getUploader(transaction);
             while (!uploader.isComplete) {
@@ -273,7 +273,9 @@ class ArweaveService {
                 uploadTimestamp: tags.find(t => t.name === 'OneKey-Uploaded-Timestamp')?.value || '',
                 dataHash: tags.find(t => t.name === 'OneKey-Data-Hash')?.value || '',
                 category: (tags.find(t => t.name === 'OneKey-Category')?.value || 'other'),
-                description: tags.find(t => t.name === 'OneKey-Description')?.value
+                ...(tags.find(t => t.name === 'OneKey-Description')?.value && {
+                    description: tags.find(t => t.name === 'OneKey-Description').value
+                })
             };
             // Verify integrity if requested
             let verified = false;
@@ -300,7 +302,9 @@ class ArweaveService {
                 // Clean up cache if it gets too large
                 if (this.cache.size > this.config.caching.maxSize) {
                     const firstKey = this.cache.keys().next().value;
-                    this.cache.delete(firstKey);
+                    if (firstKey) {
+                        this.cache.delete(firstKey);
+                    }
                 }
             }
             // Update statistics
