@@ -370,7 +370,7 @@ export class EasService extends BaseAttestationService {
       const metadata = {
         gasUsed: receipt.gasUsed.toString(),
         gasPrice,
-        requestId: request._requestMetadata.requestId,
+        requestId: request._requestMetadata.requestId || crypto.randomUUID(),
         batchIndex: i.toString()
       };
 
