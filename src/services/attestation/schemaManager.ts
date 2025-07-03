@@ -100,12 +100,12 @@ export class SchemaManager {
       });
 
       const receipt = await tx.wait();
-      if (!receipt || !receipt.logs) {
-        throw new SchemaError('Transaction receipt or logs not available');
+      if (!receipt) {
+        throw new SchemaError('Transaction receipt not available');
       }
 
       // Extract schema ID from transaction logs
-      const schemaId = this.extractSchemaIdFromLogs(receipt.logs);
+      const schemaId = this.extractSchemaIdFromLogs(receipt.logs as ethers.Log[]);
 
       logger.info('Schema registered successfully', {
         schemaId,
@@ -293,7 +293,7 @@ export class SchemaManager {
     if (!schema.schema) errors.push('Schema definition is required');
 
     // Validate field types
-    for (const field of schema.fields as AttestationSchemaField[]) {
+    for (const field of schema.fields) {
       if (!this.isValidFieldType(field.type)) {
         errors.push(`Invalid field type: ${field.type} for field ${field.name}`);
       }
@@ -364,10 +364,10 @@ export class SchemaManager {
       .trim()
       .split(',')
       .map((field) => {
-        const [type, name] = field.trim().split(' ').filter(Boolean);
+        const [type, name] = field.trim().split(' ');
         return {
           name,
-          type: type as AttestationSchemaField['type'],
+          type,
           description: '', // Would be in metadata
           required: true, // All fields are required by default
         } as AttestationSchemaField;
