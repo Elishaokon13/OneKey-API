@@ -89,6 +89,42 @@ const config = {
         masterKey: process.env.ENCRYPTION_MASTER_KEY || 'dev-master-key-change-in-production',
         saltSeed: process.env.ENCRYPTION_SALT_SEED || 'dev-salt-seed-change-in-production'
     },
+    arweave: {
+        // Network settings
+        host: process.env.ARWEAVE_HOST || 'arweave.net',
+        port: parseInt(process.env.ARWEAVE_PORT || '443'),
+        protocol: (process.env.ARWEAVE_PROTOCOL || 'https'),
+        timeout: parseInt(process.env.ARWEAVE_TIMEOUT || '60000'),
+        logging: process.env.ARWEAVE_LOGGING === 'true',
+        // Gateway URLs for retrieval
+        gatewayUrls: (process.env.ARWEAVE_GATEWAY_URLS || 'https://arweave.net,https://arweave.dev').split(','),
+        defaultGateway: process.env.ARWEAVE_DEFAULT_GATEWAY || 'https://arweave.net',
+        // Wallet configuration
+        wallet: {
+            keyFile: process.env.ARWEAVE_WALLET_KEY_FILE,
+            keyData: process.env.ARWEAVE_WALLET_KEY_DATA ? JSON.parse(process.env.ARWEAVE_WALLET_KEY_DATA) : undefined,
+            address: process.env.ARWEAVE_WALLET_ADDRESS,
+            privateKey: process.env.ARWEAVE_WALLET_PRIVATE_KEY
+        },
+        // Bundling configuration
+        bundling: {
+            enabled: process.env.ARWEAVE_BUNDLING_ENABLED === 'true',
+            maxBundleSize: parseInt(process.env.ARWEAVE_MAX_BUNDLE_SIZE || '10485760'), // 10MB
+            maxItems: parseInt(process.env.ARWEAVE_MAX_BUNDLE_ITEMS || '100')
+        },
+        // Retry policy
+        retryPolicy: {
+            maxRetries: parseInt(process.env.ARWEAVE_MAX_RETRIES || '3'),
+            retryDelay: parseInt(process.env.ARWEAVE_RETRY_DELAY || '1000'),
+            backoffMultiplier: parseFloat(process.env.ARWEAVE_BACKOFF_MULTIPLIER || '2.0')
+        },
+        // Caching
+        caching: {
+            enabled: process.env.ARWEAVE_CACHING_ENABLED === 'true',
+            ttl: parseInt(process.env.ARWEAVE_CACHE_TTL || '3600'), // 1 hour
+            maxSize: parseInt(process.env.ARWEAVE_CACHE_MAX_SIZE || '1000')
+        }
+    },
 };
 exports.config = config;
 //# sourceMappingURL=environment.js.map
