@@ -272,7 +272,7 @@ app.use('/api/v1/privy', privyRoutes);
 app.use('/api/v1/kyc', kycRoutes);
 app.use('/api/v1/attestations', attestationRoutes);
 app.use('/api/v1/encryption', encryptionRoutes);
-app.use('/api/v1/arweave', arweaveRoutes);
+app.use('/api/v1/storage/arweave', arweaveRoutes);
 
 app.use('/api/v1/storage', (req, res) => {
   res.status(501).json({
