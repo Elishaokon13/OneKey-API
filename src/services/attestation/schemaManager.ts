@@ -71,51 +71,53 @@ export class SchemaManager {
     description: string,
     schema: string,
     version: SchemaVersion,
-    revocable: boolean = true
+    revocable: boolean = true,
   ): Promise<string> {
     try {
       // Validate schema before registration
       this.validateSchemaString(schema);
-
+  
       // Add version and metadata to schema
       const schemaWithMetadata = this.addSchemaMetadata(
         schema,
         name,
         description,
-        version
+        version,
       );
-
+  
       if (!this.schemaRegistry) {
-        throw new SchemaError("Schema registry not initialized");
+        throw new SchemaError('Schema registry not initialized');
       }
-
+  
       const tx = await this.schemaRegistry.register({
         schema: schemaWithMetadata,
         resolverAddress: this.config.defaultResolver,
         revocable,
       });
-
+  
       const receipt = await tx.wait();
       if (!receipt) {
-        throw new SchemaError("Transaction receipt not available");
+        throw new SchemaError('Transaction receipt not available');
       }
-
+  
       // Extract schema ID from transaction logs
-      const schemaId = this.extractSchemaIdFromLogs(receipt.logs);
-
-      logger.info("Schema registered successfully", {
+      const schemaId = this.extractSchemaIdFromLogs(receipt.logs); // receipt.logs is now correctly typed
+  
+      logger.info('Schema registered successfully', {
         schemaId,
         name,
         version: `${version.major}.${version.minor}.${version.patch}`,
         revocable,
       });
-
+  
       return schemaId;
     } catch (error) {
-      logger.error("Failed to register schema", { error });
-      throw new SchemaError("Schema registration failed", undefined, {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error('Failed to register schema', { error });
+      throw new SchemaError(
+        'Schema registration failed',
+        undefined,
+        { error: error instanceof Error ? error.message : String(error) },
+      );
     }
   }
 
