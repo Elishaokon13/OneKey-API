@@ -194,9 +194,12 @@ app.get('/api/v1', (req, res) => {
         config: 'GET /api/v1/encryption/config'
       },
       storage: {
-        encrypt: 'POST /api/v1/storage/encrypt',
-        decrypt: 'POST /api/v1/storage/decrypt',
-        upload: 'POST /api/v1/storage/upload'
+        arweaveUpload: 'POST /api/v1/storage/arweave/upload',
+        arweaveRetrieve: 'GET /api/v1/storage/arweave/retrieve/:transactionId',
+        arweaveHealth: 'GET /api/v1/storage/arweave/health',
+        arweaveStats: 'GET /api/v1/storage/arweave/stats',
+        storeAttestation: 'POST /api/v1/storage/arweave/attestation/:attestationId/store',
+        storeKyc: 'POST /api/v1/storage/arweave/kyc/:sessionId/store'
       },
       user: {
         profile: 'GET /api/v1/user/profile',
