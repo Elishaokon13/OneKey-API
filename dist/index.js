@@ -10,13 +10,14 @@ const environment_1 = require("./config/environment");
 const database_1 = require("./config/database");
 const migrator_1 = require("./database/migrator");
 // Import routes
-const auth_1 = __importDefault(require("./routes/auth"));
-const privy_1 = __importDefault(require("./routes/privy"));
-const kyc_1 = __importDefault(require("./routes/kyc"));
-const attestation_1 = require("./routes/attestation");
-const encryption_1 = __importDefault(require("./routes/encryption"));
+const auth_1 = __importDefault(require("@/routes/auth"));
+const privy_1 = __importDefault(require("@/routes/privy"));
+const kyc_1 = __importDefault(require("@/routes/kyc"));
+const attestation_1 = require("@/routes/attestation");
+const arweave_1 = __importDefault(require("@/routes/arweave"));
+const encryption_1 = __importDefault(require("@/routes/encryption"));
 const privyService_1 = require("./services/auth/privyService");
-const encryptionService_1 = require("./services/encryption/encryptionService");
+const encryptionService_1 = require("@/services/encryption/encryptionService");
 // Import custom middleware
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const errorHandler_1 = require("./middleware/errorHandler");
@@ -170,9 +171,12 @@ app.get('/api/v1', (req, res) => {
                 config: 'GET /api/v1/encryption/config'
             },
             storage: {
-                encrypt: 'POST /api/v1/storage/encrypt',
-                decrypt: 'POST /api/v1/storage/decrypt',
-                upload: 'POST /api/v1/storage/upload'
+                arweaveUpload: 'POST /api/v1/storage/arweave/upload',
+                arweaveRetrieve: 'GET /api/v1/storage/arweave/retrieve/:transactionId',
+                arweaveHealth: 'GET /api/v1/storage/arweave/health',
+                arweaveStats: 'GET /api/v1/storage/arweave/stats',
+                storeAttestation: 'POST /api/v1/storage/arweave/attestation/:attestationId/store',
+                storeKyc: 'POST /api/v1/storage/arweave/kyc/:sessionId/store'
             },
             user: {
                 profile: 'GET /api/v1/user/profile',
@@ -185,6 +189,7 @@ app.get('/api/v1', (req, res) => {
             'Zero PII storage architecture',
             'Client-side AES-256-GCM encryption',
             'EAS attestation creation',
+            'Arweave permanent storage',
             'Decentralized storage (Filecoin/Arweave)',
             'Selective disclosure with ZKPs',
             'Cross-platform KYC reuse'
@@ -246,6 +251,7 @@ app.use('/api/v1/privy', privy_1.default);
 app.use('/api/v1/kyc', kyc_1.default);
 app.use('/api/v1/attestations', attestation_1.attestationRoutes);
 app.use('/api/v1/encryption', encryption_1.default);
+app.use('/api/v1/storage/arweave', arweave_1.default);
 app.use('/api/v1/storage', (req, res) => {
     res.status(501).json({
         error: 'NOT_IMPLEMENTED',
