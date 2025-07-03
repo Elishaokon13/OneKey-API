@@ -27,11 +27,11 @@ import {
 import { logger } from '../../utils/logger';
 
 export class ArweaveService {
-  private arweave: Arweave;
+  private arweave!: Arweave;
   private wallet: JWKInterface | null = null;
   private config: ArweaveConfig;
   private cache: Map<string, any> = new Map();
-  private stats: ArweaveUsageStats;
+  private stats!: ArweaveUsageStats;
 
   constructor(arweaveConfig: ArweaveConfig) {
     this.config = arweaveConfig;
