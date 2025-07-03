@@ -366,6 +366,14 @@ export class EasService extends BaseAttestationService {
         gasPrice = receipt.gasPrice.toString();
       }
 
+      // Ensure metadata has required string values
+      const metadata = {
+        gasUsed: receipt.gasUsed.toString(),
+        gasPrice,
+        requestId: request._requestMetadata.requestId,
+        batchIndex: i.toString()
+      };
+
       const attestation: EasAttestation = {
         id: uuidv4(),
         uid,
@@ -383,12 +391,7 @@ export class EasService extends BaseAttestationService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         expiresAt: new Date(Number(request.data[0].expirationTime) * 1000).toISOString(),
-        metadata: {
-          gasUsed: receipt.gasUsed.toString(),
-          gasPrice,
-          requestId: request._requestMetadata.requestId,
-          batchIndex: i
-        }
+        metadata
       };
 
       attestations.push(attestation);
@@ -818,7 +821,10 @@ export class EasService extends BaseAttestationService {
         });
 
         // Update attestation with Arweave transaction ID
-        attestation.metadata.arweaveTransactionId = arweaveData.transactionId;
+        attestation.metadata = {
+          ...attestation.metadata,
+          arweaveTransactionId: arweaveData.transactionId
+        };
         await this.updateAttestationInDb(attestation);
 
         logger.info('Attestation stored in Arweave', {
