@@ -2,7 +2,7 @@
 // OneKey KYC API - Base KYC Service
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseKycService = void 0;
-const kyc_1 = require("../../types/kyc");
+const kyc_1 = require("@/types/kyc");
 const uuid_1 = require("uuid");
 class BaseKycService {
     config;
