@@ -130,7 +130,7 @@ router.get('/retrieve/:transactionId',
         transactionId: req.params.transactionId!,
         decrypt: req.query.decrypt === 'true',
         verifyIntegrity: req.query.verifyIntegrity === 'true',
-        preferredGateway: typeof req.query.preferredGateway === 'string' ? req.query.preferredGateway : undefined
+        ...(typeof req.query.preferredGateway === 'string' && { preferredGateway: req.query.preferredGateway })
       };
 
       const result = await arweaveService.retrieveData(retrievalRequest);
