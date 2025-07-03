@@ -1,8 +1,8 @@
 // OneKey KYC API - EAS Schema Manager
 // Handles schema registration, versioning, and validation for EAS attestations
 
-import { ethers, TransactionReceipt } from 'ethers';
-import { SchemaRegistry, GetSchemaParams } from '@ethereum-attestation-service/eas-sdk';
+import { ethers } from 'ethers';
+import { SchemaRegistry, GetSchemaParams, SchemaRegistryTransactionReceipt } from '@ethereum-attestation-service/eas-sdk';
 import { logger } from '../../utils/logger';
 import { 
   SchemaConfig, 
@@ -76,7 +76,7 @@ export class SchemaManager {
         revocable
       });
 
-      const receipt = await tx.wait() as TransactionReceipt;
+      const receipt = await tx.wait() as SchemaRegistryTransactionReceipt;
       if (!receipt) {
         throw new SchemaError('Transaction receipt not available');
       }
