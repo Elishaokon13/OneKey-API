@@ -360,6 +360,12 @@ export class EasService extends BaseAttestationService {
         );
       }
 
+      // Get gas price safely
+      let gasPrice = '0';
+      if (receipt.gasPrice) {
+        gasPrice = receipt.gasPrice.toString();
+      }
+
       const attestation: EasAttestation = {
         id: uuidv4(),
         uid,
@@ -379,7 +385,7 @@ export class EasService extends BaseAttestationService {
         expiresAt: new Date(Number(request.data[0].expirationTime) * 1000).toISOString(),
         metadata: {
           gasUsed: receipt.gasUsed.toString(),
-          gasPrice: (receipt.gasPrice || '0').toString(),
+          gasPrice,
           requestId: request._requestMetadata.requestId,
           batchIndex: i
         }
