@@ -360,7 +360,7 @@ export class EasService extends BaseAttestationService {
       const uid = uids[i];
       const request = requests[i];
 
-      if (!request || !request.data[0]) {
+      if (!request || !request.data[0] || !uid) {
         throw new AttestationError(
           'Invalid batch request data',
           'INVALID_BATCH_DATA',
