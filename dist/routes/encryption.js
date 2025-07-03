@@ -8,11 +8,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const express_validator_1 = require("express-validator");
-const auth_1 = require("@/middleware/auth");
-const rateLimiter_1 = require("@/middleware/rateLimiter");
-const encryptionService_1 = require("@/services/encryption/encryptionService");
-const encryption_1 = require("@/types/encryption");
-const logger_1 = require("@/utils/logger");
+const privyAuth_1 = require("../middleware/privyAuth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const encryptionService_1 = require("../services/encryption/encryptionService");
+const encryption_1 = require("../types/encryption");
+const logger_1 = require("../utils/logger");
 const uuid_1 = require("uuid");
 const router = (0, express_1.Router)();
 // Validation middleware
@@ -37,7 +37,7 @@ const handleValidationErrors = (req, res, next) => {
  * POST /api/v1/encryption/encrypt
  * Encrypt data using AES-256-GCM encryption
  */
-router.post('/encrypt', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.encryptionOperations, (0, express_validator_1.body)('data').notEmpty().withMessage('Data is required'), (0, express_validator_1.body)('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'), (0, express_validator_1.body)('keyId').optional().isUUID().withMessage('KeyId must be a valid UUID'), handleValidationErrors, async (req, res) => {
+router.post('/encrypt', privyAuth_1.authenticatePrivy, rateLimiter_1.rateLimiter.encryptionOperations, (0, express_validator_1.body)('data').notEmpty().withMessage('Data is required'), (0, express_validator_1.body)('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'), (0, express_validator_1.body)('keyId').optional().isUUID().withMessage('KeyId must be a valid UUID'), handleValidationErrors, async (req, res) => {
     const requestId = req.requestId || (0, uuid_1.v4)();
     try {
         const encryptionRequest = {
@@ -86,7 +86,7 @@ router.post('/encrypt', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.encryp
  * POST /api/v1/encryption/decrypt
  * Decrypt data using stored keys or provided password
  */
-router.post('/decrypt', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.encryptionOperations, (0, express_validator_1.body)('encryptedData').notEmpty().withMessage('Encrypted data is required'), (0, express_validator_1.body)('iv').notEmpty().withMessage('IV is required'), (0, express_validator_1.body)('salt').notEmpty().withMessage('Salt is required'), (0, express_validator_1.body)('authTag').notEmpty().withMessage('Auth tag is required'), (0, express_validator_1.body)('algorithm').notEmpty().withMessage('Algorithm is required'), handleValidationErrors, async (req, res) => {
+router.post('/decrypt', privyAuth_1.authenticatePrivy, rateLimiter_1.rateLimiter.encryptionOperations, (0, express_validator_1.body)('encryptedData').notEmpty().withMessage('Encrypted data is required'), (0, express_validator_1.body)('iv').notEmpty().withMessage('IV is required'), (0, express_validator_1.body)('salt').notEmpty().withMessage('Salt is required'), (0, express_validator_1.body)('authTag').notEmpty().withMessage('Auth tag is required'), (0, express_validator_1.body)('algorithm').notEmpty().withMessage('Algorithm is required'), handleValidationErrors, async (req, res) => {
     const requestId = req.requestId || (0, uuid_1.v4)();
     try {
         const decryptionRequest = {
@@ -129,7 +129,7 @@ router.post('/decrypt', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.encryp
  * POST /api/v1/encryption/keys/generate
  * Generate a new encryption key
  */
-router.post('/keys/generate', auth_1.authenticateJWT, rateLimiter_1.rateLimiter.keyManagement, (0, express_validator_1.body)('usage').isArray().withMessage('Usage must be an array'), handleValidationErrors, async (req, res) => {
+router.post('/keys/generate', privyAuth_1.authenticatePrivy, rateLimiter_1.rateLimiter.keyManagement, (0, express_validator_1.body)('usage').isArray().withMessage('Usage must be an array'), handleValidationErrors, async (req, res) => {
     const requestId = req.requestId || (0, uuid_1.v4)();
     try {
         const keyGenerationRequest = {
