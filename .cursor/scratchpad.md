@@ -913,11 +913,47 @@ const response = await fetch('/api/v1/kyc/sessions', {
 - **Dependencies**: Filecoin storage client libraries, IPFS integration
 - **Integration**: Store encrypted KYC documents after client-side encryption
 
-**Task 4.3: Arweave Integration** ⏳ **MEDIUM PRIORITY**  
-- **Scope**: Permanent storage for attestation metadata and critical documents
-- **API Endpoints**: `/api/v1/storage/arweave/upload`, `/api/v1/storage/arweave/retrieve`
-- **Dependencies**: Arweave SDK and wallet integration
-- **Integration**: Backup attestation data permanently on Arweave
+#### **📋 Task 4.3: Arweave Storage Integration** ✅ **COMPLETED**
+
+**Implementation Details:**
+- **Arweave SDK Integration**: Full Arweave client with wallet support
+- **Permanent Storage Service**: Complete ArweaveService with upload/download capabilities
+- **REST API Endpoints**: 8 endpoints for storage operations and health monitoring
+- **Data Categories**: Support for KYC documents, attestation metadata, audit logs, and backups
+- **Metadata System**: Rich tagging and categorization for searchability
+- **Multiple Gateways**: Failover support across multiple Arweave gateways
+- **Caching Layer**: Built-in caching for retrieval optimization
+- **Cost Management**: Transaction cost estimation and wallet balance monitoring
+- **Health Monitoring**: Real-time network status and performance metrics
+- **Batch Operations**: Support for bulk upload/download operations
+- **Integration Points**: Direct integration with KYC and attestation systems
+
+**API Endpoints Implemented:**
+1. `POST /api/v1/storage/arweave/upload` - Upload data with metadata
+2. `GET /api/v1/storage/arweave/retrieve/:transactionId` - Retrieve stored data
+3. `GET /api/v1/storage/arweave/health` - Service health and network status
+4. `GET /api/v1/storage/arweave/stats` - Usage statistics and performance metrics
+5. `POST /api/v1/storage/arweave/attestation/:attestationId/store` - Store attestation data
+6. `POST /api/v1/storage/arweave/kyc/:sessionId/store` - Store KYC session data
+
+**Technical Features:**
+- **Permanent Storage**: True permanent storage for critical attestation metadata
+- **Content Addressing**: Cryptographic hashes for data integrity verification
+- **Decentralized Network**: No single point of failure for data storage
+- **Custom Tags**: OneKey-specific metadata tags for efficient data organization
+- **Rate Limiting**: Specialized limits for storage operations (20 uploads/hour)
+- **Error Handling**: Comprehensive error types and retry mechanisms
+- **TypeScript Types**: Full type safety with 200+ lines of interface definitions
+
+**Configuration Added:**
+- Network settings (host, port, protocol, timeout)
+- Multiple gateway URLs for redundancy
+- Wallet configuration (key file, key data, address)
+- Bundling settings for cost optimization
+- Retry policies and caching configuration
+- Environment variables in `env.example`
+
+**Status**: Ready for production use with wallet configuration
 
 ### 🔗 **Critical Integration Needed**
 
