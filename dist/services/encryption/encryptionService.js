@@ -13,8 +13,8 @@ exports.encryptionService = exports.EncryptionService = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const util_1 = require("util");
 const zlib_1 = __importDefault(require("zlib"));
-const encryption_1 = require("../../types/encryption");
-const logger_1 = require("../../utils/logger");
+const encryption_1 = require("@/types/encryption");
+const logger_1 = require("@/utils/logger");
 // Promisify compression functions
 const gzip = (0, util_1.promisify)(zlib_1.default.gzip);
 const gunzip = (0, util_1.promisify)(zlib_1.default.gunzip);
