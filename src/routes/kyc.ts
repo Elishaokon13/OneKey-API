@@ -39,7 +39,7 @@ const handleValidationErrors = (req: Request, res: Response, next: Function): vo
  * POST /api/v1/kyc/sessions - Create new KYC session
  */
 router.post('/sessions', 
-  authenticateJWT,
+  authenticatePrivy,
   kycLimiter,
   validateCreateSession,
   handleValidationErrors,
