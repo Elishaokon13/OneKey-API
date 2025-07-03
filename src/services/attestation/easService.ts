@@ -655,8 +655,14 @@ export class EasService extends BaseAttestationService {
         gasUsed: receipt.gasUsed.toString()
       });
 
-      // Update attestation in database (placeholder)
-      await this.updateAttestationStatus(uid, 'revoked', reason);
+      // Update attestation in database
+      const attestation: EasAttestation = {
+        ...await this.getAttestation(uid),
+        status: 'revoked',
+        revoked: true,
+        updatedAt: new Date().toISOString()
+      };
+      await this.updateAttestationInDb(attestation);
 
       logger.info('Attestation revoked successfully', {
         uid,
