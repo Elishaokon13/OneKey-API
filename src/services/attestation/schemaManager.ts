@@ -364,10 +364,10 @@ export class SchemaManager {
       .trim()
       .split(',')
       .map((field) => {
-        const [type, name] = field.trim().split(' ');
+        const [type, name] = field.trim().split(' ').filter(Boolean);
         return {
           name,
-          type,
+          type: type as AttestationSchemaField['type'],
           description: '', // Would be in metadata
           required: true, // All fields are required by default
         } as AttestationSchemaField;
