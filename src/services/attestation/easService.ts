@@ -656,8 +656,13 @@ export class EasService extends BaseAttestationService {
       });
 
       // Update attestation in database
+      const verificationResult = await this.verifyOnChain(uid);
+      if (!verificationResult.attestation) {
+        throw new AttestationError('Could not fetch attestation data', 'ATTESTATION_NOT_FOUND');
+      }
+      
       const attestation: EasAttestation = {
-        ...await this.getAttestation(uid),
+        ...verificationResult.attestation,
         status: 'revoked',
         revoked: true,
         updatedAt: new Date().toISOString()
