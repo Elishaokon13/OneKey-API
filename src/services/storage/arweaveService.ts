@@ -344,7 +344,9 @@ export class ArweaveService {
         // Clean up cache if it gets too large
         if (this.cache.size > this.config.caching.maxSize) {
           const firstKey = this.cache.keys().next().value;
-          this.cache.delete(firstKey);
+          if (firstKey) {
+            this.cache.delete(firstKey);
+          }
         }
       }
 
