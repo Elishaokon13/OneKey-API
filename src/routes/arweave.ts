@@ -3,7 +3,7 @@
 import { Router, Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { authenticatePrivy } from '@/middleware/privyAuth';
-import { createRateLimiter } from '@/middleware/rateLimiter';
+import { fileEncryptionLimiter, generalLimiter, encryptionOperationsLimiter } from '@/middleware/rateLimiter';
 import { ArweaveService } from '@/services/storage/arweaveService';
 import {
   ArweaveStorageRequest,
