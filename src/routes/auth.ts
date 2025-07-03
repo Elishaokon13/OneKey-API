@@ -230,7 +230,7 @@ router.post('/refresh', authLimiter, async (req: Request, res: Response): Promis
  * POST /api/v1/auth/logout
  * Logout user (revoke refresh token)
  */
-router.post('/logout', authenticateJWT, async (req: Request, res: Response): Promise<void> => {
+router.post('/logout', authenticatePrivy, async (req: Request, res: Response): Promise<void> => {
   try {
     const { refresh_token } = req.body;
 
@@ -261,7 +261,7 @@ router.post('/logout', authenticateJWT, async (req: Request, res: Response): Pro
  * GET /api/v1/auth/me
  * Get current user profile
  */
-router.get('/me', authenticateJWT, async (req: Request, res: Response): Promise<void> => {
+router.get('/me', authenticatePrivy, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = req.user!;
     
@@ -316,7 +316,7 @@ router.get('/nonce', async (req: Request, res: Response): Promise<void> => {
  * GET /api/v1/auth/status
  * Check authentication status and token validity
  */
-router.get('/status', authenticateJWT, async (req: Request, res: Response): Promise<void> => {
+router.get('/status', authenticatePrivy, async (req: Request, res: Response): Promise<void> => {
   try {
     const tokenInfo = jwtService.getTokenInfo(req.token!, 'access');
 
