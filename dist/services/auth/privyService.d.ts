@@ -1,5 +1,5 @@
-import { PrivyUser, PrivyAuthRequest, PrivyVerificationResult, PrivyAuthContext } from '../../types/privy';
-import { AuthResponse } from '../../types/auth';
+import { PrivyUser, PrivyAuthRequest, PrivyVerificationResult, PrivyAuthContext } from '@/types/privy';
+import { AuthResponse } from '@/types/auth';
 export declare class PrivyService {
     private privy;
     private isInitialized;
