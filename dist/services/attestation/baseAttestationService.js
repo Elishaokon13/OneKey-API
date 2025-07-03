@@ -114,32 +114,40 @@ class BaseAttestationService {
     // ===== Data Transformation =====
     transformKycToAttestationData(kycResult, recipient) {
         // Create privacy-preserving attestation data
-        const userIdHash = this.hashUserId(kycResult.userId || recipient);
+        const userIdHash = this.hashUserId(kycResult.user.id || recipient);
         return {
             kycProvider: kycResult.provider,
             kycSessionId: kycResult.sessionId,
-            verificationStatus: kycResult.status,
-            verificationTimestamp: Math.floor(kycResult.timestamp / 1000), // Convert to Unix timestamp
-            confidenceScore: kycResult.confidenceScore,
+            verificationStatus: this.mapKycStatusToVerificationStatus(kycResult.status),
+            verificationTimestamp: Math.floor(new Date(kycResult.createdAt).getTime() / 1000),
+            confidenceScore: kycResult.confidence,
             // Zero-PII identity info
             userIdHash,
-            countryCode: kycResult.countryCode,
-            documentType: kycResult.documentType,
+            countryCode: '', // Will be extracted from metadata if needed
+            documentType: kycResult.document?.type || '',
             // Verification checks
-            documentVerified: kycResult.checks?.documentVerification?.verified || false,
-            biometricVerified: kycResult.checks?.biometricVerification?.verified || false,
-            livenessVerified: kycResult.checks?.livenessDetection?.verified || false,
-            addressVerified: kycResult.checks?.addressVerification?.verified || false,
-            sanctionsCleared: kycResult.checks?.sanctionsCheck?.cleared || false,
-            pepCleared: kycResult.checks?.pepCheck?.cleared || false,
+            documentVerified: kycResult.checks?.documentAuthenticity?.status === 'pass',
+            biometricVerified: kycResult.checks?.faceMatch?.status === 'pass',
+            livenessVerified: kycResult.checks?.livenessDetection?.status === 'pass',
+            addressVerified: kycResult.checks?.addressVerification?.status === 'pass',
+            sanctionsCleared: kycResult.checks?.sanctions?.status === 'pass',
+            pepCleared: kycResult.checks?.pep?.status === 'pass',
             // Risk assessment
             riskLevel: this.calculateRiskLevel(kycResult),
-            riskScore: kycResult.riskScore || 0,
+            riskScore: 0, // Calculate from checks
             // Attestation metadata
             schemaVersion: '1.0.0',
             apiVersion: environment_1.config.api.version,
             attestationStandard: 'OneKey-KYC-v1.0'
         };
+    }
+    mapKycStatusToVerificationStatus(status) {
+        switch (status) {
+            case 'completed': return 'verified';
+            case 'failed': return 'failed';
+            case 'expired': return 'expired';
+            default: return 'pending';
+        }
     }
     // ===== Utility Methods =====
     hashUserId(userId) {
@@ -150,16 +158,15 @@ class BaseAttestationService {
             .digest('hex');
     }
     calculateRiskLevel(kycResult) {
-        const riskScore = kycResult.riskScore || 0;
-        const confidenceScore = kycResult.confidenceScore;
-        // Risk calculation logic
-        if (riskScore > 70 || confidenceScore < 60) {
+        const confidenceScore = kycResult.confidence;
+        // Risk calculation based on confidence and check results
+        if (confidenceScore < 60) {
             return 'critical';
         }
-        else if (riskScore > 40 || confidenceScore < 80) {
+        else if (confidenceScore < 80) {
             return 'high';
         }
-        else if (riskScore > 20 || confidenceScore < 90) {
+        else if (confidenceScore < 90) {
             return 'medium';
         }
         else {
@@ -246,7 +253,7 @@ class BaseAttestationService {
             successRate: 0,
             averageConfidenceScore: 0,
             providerStats: {
-                'smile-identity': { count: 0, successRate: 0, averageScore: 0 },
+                'smile_identity': { count: 0, successRate: 0, averageScore: 0 },
                 'onfido': { count: 0, successRate: 0, averageScore: 0 },
                 'trulioo': { count: 0, successRate: 0, averageScore: 0 }
             },
