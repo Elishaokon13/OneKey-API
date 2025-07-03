@@ -352,7 +352,7 @@ export class SchemaManager {
     let metadata: Partial<SchemaMetadata> = {};
     if (metadataMatch) {
       try {
-        metadata = JSON.parse(metadataMatch[1]) as SchemaMetadata;
+        metadata = JSON.parse(metadataMatch[1] ?? '{}') as SchemaMetadata;
       } catch {
         // Invalid metadata JSON, ignore
       }
