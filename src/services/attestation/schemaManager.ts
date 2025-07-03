@@ -37,14 +37,18 @@ export class SchemaManager {
 
   async initialize(): Promise<void> {
     try {
+      if (!this.config.rpcUrl || !this.config.privateKey) {
+        throw new SchemaError('Missing required configuration: rpcUrl or privateKey');
+      }
+  
       // Initialize provider and signer
       this.provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
       this.signer = new ethers.Wallet(this.config.privateKey, this.provider);
-
+  
       // Initialize schema registry
       this.schemaRegistry = new SchemaRegistry(this.config.registryAddress);
       this.schemaRegistry.connect(this.signer);
-
+  
       logger.info('Schema manager initialized', {
         registryAddress: this.config.registryAddress,
         signer: await this.signer.getAddress(),
