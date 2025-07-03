@@ -76,7 +76,7 @@ export class SchemaManager {
         revocable
       });
 
-      const receipt = await tx.wait();
+      const receipt = await tx.wait() as ethers.ContractTransactionReceipt;
       if (!receipt) {
         throw new SchemaError('Transaction receipt not available');
       }
