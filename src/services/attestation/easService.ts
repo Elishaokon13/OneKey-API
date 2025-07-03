@@ -2,12 +2,13 @@
 // Ethereum Attestation Service integration for KYC verification proofs
 
 import { ethers } from 'ethers';
-import { EAS, SchemaEncoder } from '@ethereum-attestation-service/eas-sdk';
+import { EAS, SchemaEncoder, MultiAttestationRequest, AttestationRequestData } from '@ethereum-attestation-service/eas-sdk';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 
 import { BaseAttestationService } from './baseAttestationService';
 import { SchemaManager } from './schemaManager';
+import { ArweaveService } from '../storage/arweaveService';
 import {
   EasAttestation,
   CreateAttestationRequest,
@@ -25,7 +26,6 @@ import {
 } from '../../types/attestation';
 import { config } from '../../config/environment';
 import { logger } from '../../utils/logger';
-import { ArweaveService } from '../storage/arweaveService';
 
 export class EasService extends BaseAttestationService {
   private eas!: EAS;
@@ -257,10 +257,10 @@ export class EasService extends BaseAttestationService {
   ): Promise<EasAttestation[]> {
     try {
       // Validate all requests first
-      await Promise.all(requests.map(this.validateRequest));
+      await Promise.all(requests.map(request => this.validateRequest(request)));
 
       // Prepare all attestation requests
-      const attestationRequests = await Promise.all(
+      const attestationRequests: MultiAttestationRequest[] = await Promise.all(
         requests.map(async request => {
           const attestationData = this.transformKycToAttestationData(
             request.kycResult,
@@ -268,16 +268,18 @@ export class EasService extends BaseAttestationService {
           );
           const encodedData = this.encodeAttestationData(attestationData);
 
+          const requestData: AttestationRequestData = {
+            recipient: request.recipient,
+            expirationTime: BigInt(request.options?.expirationTime || this.calculateExpirationTime()),
+            revocable: request.options?.revocable ?? true,
+            data: encodedData,
+          };
+
           return {
             schema: this.config.defaultSchemaId,
-            data: {
-              recipient: request.recipient,
-              expirationTime: BigInt(request.options?.expirationTime || this.calculateExpirationTime()),
-              revocable: request.options?.revocable ?? true,
-              data: encodedData,
-            },
-            metadata: {
-              requestId: request.requestId,
+            data: [requestData],
+            _requestMetadata: {
+              requestId: request.requestId || '',
               originalData: attestationData
             }
           };
@@ -324,7 +326,7 @@ export class EasService extends BaseAttestationService {
 
   private async processBatchReceipt(
     receipt: ethers.TransactionReceipt,
-    requests: any[]
+    requests: MultiAttestationRequest[]
   ): Promise<EasAttestation[]> {
     const attestations: EasAttestation[] = [];
     const block = await this.provider.getBlock(receipt.blockNumber);
@@ -340,16 +342,16 @@ export class EasService extends BaseAttestationService {
     for (let i = 0; i < uids.length; i++) {
       const uid = uids[i];
       const request = requests[i];
-      const originalData = request.metadata.originalData;
+      const originalData = request._requestMetadata.originalData;
 
       const attestation: EasAttestation = {
         id: uuidv4(),
         uid,
         schemaId: this.config.defaultSchemaId,
         attester: this.config.attesterAddress,
-        recipient: request.data.recipient,
+        recipient: request.data[0].recipient,
         data: originalData,
-        encodedData: request.data.data,
+        encodedData: request.data[0].data,
         transactionHash: receipt.hash,
         blockNumber: receipt.blockNumber,
         blockTimestamp: block.timestamp,
@@ -358,11 +360,11 @@ export class EasService extends BaseAttestationService {
         revoked: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        expiresAt: new Date(Number(request.data.expirationTime) * 1000).toISOString(),
+        expiresAt: new Date(Number(request.data[0].expirationTime) * 1000).toISOString(),
         metadata: {
           gasUsed: receipt.gasUsed.toString(),
-          gasPrice: receipt.gasPrice?.toString(),
-          requestId: request.metadata.requestId,
+          gasPrice: (receipt.gasPrice || '0').toString(),
+          requestId: request._requestMetadata.requestId,
           batchIndex: i
         }
       };
