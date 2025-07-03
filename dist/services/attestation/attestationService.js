@@ -76,8 +76,8 @@ class AttestationService {
                 kycResult,
                 options: {
                     revocable: true,
-                    expirationTime,
-                    offChainMetadata: options?.metadata
+                    ...(expirationTime !== undefined && { expirationTime }),
+                    ...(options?.metadata && { offChainMetadata: options.metadata })
                 },
                 requestId,
                 timestamp: Date.now()
@@ -119,7 +119,7 @@ class AttestationService {
                 error: {
                     code: error instanceof attestation_1.AttestationError ? error.code : 'ATTESTATION_CREATION_FAILED',
                     message: error instanceof Error ? error.message : 'Unknown error occurred',
-                    details: error instanceof attestation_1.AttestationError ? error.details : undefined
+                    ...(error instanceof attestation_1.AttestationError && error.details && { details: error.details })
                 },
                 requestId,
                 timestamp: new Date().toISOString()
