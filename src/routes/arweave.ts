@@ -23,23 +23,9 @@ const router = Router();
 const arweaveService = new ArweaveService(config.arweave);
 
 // Rate limiters for different operations
-const arweaveUploadLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // 20 uploads per hour
-  message: 'Too many upload requests'
-});
-
-const arweaveRetrievalLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 retrievals per 15 minutes
-  message: 'Too many retrieval requests'
-});
-
-const arweaveGeneralLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // 50 general requests per 15 minutes
-  message: 'Too many requests'
-});
+const arweaveUploadLimiter = fileEncryptionLimiter; // Reuse file encryption limiter
+const arweaveRetrievalLimiter = encryptionOperationsLimiter; // Reuse encryption operations limiter
+const arweaveGeneralLimiter = generalLimiter; // Reuse general limiter
 
 // Validation middleware
 const validateUpload = [
