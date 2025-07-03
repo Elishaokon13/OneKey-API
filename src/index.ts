@@ -212,6 +212,7 @@ app.get('/api/v1', (req, res) => {
       'Zero PII storage architecture',
       'Client-side AES-256-GCM encryption',
       'EAS attestation creation',
+      'Arweave permanent storage',
       'Decentralized storage (Filecoin/Arweave)',
       'Selective disclosure with ZKPs',
       'Cross-platform KYC reuse'
