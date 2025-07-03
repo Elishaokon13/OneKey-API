@@ -310,7 +310,9 @@ export class ArweaveService {
         uploadTimestamp: tags.find(t => t.name === 'OneKey-Uploaded-Timestamp')?.value || '',
         dataHash: tags.find(t => t.name === 'OneKey-Data-Hash')?.value || '',
         category: (tags.find(t => t.name === 'OneKey-Category')?.value || 'other') as ArweaveMetadata['category'],
-        description: tags.find(t => t.name === 'OneKey-Description')?.value
+        ...(tags.find(t => t.name === 'OneKey-Description')?.value && {
+          description: tags.find(t => t.name === 'OneKey-Description')!.value
+        })
       };
 
       // Verify integrity if requested
