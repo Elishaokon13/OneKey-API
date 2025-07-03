@@ -6,7 +6,7 @@ exports.privyService = exports.PrivyService = void 0;
 const environment_1 = require("../../config/environment");
 const authService_1 = require("./authService");
 const jwtService_1 = require("./jwtService");
-const privy_1 = require("@/types/privy");
+const privy_1 = require("../../types/privy");
 const uuid_1 = require("uuid");
 class PrivyService {
     privy = null; // Placeholder until we get correct SDK
