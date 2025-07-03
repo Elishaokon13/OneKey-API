@@ -106,13 +106,12 @@ export class SchemaManager {
       if (typeof result === 'string') {
         // If result is already the schema ID
         schemaId = result;
-      } else {
+      } else if (result && typeof result === 'object') {
         // If result is a transaction receipt
-        const logs = result.logs || [];
-        if (!Array.isArray(logs)) {
-          throw new SchemaError('Transaction logs not available');
-        }
-        schemaId = this.extractSchemaIdFromLogs(logs as readonly ethers.Log[]);
+        const receipt = result as ethers.ContractTransactionReceipt;
+        schemaId = this.extractSchemaIdFromLogs(receipt.logs);
+      } else {
+        throw new SchemaError('Invalid transaction result');
       }
 
       logger.info('Schema registered successfully', {
