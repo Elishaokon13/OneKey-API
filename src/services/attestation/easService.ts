@@ -833,7 +833,6 @@ export class EasService extends BaseAttestationService {
           ...attestation.metadata,
           arweaveTransactionId: arweaveData.transactionId
         };
-        
         attestation.metadata = updatedMetadata;
         await this.updateAttestationInDb(attestation);
 
