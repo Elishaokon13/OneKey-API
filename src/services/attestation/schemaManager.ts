@@ -99,13 +99,13 @@ export class SchemaManager {
         revocable,
       });
 
-      const receipt = await tx.wait() as ethers.ContractTransactionReceipt;
+      const receipt = await tx.wait();
       if (!receipt) {
         throw new SchemaError('Transaction receipt not available');
       }
 
       // Extract schema ID from transaction logs
-      const schemaId = this.extractSchemaIdFromLogs(receipt.logs);
+        const schemaId = this.extractSchemaIdFromLogs(receipt.logs as unknown as readonly ethers.Log[]);
 
       logger.info('Schema registered successfully', {
         schemaId,
