@@ -1,5 +1,5 @@
 import { BaseKycService } from './baseKycService';
-import { KycSession, KycVerificationResult, CreateKycSessionRequest, KycProvider, KycProviderConfig } from '@/types/kyc';
+import { KycSession, KycVerificationResult, CreateKycSessionRequest, KycProvider, KycProviderConfig } from '../../types/kyc';
 export declare class KycService {
     private providers;
     constructor();
