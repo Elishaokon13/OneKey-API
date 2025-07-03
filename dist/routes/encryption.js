@@ -8,11 +8,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const express_validator_1 = require("express-validator");
-const privyAuth_1 = require("@/middleware/privyAuth");
-const rateLimiter_1 = require("@/middleware/rateLimiter");
-const encryptionService_1 = require("@/services/encryption/encryptionService");
-const encryption_1 = require("@/types/encryption");
-const logger_1 = require("@/utils/logger");
+const privyAuth_1 = require("../middleware/privyAuth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const encryptionService_1 = require("../services/encryption/encryptionService");
+const encryption_1 = require("../types/encryption");
+const logger_1 = require("../utils/logger");
 const uuid_1 = require("uuid");
 const router = (0, express_1.Router)();
 // Validation middleware
