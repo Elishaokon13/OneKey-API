@@ -76,13 +76,13 @@ export class SchemaManager {
         revocable
       });
 
-      const receipt = await tx.wait() as ethers.ContractTransactionReceipt;
+      const receipt = await tx.wait();
       if (!receipt) {
         throw new SchemaError('Transaction receipt not available');
       }
       
       // Extract schema ID from transaction logs
-      const schemaId = await this.extractSchemaId(receipt);
+      const schemaId = this.extractSchemaIdFromLogs(receipt.logs);
       
       logger.info('Schema registered successfully', {
         schemaId,
@@ -226,12 +226,8 @@ export class SchemaManager {
     return `/* ${JSON.stringify(metadata)} */\n${schema}`;
   }
 
-  private async extractSchemaId(receipt: ethers.ContractTransactionReceipt | null): Promise<string> {
-    if (!receipt) {
-      throw new SchemaError('Transaction receipt is null');
-    }
-    
-    for (const log of receipt.logs) {
+  private extractSchemaIdFromLogs(logs: ethers.Log[]): string {
+    for (const log of logs) {
       try {
         const iface = new ethers.Interface([
           'event Registered(bytes32 indexed uid, address indexed registerer, string schema)'
