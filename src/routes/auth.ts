@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authLimiter } from '@/middleware/rateLimiter';
-import { authenticateJWT } from '@/middleware/auth';
+import { authenticatePrivy } from '@/middleware/privyAuth';
 import { authService } from '@/services/auth/authService';
 import { jwtService } from '@/services/auth/jwtService';
 import {
