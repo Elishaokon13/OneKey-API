@@ -659,6 +659,12 @@ HASH_SALT=your-hash-salt-for-privacy-preserving-hashes
 14. **Module Resolution**: Path mapping in TypeScript requires post-compilation resolution for Node.js
 15. **Privy SDK Integration**: Privy server SDK integration requires careful type management and placeholder implementations during development
 16. **Hybrid Authentication**: Supporting both JWT and Web3 authentication requires flexible middleware architecture
+17. **Authentication Simplification**: Removing JWT in favor of Privy-only auth significantly reduces complexity
+18. **Production Deployment**: Vercel requires specific configuration for Node.js API deployment
+19. **Environment Management**: Production environment variables must exclude JWT secrets when using Privy-only auth
+20. **TypeScript Compilation**: Production builds require `vercel-build` script for proper path mapping resolution
+21. **Authentication Consistency**: Single authentication method across all endpoints improves maintainability
+22. **Middleware Refactoring**: Bulk middleware replacement requires careful attention to maintain functionality
 
 ### Security Lessons
 17. **Environment File Security**: Always remove .env files from git tracking using `git rm --cached .env` to prevent credential leaks
