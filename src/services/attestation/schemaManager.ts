@@ -105,7 +105,7 @@ export class SchemaManager {
       }
 
       // Extract schema ID from transaction logs
-      const schemaId = this.extractSchemaIdFromLogs(receipt.logs);
+      const schemaId = this.extractSchemaIdFromLogs(receipt.logs as ethers.Log[]);
 
       logger.info('Schema registered successfully', {
         schemaId,
