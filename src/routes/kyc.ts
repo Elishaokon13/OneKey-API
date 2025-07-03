@@ -97,7 +97,7 @@ router.post('/sessions/:sessionId/verify',
  * GET /api/v1/kyc/providers - Get available providers
  */
 router.get('/providers',
-  authenticateJWT,
+  authenticatePrivy,
   generalLimiter,
   async (req: Request, res: Response) => {
     const requestId = uuidv4();
