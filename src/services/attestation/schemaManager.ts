@@ -77,6 +77,9 @@ export class SchemaManager {
       });
 
       const receipt = await tx.wait();
+      if (!receipt) {
+        throw new SchemaError('Transaction receipt not available');
+      }
       
       // Extract schema ID from transaction logs
       const schemaId = await this.extractSchemaId(receipt);
@@ -255,7 +258,7 @@ export class SchemaManager {
     if (!schema.schema) errors.push('Schema definition is required');
 
     // Validate field types
-    for (const field of schema.fields) {
+    for (const field of schema.fields as AttestationSchemaField[]) {
       if (!this.isValidFieldType(field.type)) {
         errors.push(`Invalid field type: ${field.type} for field ${field.name}`);
       }
