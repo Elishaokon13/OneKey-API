@@ -27,6 +27,15 @@ import {
 import { config } from '../../config/environment';
 import { logger } from '../../utils/logger';
 
+interface RequestMetadata {
+  requestId: string;
+  originalData: AttestationData;
+}
+
+interface ExtendedMultiAttestationRequest extends MultiAttestationRequest {
+  _requestMetadata: RequestMetadata;
+}
+
 export class EasService extends BaseAttestationService {
   private eas!: EAS;
   private schemaEncoder!: SchemaEncoder;
@@ -260,7 +269,7 @@ export class EasService extends BaseAttestationService {
       await Promise.all(requests.map(request => this.validateRequest(request)));
 
       // Prepare all attestation requests
-      const attestationRequests: MultiAttestationRequest[] = await Promise.all(
+      const attestationRequests: ExtendedMultiAttestationRequest[] = await Promise.all(
         requests.map(async request => {
           const attestationData = this.transformKycToAttestationData(
             request.kycResult,
@@ -279,7 +288,7 @@ export class EasService extends BaseAttestationService {
             schema: this.config.defaultSchemaId,
             data: [requestData],
             _requestMetadata: {
-              requestId: request.requestId || '',
+              requestId: request.requestId || crypto.randomUUID(),
               originalData: attestationData
             }
           };
@@ -309,7 +318,7 @@ export class EasService extends BaseAttestationService {
       }
 
       // Store attestations
-      await Promise.all(attestations.map(this.storeAttestation));
+      await Promise.all(attestations.map(attestation => this.storeAttestation(attestation)));
 
       return attestations;
 
@@ -326,7 +335,7 @@ export class EasService extends BaseAttestationService {
 
   private async processBatchReceipt(
     receipt: ethers.TransactionReceipt,
-    requests: MultiAttestationRequest[]
+    requests: ExtendedMultiAttestationRequest[]
   ): Promise<EasAttestation[]> {
     const attestations: EasAttestation[] = [];
     const block = await this.provider.getBlock(receipt.blockNumber);
@@ -342,7 +351,14 @@ export class EasService extends BaseAttestationService {
     for (let i = 0; i < uids.length; i++) {
       const uid = uids[i];
       const request = requests[i];
-      const originalData = request._requestMetadata.originalData;
+
+      if (!request || !request.data[0]) {
+        throw new AttestationError(
+          'Invalid batch request data',
+          'INVALID_BATCH_DATA',
+          { index: i }
+        );
+      }
 
       const attestation: EasAttestation = {
         id: uuidv4(),
@@ -350,7 +366,7 @@ export class EasService extends BaseAttestationService {
         schemaId: this.config.defaultSchemaId,
         attester: this.config.attesterAddress,
         recipient: request.data[0].recipient,
-        data: originalData,
+        data: request._requestMetadata.originalData,
         encodedData: request.data[0].data,
         transactionHash: receipt.hash,
         blockNumber: receipt.blockNumber,
