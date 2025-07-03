@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const rateLimiter_1 = require("@/middleware/rateLimiter");
-const auth_1 = require("@/middleware/auth");
-const authService_1 = require("@/services/auth/authService");
-const jwtService_1 = require("@/services/auth/jwtService");
-const auth_2 = require("@/types/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const privyAuth_1 = require("../middleware/privyAuth");
+const authService_1 = require("../services/auth/authService");
+const jwtService_1 = require("../services/auth/jwtService");
+const auth_1 = require("../types/auth");
 const router = (0, express_1.Router)();
 /**
  * POST /api/v1/auth/register
@@ -56,7 +56,7 @@ router.post('/register', rateLimiter_1.authLimiter, async (req, res) => {
         });
     }
     catch (error) {
-        if (error instanceof auth_2.AuthenticationError) {
+        if (error instanceof auth_1.AuthenticationError) {
             res.status(400).json({
                 error: error.code,
                 message: error.message,
@@ -100,7 +100,7 @@ router.post('/login', rateLimiter_1.authLimiter, async (req, res) => {
         });
     }
     catch (error) {
-        if (error instanceof auth_2.AuthenticationError) {
+        if (error instanceof auth_1.AuthenticationError) {
             res.status(401).json({
                 error: error.code,
                 message: error.message,
@@ -146,7 +146,7 @@ router.post('/wallet-login', rateLimiter_1.authLimiter, async (req, res) => {
         });
     }
     catch (error) {
-        if (error instanceof auth_2.AuthenticationError) {
+        if (error instanceof auth_1.AuthenticationError) {
             res.status(401).json({
                 error: error.code,
                 message: error.message,
@@ -186,7 +186,7 @@ router.post('/refresh', rateLimiter_1.authLimiter, async (req, res) => {
         });
     }
     catch (error) {
-        if (error instanceof auth_2.AuthenticationError) {
+        if (error instanceof auth_1.AuthenticationError) {
             res.status(401).json({
                 error: error.code,
                 message: error.message,
@@ -206,7 +206,7 @@ router.post('/refresh', rateLimiter_1.authLimiter, async (req, res) => {
  * POST /api/v1/auth/logout
  * Logout user (revoke refresh token)
  */
-router.post('/logout', auth_1.authenticateJWT, async (req, res) => {
+router.post('/logout', privyAuth_1.authenticatePrivy, async (req, res) => {
     try {
         const { refresh_token } = req.body;
         if (refresh_token) {
@@ -236,7 +236,7 @@ router.post('/logout', auth_1.authenticateJWT, async (req, res) => {
  * GET /api/v1/auth/me
  * Get current user profile
  */
-router.get('/me', auth_1.authenticateJWT, async (req, res) => {
+router.get('/me', privyAuth_1.authenticatePrivy, async (req, res) => {
     try {
         const user = req.user;
         // Remove sensitive metadata
@@ -288,7 +288,7 @@ router.get('/nonce', async (req, res) => {
  * GET /api/v1/auth/status
  * Check authentication status and token validity
  */
-router.get('/status', auth_1.authenticateJWT, async (req, res) => {
+router.get('/status', privyAuth_1.authenticatePrivy, async (req, res) => {
     try {
         const tokenInfo = jwtService_1.jwtService.getTokenInfo(req.token, 'access');
         res.status(200).json({
