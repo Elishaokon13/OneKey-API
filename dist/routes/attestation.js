@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.attestationService = exports.attestationRoutes = void 0;
 const express_1 = require("express");
 const express_validator_1 = require("express-validator");
+const privyAuth_1 = require("../middleware/privyAuth");
 const auth_1 = require("../middleware/auth");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const attestationService_1 = require("../services/attestation/attestationService");
@@ -131,7 +132,7 @@ const logRequest = (req, endpoint) => {
  * POST /api/v1/attestations
  * Create a new attestation from KYC verification
  */
-router.post('/', auth_1.authenticateJWT, auth_1.requireKYCCompletion, rateLimiter_1.applyAttestationRateLimit, validateCreateAttestation, async (req, res) => {
+router.post('/', privyAuth_1.authenticatePrivy, auth_1.requireKYCCompletion, rateLimiter_1.applyAttestationRateLimit, validateCreateAttestation, async (req, res) => {
     logRequest(req, 'CREATE_ATTESTATION');
     if (handleValidationErrors(req, res))
         return;
@@ -140,7 +141,7 @@ router.post('/', auth_1.authenticateJWT, auth_1.requireKYCCompletion, rateLimite
         // Get KYC verification result
         const kycResult = await kycService.getVerificationResult(kycSessionId);
         if (!kycResult) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: {
                     code: 'KYC_SESSION_NOT_FOUND',
@@ -149,10 +150,11 @@ router.post('/', auth_1.authenticateJWT, auth_1.requireKYCCompletion, rateLimite
                 requestId: req.headers['x-request-id'],
                 timestamp: new Date().toISOString()
             });
+            return;
         }
         // Verify user owns the KYC session
-        if (kycResult.userId !== req.user.id) {
-            return res.status(403).json({
+        if (kycResult.user.id !== req.user.id) {
+            res.status(403).json({
                 success: false,
                 error: {
                     code: 'KYC_SESSION_ACCESS_DENIED',
@@ -161,6 +163,7 @@ router.post('/', auth_1.authenticateJWT, auth_1.requireKYCCompletion, rateLimite
                 requestId: req.headers['x-request-id'],
                 timestamp: new Date().toISOString()
             });
+            return;
         }
         // Create attestation
         const result = await attestationService.createAttestationFromKyc(recipient, kycResult, {
@@ -207,7 +210,7 @@ router.post('/', auth_1.authenticateJWT, auth_1.requireKYCCompletion, rateLimite
  * GET /api/v1/attestations/:uid
  * Get attestation details by UID
  */
-router.get('/:uid', auth_1.authenticateJWT, validateGetAttestation, async (req, res) => {
+router.get('/:uid', privyAuth_1.authenticatePrivy, validateGetAttestation, async (req, res) => {
     logRequest(req, 'GET_ATTESTATION');
     if (handleValidationErrors(req, res))
         return;
@@ -248,7 +251,7 @@ router.get('/:uid', auth_1.authenticateJWT, validateGetAttestation, async (req, 
  * POST /api/v1/attestations/verify
  * Verify attestation validity
  */
-router.post('/verify', auth_1.authenticateJWT, validateVerifyAttestation, async (req, res) => {
+router.post('/verify', privyAuth_1.authenticatePrivy, validateVerifyAttestation, async (req, res) => {
     logRequest(req, 'VERIFY_ATTESTATION');
     if (handleValidationErrors(req, res))
         return;
@@ -284,7 +287,7 @@ router.post('/verify', auth_1.authenticateJWT, validateVerifyAttestation, async 
  * GET /api/v1/attestations
  * List attestations for a recipient
  */
-router.get('/', auth_1.authenticateJWT, validateListAttestations, async (req, res) => {
+router.get('/', privyAuth_1.authenticatePrivy, validateListAttestations, async (req, res) => {
     logRequest(req, 'LIST_ATTESTATIONS');
     if (handleValidationErrors(req, res))
         return;
@@ -329,7 +332,7 @@ router.get('/', auth_1.authenticateJWT, validateListAttestations, async (req, re
  * POST /api/v1/attestations/revoke
  * Revoke an attestation
  */
-router.post('/revoke', auth_1.authenticateJWT, rateLimiter_1.applyAttestationRateLimit, validateRevokeAttestation, async (req, res) => {
+router.post('/revoke', privyAuth_1.authenticatePrivy, rateLimiter_1.applyAttestationRateLimit, validateRevokeAttestation, async (req, res) => {
     logRequest(req, 'REVOKE_ATTESTATION');
     if (handleValidationErrors(req, res))
         return;
@@ -377,7 +380,7 @@ router.post('/revoke', auth_1.authenticateJWT, rateLimiter_1.applyAttestationRat
  * POST /api/v1/attestations/estimate-cost
  * Estimate gas cost for creating an attestation
  */
-router.post('/estimate-cost', auth_1.authenticateJWT, validateEstimateCost, async (req, res) => {
+router.post('/estimate-cost', privyAuth_1.authenticatePrivy, validateEstimateCost, async (req, res) => {
     logRequest(req, 'ESTIMATE_ATTESTATION_COST');
     if (handleValidationErrors(req, res))
         return;
@@ -386,7 +389,7 @@ router.post('/estimate-cost', auth_1.authenticateJWT, validateEstimateCost, asyn
         // Get KYC verification result
         const kycResult = await kycService.getVerificationResult(kycSessionId);
         if (!kycResult) {
-            return res.status(404).json({
+            res.status(404).json({
                 success: false,
                 error: {
                     code: 'KYC_SESSION_NOT_FOUND',
@@ -395,10 +398,11 @@ router.post('/estimate-cost', auth_1.authenticateJWT, validateEstimateCost, asyn
                 requestId: req.headers['x-request-id'],
                 timestamp: new Date().toISOString()
             });
+            return;
         }
         // Verify user owns the KYC session
-        if (kycResult.userId !== req.user.id) {
-            return res.status(403).json({
+        if (kycResult.user.id !== req.user.id) {
+            res.status(403).json({
                 success: false,
                 error: {
                     code: 'KYC_SESSION_ACCESS_DENIED',
@@ -407,6 +411,7 @@ router.post('/estimate-cost', auth_1.authenticateJWT, validateEstimateCost, asyn
                 requestId: req.headers['x-request-id'],
                 timestamp: new Date().toISOString()
             });
+            return;
         }
         const result = await attestationService.estimateAttestationCost(recipient, kycResult);
         logger_1.logger.info('Attestation cost estimation completed', {
@@ -463,7 +468,7 @@ router.get('/health', async (req, res) => {
  * GET /api/v1/attestations/stats
  * Get attestation statistics
  */
-router.get('/stats', auth_1.authenticateJWT, async (req, res) => {
+router.get('/stats', privyAuth_1.authenticatePrivy, async (req, res) => {
     try {
         const stats = attestationService.getStats();
         res.status(200).json({
