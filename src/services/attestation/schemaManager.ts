@@ -95,17 +95,17 @@ export class SchemaManager {
 
       const tx = await this.schemaRegistry.register({
         schema: schemaWithMetadata,
-        resolverAddress: this.config.defaultResolver,
+        resolverAddress: this.config.defaultResolver || ethers.ZeroAddress,
         revocable,
       });
 
       const receipt = await tx.wait();
-      if (!receipt) {
+      if (!receipt?.logs) {
         throw new SchemaError('Transaction receipt not available');
       }
 
       // Extract schema ID from transaction logs
-      const schemaId = this.extractSchemaIdFromLogs(receipt.logs as ethers.Log[]);
+      const schemaId = this.extractSchemaIdFromLogs(receipt.logs);
 
       logger.info('Schema registered successfully', {
         schemaId,
@@ -156,8 +156,8 @@ export class SchemaManager {
         schema: schema.schema,
         resolver: schema.resolver,
         revocable: schema.revocable,
-        registerer: schema.registerer ?? '',
-        transactionHash: schema.transactionHash ?? '',
+        registerer: '',
+        transactionHash: '',
       });
 
       // Update cache
