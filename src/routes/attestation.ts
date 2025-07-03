@@ -150,7 +150,7 @@ const logRequest = (req: Request, endpoint: string) => {
  */
 router.post(
   '/',
-  authenticateJWT,
+  authenticatePrivy,
   requireKYCCompletion,
   applyAttestationRateLimit,
   validateCreateAttestation,
@@ -247,7 +247,7 @@ router.post(
  */
 router.get(
   '/:uid',
-  authenticateJWT,
+  authenticatePrivy,
   validateGetAttestation,
   async (req: Request, res: Response) => {
     logRequest(req, 'GET_ATTESTATION');
@@ -298,7 +298,7 @@ router.get(
  */
 router.post(
   '/verify',
-  authenticateJWT,
+  authenticatePrivy,
   validateVerifyAttestation,
   async (req: Request, res: Response) => {
     logRequest(req, 'VERIFY_ATTESTATION');
@@ -345,7 +345,7 @@ router.post(
  */
 router.get(
   '/',
-  authenticateJWT,
+  authenticatePrivy,
   validateListAttestations,
   async (req: Request, res: Response) => {
     logRequest(req, 'LIST_ATTESTATIONS');
@@ -407,7 +407,7 @@ router.get(
  */
 router.post(
   '/revoke',
-  authenticateJWT,
+  authenticatePrivy,
   applyAttestationRateLimit,
   validateRevokeAttestation,
   async (req: Request, res: Response) => {
@@ -466,7 +466,7 @@ router.post(
  */
 router.post(
   '/estimate-cost',
-  authenticateJWT,
+  authenticatePrivy,
   validateEstimateCost,
   async (req: Request, res: Response): Promise<void> => {
     logRequest(req, 'ESTIMATE_ATTESTATION_COST');
@@ -574,7 +574,7 @@ router.get(
  */
 router.get(
   '/stats',
-  authenticateJWT,
+  authenticatePrivy,
   async (req: Request, res: Response) => {
     try {
       const stats = attestationService.getStats();
