@@ -99,13 +99,20 @@ export class SchemaManager {
         revocable,
       });
 
-      const receipt = await tx.wait();
-      if (!receipt) {
-        throw new SchemaError('Transaction receipt not available');
-      }
+      // Replace the problematic section in registerSchema method:
 
-      // Extract schema ID from transaction logs
-        const schemaId = this.extractSchemaIdFromLogs(receipt.logs as unknown as readonly ethers.Log[]);
+const receipt = await tx.wait();
+if (!receipt) {
+  throw new SchemaError('Transaction receipt not available');
+}
+
+// Fix: Check if logs exist and are in the correct format
+if (!receipt.logs || !Array.isArray(receipt.logs)) {
+  throw new SchemaError('Transaction logs not available');
+}
+
+// Extract schema ID from transaction logs
+const schemaId = this.extractSchemaIdFromLogs(receipt.logs as readonly ethers.Log[]);
 
       logger.info('Schema registered successfully', {
         schemaId,
