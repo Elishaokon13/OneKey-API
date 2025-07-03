@@ -226,7 +226,11 @@ export class SchemaManager {
     return `/* ${JSON.stringify(metadata)} */\n${schema}`;
   }
 
-  private async extractSchemaId(receipt: ethers.TransactionReceipt): Promise<string> {
+  private async extractSchemaId(receipt: ethers.ContractTransactionReceipt | null): Promise<string> {
+    if (!receipt) {
+      throw new SchemaError('Transaction receipt is null');
+    }
+    
     for (const log of receipt.logs) {
       try {
         const iface = new ethers.Interface([
