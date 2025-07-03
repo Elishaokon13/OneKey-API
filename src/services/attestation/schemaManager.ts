@@ -108,7 +108,7 @@ export class SchemaManager {
       }
 
       // Fix: Extract logs from receipt
-      const logs = receipt.logs || [];
+      const logs = receipt.logs as readonly ethers.Log[];
       if (!Array.isArray(logs)) {
         throw new SchemaError("Transaction logs not available");
       }
