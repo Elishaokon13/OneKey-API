@@ -263,7 +263,7 @@ export class SchemaManager {
     return `/* ${JSON.stringify(metadata)} */\n${schema}`;
   }
 
-  private extractSchemaIdFromLogs(logs: ethers.Log[]): string {
+  private extractSchemaIdFromLogs(logs: readonly ethers.Log[]): string {
     for (const log of logs) {
       try {
         const iface = new ethers.Interface([
