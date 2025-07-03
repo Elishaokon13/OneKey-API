@@ -1,9 +1,12 @@
 // OneKey KYC API - EAS Schema Manager
 // Handles schema registration, versioning, and validation for EAS attestations
 
-import { ethers } from 'ethers';
-import { SchemaRegistry, GetSchemaParams } from '@ethereum-attestation-service/eas-sdk';
-import { logger } from '../../utils/logger';
+import { ethers } from "ethers";
+import {
+  SchemaRegistry,
+  GetSchemaParams,
+} from "@ethereum-attestation-service/eas-sdk";
+import { logger } from "../../utils/logger";
 import {
   SchemaConfig,
   SchemaVersion,
@@ -12,7 +15,7 @@ import {
   AttestationSchema,
   SchemaCompatibility,
   AttestationSchemaField,
-} from '../../types/attestation';
+} from "../../types/attestation";
 
 interface SchemaMetadata {
   name: string;
@@ -38,28 +41,28 @@ export class SchemaManager {
   async initialize(): Promise<void> {
     try {
       if (!this.config.rpcUrl || !this.config.privateKey) {
-        throw new SchemaError('Missing required configuration: rpcUrl or privateKey');
+        throw new SchemaError(
+          "Missing required configuration: rpcUrl or privateKey"
+        );
       }
-  
+
       // Initialize provider and signer
       this.provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
       this.signer = new ethers.Wallet(this.config.privateKey, this.provider);
-  
+
       // Initialize schema registry
       this.schemaRegistry = new SchemaRegistry(this.config.registryAddress);
       this.schemaRegistry.connect(this.signer);
-  
-      logger.info('Schema manager initialized', {
+
+      logger.info("Schema manager initialized", {
         registryAddress: this.config.registryAddress,
         signer: await this.signer.getAddress(),
       });
     } catch (error) {
-      logger.error('Failed to initialize schema manager', { error });
-      throw new SchemaError(
-        'Schema manager initialization failed',
-        undefined,
-        { error: error instanceof Error ? error.message : String(error) },
-      );
+      logger.error("Failed to initialize schema manager", { error });
+      throw new SchemaError("Schema manager initialization failed", undefined, {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -68,7 +71,7 @@ export class SchemaManager {
     description: string,
     schema: string,
     version: SchemaVersion,
-    revocable: boolean = true,
+    revocable: boolean = true
   ): Promise<string> {
     try {
       // Validate schema before registration
@@ -79,11 +82,11 @@ export class SchemaManager {
         schema,
         name,
         description,
-        version,
+        version
       );
 
       if (!this.schemaRegistry) {
-        throw new SchemaError('Schema registry not initialized');
+        throw new SchemaError("Schema registry not initialized");
       }
 
       const tx = await this.schemaRegistry.register({
@@ -94,13 +97,13 @@ export class SchemaManager {
 
       const receipt = await tx.wait();
       if (!receipt) {
-        throw new SchemaError('Transaction receipt not available');
+        throw new SchemaError("Transaction receipt not available");
       }
 
       // Extract schema ID from transaction logs
       const schemaId = this.extractSchemaIdFromLogs(receipt.logs);
 
-      logger.info('Schema registered successfully', {
+      logger.info("Schema registered successfully", {
         schemaId,
         name,
         version: `${version.major}.${version.minor}.${version.patch}`,
@@ -109,12 +112,10 @@ export class SchemaManager {
 
       return schemaId;
     } catch (error) {
-      logger.error('Failed to register schema', { error });
-      throw new SchemaError(
-        'Schema registration failed',
-        undefined,
-        { error: error instanceof Error ? error.message : String(error) },
-      );
+      logger.error("Failed to register schema", { error });
+      throw new SchemaError("Schema registration failed", undefined, {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -125,14 +126,14 @@ export class SchemaManager {
         const cached = this.schemaCache.get(schemaId);
         if (
           cached &&
-          Date.now() - cached.timestamp < (this.config.caching.ttl * 1000)
+          Date.now() - cached.timestamp < this.config.caching.ttl * 1000
         ) {
           return cached.schema;
         }
       }
 
       if (!this.schemaRegistry) {
-        throw new SchemaError('Schema registry not initialized');
+        throw new SchemaError("Schema registry not initialized");
       }
 
       // Get schema from registry
@@ -140,7 +141,7 @@ export class SchemaManager {
       const schema = await this.schemaRegistry.getSchema(params);
 
       if (!schema) {
-        throw new SchemaError('Schema not found', schemaId);
+        throw new SchemaError("Schema not found", schemaId);
       }
 
       // Parse schema and extract metadata
@@ -156,12 +157,10 @@ export class SchemaManager {
 
       return attestationSchema;
     } catch (error) {
-      logger.error('Failed to get schema', { schemaId, error });
-      throw new SchemaError(
-        'Schema retrieval failed',
-        schemaId,
-        { error: error instanceof Error ? error.message : String(error) },
-      );
+      logger.error("Failed to get schema", { schemaId, error });
+      throw new SchemaError("Schema retrieval failed", schemaId, {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -181,18 +180,16 @@ export class SchemaManager {
         warnings: validation.warnings,
       };
     } catch (error) {
-      logger.error('Schema validation failed', { schemaId, error });
-      throw new SchemaError(
-        'Schema validation failed',
-        schemaId,
-        { error: error instanceof Error ? error.message : String(error) },
-      );
+      logger.error("Schema validation failed", { schemaId, error });
+      throw new SchemaError("Schema validation failed", schemaId, {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
   async checkCompatibility(
     sourceSchemaId: string,
-    targetSchemaId: string,
+    targetSchemaId: string
   ): Promise<SchemaCompatibility> {
     try {
       const sourceSchema = await this.getSchema(sourceSchemaId);
@@ -200,15 +197,15 @@ export class SchemaManager {
 
       return this.compareSchemas(sourceSchema, targetSchema);
     } catch (error) {
-      logger.error('Schema compatibility check failed', {
+      logger.error("Schema compatibility check failed", {
         sourceSchemaId,
         targetSchemaId,
         error,
       });
       throw new SchemaError(
-        'Schema compatibility check failed',
+        "Schema compatibility check failed",
         sourceSchemaId,
-        { error: error instanceof Error ? error.message : String(error) },
+        { error: error instanceof Error ? error.message : String(error) }
       );
     }
   }
@@ -218,7 +215,7 @@ export class SchemaManager {
   private validateSchemaString(schema: string): void {
     // Validate schema string format and field types
     const fieldRegex = /^[a-zA-Z_][a-zA-Z0-9_]* [a-zA-Z][a-zA0-9]*$/;
-    const fields = schema.split(',').map((f) => f.trim());
+    const fields = schema.split(",").map((f) => f.trim());
 
     const errors: string[] = [];
     for (const field of fields) {
@@ -228,7 +225,7 @@ export class SchemaManager {
     }
 
     if (errors.length > 0) {
-      throw new SchemaError('Invalid schema format', undefined, { errors });
+      throw new SchemaError("Invalid schema format", undefined, { errors });
     }
   }
 
@@ -236,7 +233,7 @@ export class SchemaManager {
     schema: string,
     name: string,
     description: string,
-    version: SchemaVersion,
+    version: SchemaVersion
   ): string {
     // Add metadata as a comment at the start of the schema
     const metadata: SchemaMetadata = {
@@ -253,10 +250,10 @@ export class SchemaManager {
     for (const log of logs) {
       try {
         const iface = new ethers.Interface([
-          'event Registered(bytes32 indexed uid, address indexed registerer, string schema)',
+          "event Registered(bytes32 indexed uid, address indexed registerer, string schema)",
         ]);
         const parsed = iface.parseLog(log);
-        if (parsed?.name === 'Registered') {
+        if (parsed?.name === "Registered") {
           return parsed.args.uid as string;
         }
       } catch {
@@ -264,24 +261,28 @@ export class SchemaManager {
         continue;
       }
     }
-    throw new SchemaError('Could not extract schema ID from transaction');
+    throw new SchemaError("Could not extract schema ID from transaction");
   }
 
-  private validateSchemaStructure(
-    schema: AttestationSchema,
-  ): { valid: boolean; errors: string[]; warnings: string[] } {
+  private validateSchemaStructure(schema: AttestationSchema): {
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
+  } {
     const errors: string[] = [];
     const warnings: string[] = [];
 
     // Check required fields
-    if (!schema.name) errors.push('Schema name is required');
-    if (!schema.version) errors.push('Schema version is required');
-    if (!schema.schema) errors.push('Schema definition is required');
+    if (!schema.name) errors.push("Schema name is required");
+    if (!schema.version) errors.push("Schema version is required");
+    if (!schema.schema) errors.push("Schema definition is required");
 
     // Validate field types
     for (const field of schema.fields as AttestationSchemaField[]) {
       if (!this.isValidFieldType(field.type)) {
-        errors.push(`Invalid field type: ${field.type} for field ${field.name}`);
+        errors.push(
+          `Invalid field type: ${field.type} for field ${field.name}`
+        );
       }
       if (!field.name.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
         errors.push(`Invalid field name format: ${field.name}`);
@@ -291,18 +292,18 @@ export class SchemaManager {
     // Check for duplicate field names
     const fieldNames = schema.fields.map((f) => f.name);
     const duplicates = fieldNames.filter(
-      (name, index) => fieldNames.indexOf(name) !== index,
+      (name, index) => fieldNames.indexOf(name) !== index
     );
     if (duplicates.length > 0) {
-      errors.push(`Duplicate field names: ${duplicates.join(', ')}`);
+      errors.push(`Duplicate field names: ${duplicates.join(", ")}`);
     }
 
     // Add warnings for best practices
     if (!schema.description) {
-      warnings.push('Schema description is recommended');
+      warnings.push("Schema description is recommended");
     }
     if (schema.fields.some((f) => !f.description)) {
-      warnings.push('Field descriptions are recommended for all fields');
+      warnings.push("Field descriptions are recommended for all fields");
     }
 
     return {
@@ -314,13 +315,13 @@ export class SchemaManager {
 
   private isValidFieldType(type: string): boolean {
     const validTypes = [
-      'uint256',
-      'int256',
-      'bool',
-      'string',
-      'bytes',
-      'address',
-      'bytes32',
+      "uint256",
+      "int256",
+      "bool",
+      "string",
+      "bytes",
+      "address",
+      "bytes32",
     ];
     return validTypes.includes(type);
   }
@@ -346,24 +347,24 @@ export class SchemaManager {
 
     // Parse schema string into fields
     const schemaFields = rawSchema.schema
-      .replace(/\/\*.*?\*\//s, '') // Remove metadata comment
+      .replace(/\/\*.*?\*\//s, "") // Remove metadata comment
       .trim()
-      .split(',')
+      .split(",")
       .map((field) => {
-        const [type, name] = field.trim().split(' ');
+        const [type, name] = field.trim().split(" ");
         return {
           name,
           type,
-          description: '', // Would be in metadata
+          description: "", // Would be in metadata
           required: true, // All fields are required by default
         } as AttestationSchemaField;
       });
 
     return {
       id: rawSchema.uid,
-      name: metadata.name ?? 'Unknown Schema',
-      description: metadata.description ?? '',
-      version: metadata.version ?? '1.0.0',
+      name: metadata.name ?? "Unknown Schema",
+      description: metadata.description ?? "",
+      version: metadata.version ?? "1.0.0",
       schema: rawSchema.schema,
       resolver: rawSchema.resolver,
       revocable: rawSchema.revocable,
@@ -376,7 +377,7 @@ export class SchemaManager {
 
   private compareSchemas(
     source: AttestationSchema,
-    target: AttestationSchema,
+    target: AttestationSchema
   ): SchemaCompatibility {
     const sourceFields = new Map(source.fields.map((f) => [f.name, f]));
     const targetFields = new Map(target.fields.map((f) => [f.name, f]));
@@ -415,9 +416,7 @@ export class SchemaManager {
 
   private extractSchemaVersion(schema: AttestationSchema): SchemaVersion {
     const versionStr = schema.version;
-    const [major = 1, minor = 0, patch = 0] = versionStr
-      .split('.')
-      .map(Number);
+    const [major = 1, minor = 0, patch = 0] = versionStr.split(".").map(Number);
     return { major, minor, patch };
   }
 }
