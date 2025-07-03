@@ -10,14 +10,14 @@ const environment_1 = require("./config/environment");
 const database_1 = require("./config/database");
 const migrator_1 = require("./database/migrator");
 // Import routes
-const auth_1 = __importDefault(require("@/routes/auth"));
-const privy_1 = __importDefault(require("@/routes/privy"));
-const kyc_1 = __importDefault(require("@/routes/kyc"));
-const attestation_1 = require("@/routes/attestation");
-const arweave_1 = __importDefault(require("@/routes/arweave"));
-const encryption_1 = __importDefault(require("@/routes/encryption"));
+const auth_1 = __importDefault(require("./routes/auth"));
+const privy_1 = __importDefault(require("./routes/privy"));
+const kyc_1 = __importDefault(require("./routes/kyc"));
+const attestation_1 = require("./routes/attestation");
+const arweave_1 = __importDefault(require("./routes/arweave"));
+const encryption_1 = __importDefault(require("./routes/encryption"));
 const privyService_1 = require("./services/auth/privyService");
-const encryptionService_1 = require("@/services/encryption/encryptionService");
+const encryptionService_1 = require("./services/encryption/encryptionService");
 // Import custom middleware
 const rateLimiter_1 = require("./middleware/rateLimiter");
 const errorHandler_1 = require("./middleware/errorHandler");
