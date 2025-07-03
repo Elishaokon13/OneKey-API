@@ -383,8 +383,8 @@ export class SchemaManager {
       revocable: rawSchema.revocable,
       fields: schemaFields,
       createdAt: metadata.createdAt ?? new Date().toISOString(),
-      creator: rawSchema.registerer,
-      registrationTransaction: rawSchema.transactionHash,
+      creator: rawSchema.registerer ?? 'unknown',
+      registrationTransaction: rawSchema.transactionHash ?? '',
     };
   }
 
