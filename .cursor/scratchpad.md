@@ -672,6 +672,12 @@ HASH_SALT=your-hash-salt-for-privacy-preserving-hashes
 19. **Repository Security**: Existing .env files in git history require removal from tracking before continuing development
 20. **Token Security**: Separate JWT secrets for access/refresh tokens and proper token expiration (15min access, 7 days refresh)
 21. **Web3 Authentication**: Privy integration requires careful handling of wallet signatures and session management
+22. **Authentication Simplification**: Removing JWT reduces attack surface and eliminates token refresh vulnerabilities
+23. **Production Environment Security**: Vercel environment variables must be properly secured and never committed to git
+24. **CORS Configuration**: Production CORS settings must be restrictive to specific domains only
+25. **Rate Limiting Production**: Production rate limits should be more restrictive than development settings
+26. **API Token Security**: Privy access tokens require proper validation and expiration handling
+27. **Deployment Security**: Production deployments require HTTPS-only communication and secure headers
 
 ### OneKey-Specific Architecture Insights
 1. **Zero PII Storage**: Database schema designed to store only hashes and references, never raw PII
