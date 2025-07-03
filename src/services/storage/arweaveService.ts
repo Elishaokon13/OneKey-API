@@ -169,7 +169,7 @@ export class ArweaveService {
       await this.arweave.transactions.sign(transaction, this.wallet);
 
       // Get cost
-      const cost = await this.arweave.transactions.getPrice(transaction.data_size);
+      const cost = await this.arweave.transactions.getPrice(parseInt(transaction.data_size));
 
       // Submit transaction
       const uploader = await this.arweave.transactions.getUploader(transaction);
