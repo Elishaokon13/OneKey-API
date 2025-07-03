@@ -2,7 +2,7 @@
 
 import { Router, Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import { authenticateJWT } from '@/middleware/auth';
+import { authenticatePrivy } from '@/middleware/privyAuth';
 import { generalLimiter, kycLimiter } from '@/middleware/rateLimiter';
 import { KycService } from '@/services/kyc/kycService';
 import {
