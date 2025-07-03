@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrivyAuthContext } from '../types/privy';
+import { PrivyAuthContext } from '@/types/privy';
 declare global {
     namespace Express {
         interface Request {
