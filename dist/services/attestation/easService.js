@@ -79,7 +79,12 @@ class EasService extends baseAttestationService_1.BaseAttestationService {
             });
             // Create the attestation on-chain
             const tx = await this.eas.attest(attestationRequest);
-            const receipt = await tx.wait();
+            const txHash = await tx.wait();
+            if (!txHash) {
+                throw new attestation_1.AttestationCreationError('Transaction hash not available');
+            }
+            // Get the actual receipt from provider
+            const receipt = await this.provider.getTransactionReceipt(txHash);
             if (!receipt) {
                 throw new attestation_1.AttestationCreationError('Transaction receipt not available');
             }
@@ -150,7 +155,7 @@ class EasService extends baseAttestationService_1.BaseAttestationService {
             const verification = {
                 onChain: true,
                 schemaValid: attestation.schema === this.config.defaultSchemaId,
-                notRevoked: !attestation.revoked,
+                notRevoked: !attestation.revocationTime || attestation.revocationTime === 0n,
                 notExpired: attestation.expirationTime === 0n || attestation.expirationTime > BigInt(Math.floor(Date.now() / 1000)),
                 attesterValid: attestation.attester.toLowerCase() === this.config.attesterAddress.toLowerCase(),
                 recipientMatch: true // Will be validated by caller if needed
@@ -166,7 +171,7 @@ class EasService extends baseAttestationService_1.BaseAttestationService {
                     blockNumber: currentBlock,
                     verificationTime: Date.now() - startTime
                 },
-                errors: valid ? undefined : this.getVerificationErrors(verification)
+                ...(valid ? {} : { errors: this.getVerificationErrors(verification) })
             };
             // If verification passed, include full attestation data
             if (valid) {
@@ -204,8 +209,8 @@ class EasService extends baseAttestationService_1.BaseAttestationService {
                     data: encodedData,
                 },
             };
-            // Estimate gas for the transaction
-            const estimatedGas = await this.eas.attest.estimateGas(attestationRequest);
+            // Estimate gas for the transaction (using reasonable default since EAS SDK doesn't expose estimateGas)
+            const estimatedGas = BigInt(350000); // Typical gas for EAS attestation
             // Get current gas price
             let gasPrice;
             if (this.config.gasPrice) {
@@ -242,9 +247,11 @@ class EasService extends baseAttestationService_1.BaseAttestationService {
                 schema: this.config.defaultSchemaId,
                 data: { uid, value: 0n }
             });
-            const receipt = await tx.wait();
+            const txHash = await tx.wait();
+            // Get the actual receipt from provider
+            const receipt = await this.provider.getTransactionReceipt(txHash);
             if (!receipt) {
-                throw new attestation_1.AttestationError('Revocation transaction failed', 'REVOCATION_FAILED');
+                throw new attestation_1.AttestationError('Revocation receipt not available', 'REVOCATION_FAILED');
             }
             // Log revocation activity
             this.logAttestationActivity('revoked', uid, this.config.attesterAddress, {
@@ -350,14 +357,14 @@ class EasService extends baseAttestationService_1.BaseAttestationService {
             blockNumber: 0, // Would need to query
             blockTimestamp: Number(onChainAttestation.time),
             chainId: this.config.chainId,
-            status: onChainAttestation.revoked ? 'revoked' : 'confirmed',
-            revoked: onChainAttestation.revoked,
-            revokedAt: onChainAttestation.revoked ? Number(onChainAttestation.revocationTime) : undefined,
+            status: onChainAttestation.revocationTime > 0 ? 'revoked' : 'confirmed',
+            revoked: onChainAttestation.revocationTime > 0,
+            ...(onChainAttestation.revocationTime > 0 && { revokedAt: Number(onChainAttestation.revocationTime) }),
             createdAt: new Date(Number(onChainAttestation.time) * 1000).toISOString(),
             updatedAt: new Date().toISOString(),
-            expiresAt: onChainAttestation.expirationTime > 0
-                ? new Date(Number(onChainAttestation.expirationTime) * 1000).toISOString()
-                : undefined,
+            ...(onChainAttestation.expirationTime > 0 && {
+                expiresAt: new Date(Number(onChainAttestation.expirationTime) * 1000).toISOString()
+            }),
             metadata: {}
         };
     }
