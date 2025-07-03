@@ -369,3 +369,40 @@ export type AttestationApiResponse<T = any> = {
     transactionHash?: string;
   };
 }; 
+
+// ===== Schema Management Types =====
+
+export interface SchemaConfig {
+  rpcUrl: string;
+  registryAddress: string;
+  privateKey: string;
+  defaultResolver: string;
+  caching?: {
+    enabled: boolean;
+    ttl: number;
+  };
+}
+
+export interface SchemaVersion {
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+export interface SchemaValidationResult {
+  valid: boolean;
+  schema: AttestationSchema;
+  version: SchemaVersion;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface SchemaCompatibility {
+  compatible: boolean;
+  changes: {
+    added: string[];
+    removed: string[];
+    modified: string[];
+  };
+  breaking: boolean;
+} 
