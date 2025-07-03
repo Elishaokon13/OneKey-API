@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { User } from '@/types/auth';
+import { User } from '../types/auth';
 declare global {
     namespace Express {
         interface Request {
