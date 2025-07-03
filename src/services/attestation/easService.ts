@@ -25,16 +25,24 @@ import {
 } from '../../types/attestation';
 import { config } from '../../config/environment';
 import { logger } from '../../utils/logger';
+import { ArweaveService } from '../storage/arweaveService';
 
 export class EasService extends BaseAttestationService {
   private eas!: EAS;
   private schemaEncoder!: SchemaEncoder;
   private schemaManager!: SchemaManager;
+  private arweaveService?: ArweaveService;
   private readonly SCHEMA_DEFINITION = 
     'string kycProvider,string kycSessionId,string verificationStatus,uint256 verificationTimestamp,uint256 confidenceScore,string userIdHash,string countryCode,string documentType,bool documentVerified,bool biometricVerified,bool livenessVerified,bool addressVerified,bool sanctionsCleared,bool pepCleared,string riskLevel,uint256 riskScore,string schemaVersion,string apiVersion,string attestationStandard';
 
-  constructor(easConfig: EasConfig) {
+  constructor(
+    easConfig: EasConfig,
+    private readonly arweaveConfig?: any // TODO: Add proper type
+  ) {
     super(easConfig);
+    if (arweaveConfig) {
+      this.arweaveService = new ArweaveService(arweaveConfig);
+    }
   }
 
   // ===== Provider Initialization =====
@@ -240,6 +248,150 @@ export class EasService extends BaseAttestationService {
         { error: error instanceof Error ? error.message : String(error) }
       );
     }
+  }
+
+  // ===== Batch Attestation =====
+
+  async createBatchAttestations(
+    requests: CreateAttestationRequest[]
+  ): Promise<EasAttestation[]> {
+    try {
+      // Validate all requests first
+      await Promise.all(requests.map(this.validateRequest));
+
+      // Prepare all attestation requests
+      const attestationRequests = await Promise.all(
+        requests.map(async request => {
+          const attestationData = this.transformKycToAttestationData(
+            request.kycResult,
+            request.recipient
+          );
+          const encodedData = this.encodeAttestationData(attestationData);
+
+          return {
+            schema: this.config.defaultSchemaId,
+            data: {
+              recipient: request.recipient,
+              expirationTime: BigInt(request.options?.expirationTime || this.calculateExpirationTime()),
+              revocable: request.options?.revocable ?? true,
+              data: encodedData,
+            },
+            metadata: {
+              requestId: request.requestId,
+              originalData: attestationData
+            }
+          };
+        })
+      );
+
+      // Create attestations in batches of 10
+      const batchSize = 10;
+      const attestations: EasAttestation[] = [];
+
+      for (let i = 0; i < attestationRequests.length; i += batchSize) {
+        const batch = attestationRequests.slice(i, i + batchSize);
+        
+        // Create batch with retry
+        const { transaction: tx, receipt } = await this.executeWithRetry(
+          () => this.eas.multiAttest(batch),
+          `Batch attestation ${i / batchSize + 1}`
+        );
+
+        // Process batch results
+        const batchAttestations = await this.processBatchReceipt(
+          receipt,
+          batch
+        );
+
+        attestations.push(...batchAttestations);
+      }
+
+      // Store attestations
+      await Promise.all(attestations.map(this.storeAttestation));
+
+      return attestations;
+
+    } catch (error) {
+      logger.error('Batch attestation creation failed', { error });
+      throw new AttestationCreationError(
+        'Batch attestation creation failed',
+        undefined,
+        undefined,
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+    }
+  }
+
+  private async processBatchReceipt(
+    receipt: ethers.TransactionReceipt,
+    requests: any[]
+  ): Promise<EasAttestation[]> {
+    const attestations: EasAttestation[] = [];
+    const block = await this.provider.getBlock(receipt.blockNumber);
+
+    if (!block) {
+      throw new BlockchainError('Block not found', this.config.chainId, receipt.blockNumber);
+    }
+
+    // Extract UIDs from logs
+    const uids = this.extractBatchAttestationUids(receipt);
+
+    // Create attestation objects
+    for (let i = 0; i < uids.length; i++) {
+      const uid = uids[i];
+      const request = requests[i];
+      const originalData = request.metadata.originalData;
+
+      const attestation: EasAttestation = {
+        id: uuidv4(),
+        uid,
+        schemaId: this.config.defaultSchemaId,
+        attester: this.config.attesterAddress,
+        recipient: request.data.recipient,
+        data: originalData,
+        encodedData: request.data.data,
+        transactionHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+        blockTimestamp: block.timestamp,
+        chainId: this.config.chainId,
+        status: 'confirmed' as AttestationStatus,
+        revoked: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        expiresAt: new Date(Number(request.data.expirationTime) * 1000).toISOString(),
+        metadata: {
+          gasUsed: receipt.gasUsed.toString(),
+          gasPrice: receipt.gasPrice?.toString(),
+          requestId: request.metadata.requestId,
+          batchIndex: i
+        }
+      };
+
+      attestations.push(attestation);
+    }
+
+    return attestations;
+  }
+
+  private extractBatchAttestationUids(receipt: ethers.TransactionReceipt): string[] {
+    const uids: string[] = [];
+    
+    for (const log of receipt.logs) {
+      try {
+        const iface = new ethers.Interface([
+          'event Attested(address indexed recipient, address indexed attester, bytes32 uid, bytes32 schema)'
+        ]);
+        const parsed = iface.parseLog(log);
+        if (parsed && parsed.name === 'Attested') {
+          uids.push(parsed.args.uid);
+        }
+      } catch {
+        // Skip logs that don't match the event
+        continue;
+      }
+    }
+
+    return uids;
   }
 
   // ===== Transaction Retry Logic =====
@@ -616,12 +768,75 @@ export class EasService extends BaseAttestationService {
   // ===== Database Operations (Placeholder) =====
 
   private async storeAttestation(attestation: EasAttestation): Promise<void> {
+    try {
+      // Store in database first
+      await this.storeAttestationInDb(attestation);
+
+      // If Arweave storage is configured, store there as well
+      if (this.arweaveService) {
+        const arweaveData = await this.arweaveService.uploadData({
+          data: Buffer.from(JSON.stringify(attestation)),
+          contentType: 'application/json',
+          tags: [
+            { name: 'OneKey-Type', value: 'attestation' },
+            { name: 'OneKey-Attestation-UID', value: attestation.uid },
+            { name: 'OneKey-Schema-ID', value: attestation.schemaId },
+            { name: 'OneKey-Recipient', value: attestation.recipient }
+          ],
+          metadata: {
+            uploadedBy: attestation.attester,
+            uploadTimestamp: attestation.createdAt,
+            dataHash: crypto.createHash('sha256').update(JSON.stringify(attestation)).digest('hex'),
+            category: 'attestation_metadata',
+            description: `Attestation ${attestation.uid} for ${attestation.recipient}`
+          },
+          permanent: true
+        });
+
+        // Update attestation with Arweave transaction ID
+        attestation.metadata.arweaveTransactionId = arweaveData.transactionId;
+        await this.updateAttestationInDb(attestation);
+
+        logger.info('Attestation stored in Arweave', {
+          uid: attestation.uid,
+          transactionId: arweaveData.transactionId
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to store attestation', {
+        uid: attestation.uid,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  private async storeAttestationInDb(attestation: EasAttestation): Promise<void> {
     // TODO: Implement database storage
     logger.info('Storing attestation in database', { uid: attestation.uid });
   }
 
-  private async updateAttestationStatus(uid: string, status: AttestationStatus, reason?: string): Promise<void> {
+  private async updateAttestationInDb(attestation: EasAttestation): Promise<void> {
     // TODO: Implement database update
-    logger.info('Updating attestation status', { uid, status, reason });
+    logger.info('Updating attestation in database', { uid: attestation.uid });
+  }
+
+  private async validateRequest(request: CreateAttestationRequest): Promise<void> {
+    if (!request.recipient || !ethers.isAddress(request.recipient)) {
+      throw new AttestationError(
+        'Invalid recipient address',
+        'INVALID_RECIPIENT',
+        { recipient: request.recipient }
+      );
+    }
+
+    if (!request.kycResult) {
+      throw new AttestationError(
+        'KYC result is required',
+        'MISSING_KYC_RESULT'
+      );
+    }
+
+    // Additional validation as needed
   }
 } 
