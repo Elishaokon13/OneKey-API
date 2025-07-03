@@ -151,14 +151,7 @@ export class SchemaManager {
       }
 
       // Parse schema and extract metadata
-      const attestationSchema = this.parseSchema({
-        uid: schema.uid,
-        schema: schema.schema,
-        resolver: schema.resolver,
-        revocable: schema.revocable,
-        registerer: schema.registerer || '',
-        transactionHash: schema.transactionHash || '',
-      });
+      const attestationSchema = this.parseSchema(schema);
 
       // Update cache
       if (this.config.caching?.enabled) {
