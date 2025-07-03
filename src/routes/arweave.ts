@@ -78,7 +78,7 @@ router.post('/upload',
         ...req.body,
         metadata: {
           ...req.body.metadata,
-          uploadedBy: req.user!.id,
+          uploadedBy: req.user?.id || 'anonymous',
           uploadTimestamp: new Date().toISOString()
         }
       };
