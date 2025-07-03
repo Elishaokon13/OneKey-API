@@ -2,7 +2,7 @@
 // Handles schema registration, versioning, and validation for EAS attestations
 
 import { ethers } from 'ethers';
-import { SchemaRegistry } from '@ethereum-attestation-service/eas-sdk';
+import { SchemaRegistry, GetSchemaParams } from '@ethereum-attestation-service/eas-sdk';
 import { logger } from '../../utils/logger';
 import { 
   SchemaConfig, 
@@ -10,8 +10,16 @@ import {
   SchemaValidationResult,
   SchemaError,
   AttestationSchema,
-  SchemaCompatibility
+  SchemaCompatibility,
+  AttestationSchemaField
 } from '../../types/attestation';
+
+interface SchemaMetadata {
+  name: string;
+  description: string;
+  version: string;
+  createdAt: string;
+}
 
 export class SchemaManager {
   private schemaRegistry!: SchemaRegistry;
@@ -102,7 +110,8 @@ export class SchemaManager {
       }
 
       // Get schema from registry
-      const schema = await this.schemaRegistry.getSchema(schemaId);
+      const params: GetSchemaParams = { uid: schemaId };
+      const schema = await this.schemaRegistry.getSchema(params);
       
       if (!schema) {
         throw new SchemaError('Schema not found', schemaId);
@@ -204,7 +213,7 @@ export class SchemaManager {
     version: SchemaVersion
   ): string {
     // Add metadata as a comment at the start of the schema
-    const metadata = {
+    const metadata: SchemaMetadata = {
       name,
       description,
       version: `${version.major}.${version.minor}.${version.patch}`,
@@ -287,10 +296,10 @@ export class SchemaManager {
   private parseSchema(rawSchema: any): AttestationSchema {
     // Extract metadata from schema comment if present
     const metadataMatch = rawSchema.schema.match(/\/\* (.*?) \*\//);
-    let metadata = {};
+    let metadata: Partial<SchemaMetadata> = {};
     if (metadataMatch) {
       try {
-        metadata = JSON.parse(metadataMatch[1]);
+        metadata = JSON.parse(metadataMatch[1]) as SchemaMetadata;
       } catch {
         // Invalid metadata JSON, ignore
       }
@@ -308,7 +317,7 @@ export class SchemaManager {
           type,
           description: '', // Would be in metadata
           required: true // All fields are required by default
-        };
+        } as AttestationSchemaField;
       });
 
     return {
