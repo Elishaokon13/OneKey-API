@@ -434,4 +434,4 @@ export class SchemaManager {
       .map(Number);
     return { major, minor, patch };
   }
-}
+}   
