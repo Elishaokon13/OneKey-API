@@ -99,10 +99,10 @@ interface Config {
 
     // Wallet configuration
     wallet: {
-      keyFile: string;
-      keyData: any;
-      address: string;
-      privateKey: string;
+      keyFile?: string;
+      keyData?: any;
+      address?: string;
+      privateKey?: string;
     };
 
     // Bundling configuration
