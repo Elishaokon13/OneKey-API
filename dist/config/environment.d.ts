@@ -80,6 +80,36 @@ interface Config {
         masterKey: string;
         saltSeed: string;
     };
+    arweave: {
+        host: string;
+        port: number;
+        protocol: 'http' | 'https';
+        timeout: number;
+        logging: boolean;
+        gatewayUrls: string[];
+        defaultGateway: string;
+        wallet: {
+            keyFile: string;
+            keyData: any;
+            address: string;
+            privateKey: string;
+        };
+        bundling: {
+            enabled: boolean;
+            maxBundleSize: number;
+            maxItems: number;
+        };
+        retryPolicy: {
+            maxRetries: number;
+            retryDelay: number;
+            backoffMultiplier: number;
+        };
+        caching: {
+            enabled: boolean;
+            ttl: number;
+            maxSize: number;
+        };
+    };
 }
 declare const config: Config;
 export { config };
