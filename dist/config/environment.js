@@ -101,10 +101,10 @@ const config = {
         defaultGateway: process.env.ARWEAVE_DEFAULT_GATEWAY || 'https://arweave.net',
         // Wallet configuration
         wallet: {
-            keyFile: process.env.ARWEAVE_WALLET_KEY_FILE,
-            keyData: process.env.ARWEAVE_WALLET_KEY_DATA ? JSON.parse(process.env.ARWEAVE_WALLET_KEY_DATA) : undefined,
-            address: process.env.ARWEAVE_WALLET_ADDRESS,
-            privateKey: process.env.ARWEAVE_WALLET_PRIVATE_KEY
+            ...(process.env.ARWEAVE_WALLET_KEY_FILE && { keyFile: process.env.ARWEAVE_WALLET_KEY_FILE }),
+            ...(process.env.ARWEAVE_WALLET_KEY_DATA && { keyData: JSON.parse(process.env.ARWEAVE_WALLET_KEY_DATA) }),
+            ...(process.env.ARWEAVE_WALLET_ADDRESS && { address: process.env.ARWEAVE_WALLET_ADDRESS }),
+            ...(process.env.ARWEAVE_WALLET_PRIVATE_KEY && { privateKey: process.env.ARWEAVE_WALLET_PRIVATE_KEY })
         },
         // Bundling configuration
         bundling: {
