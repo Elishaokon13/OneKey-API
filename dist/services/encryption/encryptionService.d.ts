@@ -4,7 +4,7 @@
  * Implements client-side encryption utilities with AES-256-GCM encryption,
  * PBKDF2 key derivation, and secure key management.
  */
-import { EncryptionRequest, EncryptionResponse, DecryptionRequest, DecryptionResponse, EncryptionService as IEncryptionService, KeyGenerationRequest, KeyGenerationResponse, KeyDerivationConfig, EncryptionConfig } from '@/types/encryption';
+import { EncryptionRequest, EncryptionResponse, DecryptionRequest, DecryptionResponse, EncryptionService as IEncryptionService, KeyGenerationRequest, KeyGenerationResponse, KeyDerivationConfig, EncryptionConfig } from '../../types/encryption';
 export declare class EncryptionService implements IEncryptionService {
     private keys;
     private config;
