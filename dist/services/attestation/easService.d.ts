@@ -9,7 +9,7 @@ export declare class EasService extends BaseAttestationService {
     protected createAttestation(request: CreateAttestationRequest): Promise<EasAttestation>;
     protected verifyOnChain(uid: string): Promise<AttestationVerificationResult>;
     protected estimateGas(request: CreateAttestationRequest): Promise<GasEstimate>;
-    protected revokeAttestation(uid: string, reason?: string): Promise<boolean>;
+    revokeAttestation(uid: string, reason?: string): Promise<boolean>;
     private encodeAttestationData;
     private extractAttestationUid;
     private parseOnChainAttestation;
