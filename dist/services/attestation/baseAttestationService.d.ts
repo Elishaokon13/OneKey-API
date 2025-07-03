@@ -17,6 +17,7 @@ export declare abstract class BaseAttestationService {
     verifyAttestation(uid: string): Promise<AttestationVerificationResult>;
     estimateAttestationCost(request: CreateAttestationRequest): Promise<GasEstimate>;
     protected transformKycToAttestationData(kycResult: KycVerificationResult, recipient: string): AttestationData;
+    protected mapKycStatusToVerificationStatus(status: KycVerificationResult['status']): 'pending' | 'failed' | 'expired' | 'verified';
     protected hashUserId(userId: string): string;
     protected calculateRiskLevel(kycResult: KycVerificationResult): 'low' | 'medium' | 'high' | 'critical';
     protected calculateExpirationTime(): number;
