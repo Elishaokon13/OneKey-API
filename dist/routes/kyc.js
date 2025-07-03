@@ -3,9 +3,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const express_validator_1 = require("express-validator");
-const auth_1 = require("@/middleware/auth");
-const rateLimiter_1 = require("@/middleware/rateLimiter");
-const kycService_1 = require("@/services/kyc/kycService");
+const privyAuth_1 = require("../middleware/privyAuth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const kycService_1 = require("../services/kyc/kycService");
 const uuid_1 = require("uuid");
 const router = (0, express_1.Router)();
 const kycService = new kycService_1.KycService();
@@ -30,7 +30,7 @@ const handleValidationErrors = (req, res, next) => {
 /**
  * POST /api/v1/kyc/sessions - Create new KYC session
  */
-router.post('/sessions', auth_1.authenticateJWT, rateLimiter_1.kycLimiter, validateCreateSession, handleValidationErrors, async (req, res) => {
+router.post('/sessions', privyAuth_1.authenticatePrivy, rateLimiter_1.kycLimiter, validateCreateSession, handleValidationErrors, async (req, res) => {
     const requestId = (0, uuid_1.v4)();
     try {
         const createRequest = {
@@ -53,7 +53,7 @@ router.post('/sessions', auth_1.authenticateJWT, rateLimiter_1.kycLimiter, valid
 /**
  * POST /api/v1/kyc/sessions/:sessionId/verify - Start verification
  */
-router.post('/sessions/:sessionId/verify', auth_1.authenticateJWT, rateLimiter_1.kycLimiter, async (req, res) => {
+router.post('/sessions/:sessionId/verify', privyAuth_1.authenticatePrivy, rateLimiter_1.kycLimiter, async (req, res) => {
     const requestId = (0, uuid_1.v4)();
     try {
         const { sessionId } = req.params;
@@ -75,7 +75,7 @@ router.post('/sessions/:sessionId/verify', auth_1.authenticateJWT, rateLimiter_1
 /**
  * GET /api/v1/kyc/providers - Get available providers
  */
-router.get('/providers', auth_1.authenticateJWT, rateLimiter_1.generalLimiter, async (req, res) => {
+router.get('/providers', privyAuth_1.authenticatePrivy, rateLimiter_1.generalLimiter, async (req, res) => {
     const requestId = (0, uuid_1.v4)();
     try {
         const providers = kycService.getAvailableProviders();
@@ -100,7 +100,7 @@ router.get('/providers', auth_1.authenticateJWT, rateLimiter_1.generalLimiter, a
 /**
  * GET /api/v1/kyc/providers/health - Get provider health status
  */
-router.get('/providers/health', auth_1.authenticateJWT, rateLimiter_1.generalLimiter, async (req, res) => {
+router.get('/providers/health', privyAuth_1.authenticatePrivy, rateLimiter_1.generalLimiter, async (req, res) => {
     const requestId = (0, uuid_1.v4)();
     try {
         const healthStatus = await kycService.getProvidersHealth();
