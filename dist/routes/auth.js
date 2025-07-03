@@ -1,11 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const rateLimiter_1 = require("@/middleware/rateLimiter");
-const privyAuth_1 = require("@/middleware/privyAuth");
-const authService_1 = require("@/services/auth/authService");
-const jwtService_1 = require("@/services/auth/jwtService");
-const auth_1 = require("@/types/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
+const privyAuth_1 = require("../middleware/privyAuth");
+const authService_1 = require("../services/auth/authService");
+const jwtService_1 = require("../services/auth/jwtService");
+const auth_1 = require("../types/auth");
 const router = (0, express_1.Router)();
 /**
  * POST /api/v1/auth/register
