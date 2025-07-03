@@ -89,10 +89,10 @@ interface Config {
         gatewayUrls: string[];
         defaultGateway: string;
         wallet: {
-            keyFile: string;
-            keyData: any;
-            address: string;
-            privateKey: string;
+            keyFile?: string;
+            keyData?: any;
+            address?: string;
+            privateKey?: string;
         };
         bundling: {
             enabled: boolean;
