@@ -3,7 +3,8 @@
 
 import { Router, Request, Response } from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import { authenticateJWT, requireKYCCompletion } from '../middleware/auth';
+import { authenticatePrivy } from '../middleware/privyAuth';
+import { requireKYCCompletion } from '../middleware/auth';
 import { applyAttestationRateLimit } from '../middleware/rateLimiter';
 import { AttestationService } from '../services/attestation/attestationService';
 import { KycService } from '../services/kyc/kycService';
