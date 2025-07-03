@@ -344,8 +344,8 @@ export class SchemaManager {
     schema: string;
     resolver: string;
     revocable: boolean;
-    registerer: string;
-    transactionHash: string;
+    registerer?: string;
+    transactionHash?: string;
   }): AttestationSchema {
     // Extract metadata from schema comment if present
     const metadataMatch = rawSchema.schema.match(/\/\* (.*?) \*\//);
