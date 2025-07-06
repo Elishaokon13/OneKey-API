@@ -173,7 +173,10 @@ export class LitService {
       };
     } catch (error) {
       logger.error('Failed to save encryption key', { error });
-      throw this.wrapError(error, 'SAVE_KEY_FAILED');
+      const litError = new Error(error?.message || 'Unknown error') as LitError;
+      litError.code = 'SAVE_KEY_FAILED';
+      litError.details = error;
+      throw litError;
     }
   }
 
@@ -258,7 +261,10 @@ export class LitService {
       };
     } catch (error) {
       logger.error('Failed to get encryption key', { error });
-      throw this.wrapError(error, 'GET_KEY_FAILED');
+      const litError = new Error(error?.message || 'Unknown error') as LitError;
+      litError.code = 'GET_KEY_FAILED';
+      litError.details = error;
+      throw litError;
     }
   }
 
@@ -323,16 +329,5 @@ export class LitService {
     if (!request.chain) {
       throw new Error('Chain is required');
     }
-  }
-
-  /**
-   * Wrap error with custom error type
-   */
-  private wrapError(error: any, type: string): LitError {
-    return {
-      type,
-      message: error.message || 'Unknown error',
-      details: error
-    };
   }
 } 
