@@ -67,6 +67,9 @@ export interface Organization {
   slug: string;
   billingEmail: string;
   status: OrganizationStatus;
+  subscriptionTier?: SubscriptionTier;
+  subscriptionStatus?: SubscriptionStatus;
+  subscriptionExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   metadata?: Record<string, any>;
