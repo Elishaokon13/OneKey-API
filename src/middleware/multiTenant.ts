@@ -32,31 +32,32 @@ export class MultiTenantMiddleware {
       const projectId = req.header('x-project-id') || req.query.projectId as string;
 
       if (!projectId) {
-        throw new ValidationError('Project ID is required');
+        res.status(400).json({ error: 'Project ID is required' });
+        return;
       }
 
-      // Get project from database
-      const project = await this.projectService.getProject(projectId);
+      try {
+        // Get project from database
+        const project = await this.projectService.getProject(projectId);
 
-      // Validate project status
-      if (project.status !== 'active') {
-        throw new AuthorizationError('Project is not active');
+        // Validate project status
+        if (project.status !== 'active') {
+          res.status(403).json({ error: 'Project is not active' });
+          return;
+        }
+
+        // Attach project to request
+        req.project = project;
+        next();
+      } catch (error) {
+        if (error instanceof NotFoundError) {
+          res.status(404).json({ error: 'Project not found' });
+        } else {
+          next(error);
+        }
       }
-
-      // Attach project to request
-      req.project = project;
-
-      next();
     } catch (error) {
-      if (error instanceof NotFoundError) {
-        res.status(404).json({ error: 'Project not found' });
-      } else if (error instanceof ValidationError) {
-        res.status(400).json({ error: error.message });
-      } else if (error instanceof AuthorizationError) {
-        res.status(403).json({ error: error.message });
-      } else {
-        next(error);
-      }
+      next(error);
     }
   };
 
@@ -68,22 +69,18 @@ export class MultiTenantMiddleware {
       const resourceProjectId = req.params?.projectId || req.body?.projectId;
       
       if (!req.project) {
-        throw new ValidationError('Project context is required');
+        res.status(400).json({ error: 'Project context is required' });
+        return;
       }
 
       if (resourceProjectId && resourceProjectId !== req.project.id) {
-        throw new AuthorizationError('Access denied to resource from different project');
+        res.status(403).json({ error: 'Access denied to resource from different project' });
+        return;
       }
 
       next();
     } catch (error) {
-      if (error instanceof ValidationError) {
-        res.status(400).json({ error: error.message });
-      } else if (error instanceof AuthorizationError) {
-        res.status(403).json({ error: error.message });
-      } else {
-        next(error);
-      }
+      next(error);
     }
   };
 
@@ -94,10 +91,9 @@ export class MultiTenantMiddleware {
     if (!this.rateLimiters.has(projectId)) {
       this.rateLimiters.set(projectId, rateLimit({
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: async (req) => {
-          // Get project's rate limit from metadata or use default
-          const project = await this.projectService.getProject(projectId);
-          return project.metadata?.rateLimit || 100;
+        max: (req) => {
+          const project = (req as Request).project;
+          return project?.metadata?.rateLimit || 100;
         },
         keyGenerator: (req) => `${projectId}:${req.ip}`,
         handler: (req, res) => {
@@ -105,7 +101,10 @@ export class MultiTenantMiddleware {
             error: 'Too many requests',
             retryAfter: res.getHeader('Retry-After')
           });
-        }
+        },
+        skipFailedRequests: false,
+        standardHeaders: true,
+        legacyHeaders: false
       }));
     }
     return this.rateLimiters.get(projectId)!;
@@ -116,10 +115,11 @@ export class MultiTenantMiddleware {
    */
   rateLimiting = (req: Request, res: Response, next: NextFunction) => {
     if (!req.project) {
-      return res.status(400).json({ error: 'Project context is required' });
+      res.status(400).json({ error: 'Project context is required' });
+      return;
     }
 
     const rateLimiter = this.getRateLimiter(req.project.id);
-    return rateLimiter(req, res, next);
+    rateLimiter(req, res, next);
   };
 } 
