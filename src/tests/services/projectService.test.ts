@@ -153,6 +153,7 @@ describe('ProjectService', () => {
     it('should update project settings', async () => {
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: '123' }] }) // Project exists check
         .mockResolvedValueOnce({ rows: [dbSettings] }) // Insert/Update settings
         .mockResolvedValueOnce({}); // COMMIT
 
@@ -169,7 +170,7 @@ describe('ProjectService', () => {
     it('should throw NotFoundError if project not found', async () => {
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [] }); // Insert/Update settings
+        .mockResolvedValueOnce({ rows: [] }); // Project exists check
 
       await expect(service.updateProjectSettings('123', {}))
         .rejects.toThrow(NotFoundError);
