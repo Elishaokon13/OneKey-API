@@ -4,7 +4,7 @@ import { OrganizationService } from '../../services/project/organizationService'
 import { ApiKeyService } from '../../services/project/apiKeyService';
 import { ProjectType, ProjectStatus, ApiKeyType, ApiKeyStatus } from '../../types/project';
 import { NotFoundError } from '../../utils/errors';
-import { handlers } from '../../routes/project';
+import { createHandlers } from '../../routes/project';
 
 jest.mock('../../services/project/projectService');
 jest.mock('../../services/project/organizationService');
@@ -200,7 +200,7 @@ describe('Project Routes', () => {
 
       mockProjectService.createProject.mockResolvedValueOnce(testProject);
 
-      await handlers.createProject(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.createProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(testProject);
@@ -213,7 +213,7 @@ describe('Project Routes', () => {
         type: 'invalid_type' // Invalid: wrong enum value
       };
 
-      await handlers.createProject(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.createProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
     });
@@ -224,7 +224,7 @@ describe('Project Routes', () => {
       mockReq.params = { id: '123' };
       mockProjectService.getProject.mockResolvedValueOnce(testProject);
 
-      await handlers.getProject(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.getProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testProject);
@@ -234,7 +234,7 @@ describe('Project Routes', () => {
       mockReq.params = { id: '999' };
       mockProjectService.getProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await handlers.getProject(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.getProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -256,7 +256,7 @@ describe('Project Routes', () => {
 
       mockProjectService.updateProject.mockResolvedValueOnce(updatedProject);
 
-      await handlers.updateProject(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.updateProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updatedProject);
@@ -266,7 +266,7 @@ describe('Project Routes', () => {
       mockReq.params = { id: '999' };
       mockProjectService.updateProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await handlers.updateProject(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.updateProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -277,7 +277,7 @@ describe('Project Routes', () => {
       mockReq.params = { id: 'org123' };
       mockProjectService.getProjectsByOrganization.mockResolvedValueOnce(testProjects);
 
-      await handlers.getOrganizationProjects(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.getOrganizationProjects(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testProjects);
@@ -296,7 +296,7 @@ describe('Project Routes', () => {
 
       mockApiKeyService.createApiKey.mockResolvedValueOnce(apiKeyResponse);
 
-      await handlers.createApiKey(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.createApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(apiKeyResponse);
@@ -308,7 +308,7 @@ describe('Project Routes', () => {
       mockReq.params = { id: 'proj123' };
       mockApiKeyService.getProjectApiKeys.mockResolvedValueOnce(testApiKeys);
 
-      await handlers.getProjectApiKeys(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.getProjectApiKeys(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testApiKeys);
@@ -326,7 +326,7 @@ describe('Project Routes', () => {
 
       mockProjectService.updateProjectSettings.mockResolvedValueOnce(testSettings);
 
-      await handlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testSettings);
@@ -336,7 +336,7 @@ describe('Project Routes', () => {
       mockReq.params = { id: '999' };
       mockProjectService.updateProjectSettings.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await handlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -347,7 +347,7 @@ describe('Project Routes', () => {
       mockReq.params = { projectId: 'proj123', keyId: '123' };
       mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKey);
 
-      await handlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testApiKey);
@@ -357,7 +357,7 @@ describe('Project Routes', () => {
       mockReq.params = { projectId: 'proj123', keyId: '999' };
       mockApiKeyService.revokeApiKey.mockRejectedValueOnce(new NotFoundError('API key not found'));
 
-      await handlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
+      await createHandlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
