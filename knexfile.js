@@ -14,6 +14,10 @@ const baseConfig = {
   migrations: {
     directory: './src/migrations',
     extension: 'ts'
+  },
+  seeds: {
+    directory: './src/seeds',
+    extension: 'ts'
   }
 };
 
