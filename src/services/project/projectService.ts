@@ -164,6 +164,7 @@ export class ProjectService {
       name: row.name,
       slug: row.slug,
       organizationId: row.organization_id,
+      environment: row.environment || 'production',
       type: row.type,
       status: row.status,
       createdAt: row.created_at,
