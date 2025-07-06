@@ -2,10 +2,9 @@ import { Request, Response } from 'express';
 import { ProjectService } from '../../services/project/projectService';
 import { OrganizationService } from '../../services/project/organizationService';
 import { ApiKeyService } from '../../services/project/apiKeyService';
-import { ProjectType, ProjectStatus, ApiKeyType, ApiKeyStatus } from '../../types/project';
-import { NotFoundError } from '../../utils/errors';
+import { ProjectType, ProjectStatus, ApiKeyType, ApiKeyStatus, ProjectApiKey } from '../../types/project';
+import { NotFoundError, ValidationError } from '../../utils/errors';
 import { createHandlers } from '../../routes/project';
-import { ValidationError } from '../../utils/errors';
 
 jest.mock('../../services/project/projectService');
 jest.mock('../../services/project/organizationService');
@@ -28,9 +27,15 @@ interface RequestWithUser extends Request {
   };
 }
 
+interface MockResponse extends Partial<Response> {
+  _status: number;
+  _json: any;
+  _sent: boolean;
+}
+
 describe('Project Routes', () => {
   let mockReq: Partial<RequestWithUser>;
-  let mockRes: Partial<Response>;
+  let mockRes: MockResponse;
   let mockNext: jest.Mock;
   let mockProjectService: jest.Mocked<ProjectService>;
   let mockOrganizationService: jest.Mocked<OrganizationService>;
@@ -78,7 +83,7 @@ describe('Project Routes', () => {
       _status: 200,
       _json: null,
       _sent: false
-    } as Partial<Response>;
+    } as MockResponse;
 
     // Add getters for response state
     Object.defineProperties(mockRes, {
@@ -89,16 +94,16 @@ describe('Project Routes', () => {
     });
 
     // Override status method to track state
-    (mockRes.status as jest.Mock).mockImplementation(function(code) {
-      this._status = code;
-      return this;
+    (mockRes.status as jest.Mock).mockImplementation((code: number) => {
+      mockRes._status = code;
+      return mockRes;
     });
 
     // Override json method to track state
-    (mockRes.json as jest.Mock).mockImplementation(function(data) {
-      this._json = data;
-      this._sent = true;
-      return this;
+    (mockRes.json as jest.Mock).mockImplementation((data: any) => {
+      mockRes._json = data;
+      mockRes._sent = true;
+      return mockRes;
     });
 
     mockNext = jest.fn();
@@ -339,12 +344,31 @@ describe('Project Routes', () => {
         permissions: ['read', 'write']
       };
 
-      mockApiKeyService.createApiKey.mockResolvedValueOnce(testApiKey);
+      const apiKeyResponse = {
+        apiKey: 'test_key_123',
+        apiKeyDetails: {
+          id: '123',
+          projectId: 'proj123',
+          name: 'Test Key',
+          type: ApiKeyType.Secret,
+          status: ApiKeyStatus.Active,
+          permissions: ['read', 'write'],
+          hashedKey: 'hashed_key',
+          createdBy: 'user123',
+          createdAt: new Date('2025-07-06T01:29:26.221Z'),
+          updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+          lastUsedAt: new Date('2025-07-06T01:29:26.221Z'),
+          expiresAt: new Date('2026-07-06T01:29:26.221Z'),
+          metadata: {}
+        }
+      };
+
+      mockApiKeyService.createApiKey.mockResolvedValueOnce(apiKeyResponse);
 
       await handlers.createApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes._json).toEqual(testApiKey);
+      expect(mockRes._json).toEqual(apiKeyResponse);
     });
 
     it('should return 400 for missing required fields', async () => {
