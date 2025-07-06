@@ -11,8 +11,8 @@ export interface LitConfig {
   debug?: boolean;
   minNodeCount?: number;
   maxNodeCount?: number;
-  bootstrapUrls?: string[];
-  fallbackBootstrapUrls?: string[];
+  bootstrapUrls: string[];
+  fallbackBootstrapUrls: string[];
 }
 
 export interface AccessControlCondition {
@@ -32,6 +32,7 @@ export interface EncryptionKeyRequest {
   chain: string;
   authSig?: any;
   permanent?: boolean;
+  encryptedSymmetricKey?: string;
 }
 
 export interface EncryptionKeyResponse {
