@@ -258,7 +258,6 @@ export class OrganizationService {
       invitedBy: row.invited_by,
       invitedAt: row.invited_at,
       joinedAt: row.joined_at,
-      createdAt: row.created_at,
       updatedAt: row.updated_at
     };
   }
