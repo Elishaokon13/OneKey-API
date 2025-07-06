@@ -6,15 +6,16 @@ import { ProjectType, ProjectStatus } from '../types/project';
 import { NotFoundError, ValidationError } from '../utils/errors';
 import { Pool } from 'pg';
 
-const router = Router();
-
 const pool = new Pool();
-const projectService = new ProjectService(pool);
-const organizationService = new OrganizationService(pool);
-const apiKeyService = new ApiKeyService(pool);
+const defaultProjectService = new ProjectService(pool);
+const defaultOrganizationService = new OrganizationService(pool);
+const defaultApiKeyService = new ApiKeyService(pool);
 
-// Handler functions for testing
-export const handlers = {
+export const createHandlers = (
+  projectService: ProjectService = defaultProjectService,
+  organizationService: OrganizationService = defaultOrganizationService,
+  apiKeyService: ApiKeyService = defaultApiKeyService
+) => ({
   createProject: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, organizationId, type } = req.body;
@@ -190,16 +191,19 @@ export const handlers = {
       next(error);
     }
   }
-};
+});
+
+const defaultHandlers = createHandlers();
 
 // Routes
-router.post('/', handlers.createProject);
-router.get('/:id', handlers.getProject);
-router.put('/:id', handlers.updateProject);
-router.get('/organizations/:id/projects', handlers.getOrganizationProjects);
-router.post('/:id/api-keys', handlers.createApiKey);
-router.get('/:id/api-keys', handlers.getProjectApiKeys);
-router.put('/:id/settings', handlers.updateProjectSettings);
-router.delete('/:projectId/api-keys/:keyId', handlers.revokeApiKey);
+const router = Router();
+router.post('/', defaultHandlers.createProject);
+router.get('/:id', defaultHandlers.getProject);
+router.put('/:id', defaultHandlers.updateProject);
+router.get('/organizations/:id/projects', defaultHandlers.getOrganizationProjects);
+router.post('/:id/api-keys', defaultHandlers.createApiKey);
+router.get('/:id/api-keys', defaultHandlers.getProjectApiKeys);
+router.put('/:id/settings', defaultHandlers.updateProjectSettings);
+router.delete('/:projectId/api-keys/:keyId', defaultHandlers.revokeApiKey);
 
 export { router as projectRouter }; 
