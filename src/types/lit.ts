@@ -49,5 +49,10 @@ export interface LitNodeClient {
   disconnect(): Promise<void>;
   saveEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse>;
   getEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse>;
-  generateAuthSig(): Promise<any>;
+  generateAuthSig(): Promise<{
+    sig: string;
+    derivedVia: string;
+    signedMessage: string;
+    address: string;
+  }>;
 } 
