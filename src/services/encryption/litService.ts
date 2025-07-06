@@ -54,7 +54,7 @@ export class LitService {
       });
 
       const clientConfig: LitNodeClientConfig = {
-        litNetwork: this.config.network as keyof typeof LIT_NETWORKS,
+        litNetwork: this.config.network,
         debug: this.config.debug || false,
         minNodeCount: this.config.minNodeCount || 10
       };
@@ -83,7 +83,7 @@ export class LitService {
       // Generate auth signature if not provided
       if (!request.authSig) {
         const sessionCapabilityObject: ISessionCapabilityObject = {
-          allowedActions: ['encrypt', 'decrypt'],
+          allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
           maxOperations: 100,
           validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         };
@@ -105,7 +105,7 @@ export class LitService {
 
       // Save encryption key with access control conditions
       const encryptParams: EncryptSdkParams = {
-        accessControlConditions: request.accessControlConditions as any,
+        accessControlConditions: request.accessControlConditions,
         authSig: request.authSig,
         permanent: request.permanent
       };
@@ -140,7 +140,7 @@ export class LitService {
       // Generate auth signature if not provided
       if (!request.authSig) {
         const sessionCapabilityObject: ISessionCapabilityObject = {
-          allowedActions: ['encrypt', 'decrypt'],
+          allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
           maxOperations: 100,
           validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         };
@@ -162,9 +162,9 @@ export class LitService {
 
       // Get encryption key if access conditions are met
       const decryptParams: DecryptRequest = {
-        accessControlConditions: request.accessControlConditions as any,
+        accessControlConditions: request.accessControlConditions,
         authSig: request.authSig,
-        ciphertext: request.encryptedSymmetricKey
+        ciphertext: request.encryptedSymmetricKey!
       };
 
       const response = await this.client.decrypt(decryptParams);
