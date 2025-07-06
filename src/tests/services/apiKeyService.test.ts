@@ -56,10 +56,13 @@ describe('ApiKeyService', () => {
 
   describe('createApiKey', () => {
     it('should create an API key', async () => {
+      const apiKey = 'sk_test_123';
+      const hashedKey = 'hashed_key';
+
       mockClient.query
+        .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [dbApiKey] }) // Insert API key
-        .mockResolvedValueOnce({ rows: [{ count: 0 }] }) // Check existing keys
-        .mockResolvedValueOnce({ rows: [dbApiKey] }); // Get created key
+        .mockResolvedValueOnce({}); // COMMIT
 
       const result = await service.createApiKey(
         'proj123',
