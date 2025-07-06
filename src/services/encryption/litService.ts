@@ -27,6 +27,7 @@ import { logger } from '@/utils/logger';
 import { AnalyticsService } from '@/services/analytics/analyticsService';
 import { CostMetric } from '@/types/analytics';
 import { LitCostEstimator } from '@/utils/litCostEstimator';
+import { PerformanceMonitor } from '@/utils/performanceMonitor';
 
 class LitAccessControlConditionResource {
   readonly resourcePrefix: LitResourcePrefix = 'lit-accesscontrolcondition';
@@ -54,6 +55,7 @@ export class LitService {
   private isInitialized: boolean = false;
   private readonly config: LitConfig;
   private readonly analyticsService?: AnalyticsService;
+  private performanceMonitor?: PerformanceMonitor;
 
   constructor(litConfig?: Partial<LitConfig>, analyticsService?: AnalyticsService) {
     this.config = {
@@ -145,95 +147,116 @@ export class LitService {
    * Save encryption key with access control conditions
    */
   public async saveEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse> {
-    const startTime = Date.now();
-    
+    // Create performance monitor if needed
+    if (this.analyticsService && !this.performanceMonitor) {
+      this.performanceMonitor = new PerformanceMonitor(this.analyticsService, request.projectId);
+    }
+
     try {
-      await this.ensureInitialized();
-      this.validateRequest(request);
-
-      // Generate auth signature if not provided
-      if (!request.authSig) {
-        const sessionCapabilityObject = new (class implements ISessionCapabilityObject {
-          private _attenuations: any = {};
-          private _proofs: string[] = [];
-          private _statement: string = '';
-
-          get attenuations() { return this._attenuations; }
-          get proofs() { return this._proofs; }
-          get statement() { return this._statement; }
-
-          addProof(proof: string) { this._proofs.push(proof); }
-          addAttenuation(resource: string, namespace?: string, name?: string, restriction?: any) {
-            if (!this._attenuations[resource]) {
-              this._attenuations[resource] = {};
-            }
-            if (namespace && name) {
-              if (!this._attenuations[resource][namespace]) {
-                this._attenuations[resource][namespace] = [];
-              }
-              this._attenuations[resource][namespace].push({ name, ...restriction });
-            }
-          }
-          addToSiweMessage(siwe: any) { return siwe; }
-          encodeAsSiweResource() { return ''; }
-          addCapabilityForResource(litResource: any, ability: LitAbility) {
-            this.addAttenuation(litResource.getResourceKey(), 'lit-capability', ability);
-          }
-          verifyCapabilitiesForResource() { return true; }
-          addAllCapabilitiesForResource() {}
-        })();
-
-        const resource = new LitAccessControlConditionResource('*');
-        sessionCapabilityObject.addCapabilityForResource(resource, 'access-control-condition-signing');
-
-        const walletSigProps: GetWalletSigProps = {
-          chain: request.chain as Chain,
-          sessionCapabilityObject,
-          expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          sessionKey: {
-            publicKey: '',
-            secretKey: ''
-          },
-          sessionKeyUri: '',
-          nonce: Math.random().toString(36).substring(7)
-        };
-
-        request.authSig = await this.client.getWalletSig(walletSigProps);
-      }
-
-      // Save encryption key with access control conditions
-      const encryptParams: EncryptSdkParams = {
-        accessControlConditions: request.accessControlConditions as unknown as AccessControlConditions,
-        dataToEncrypt: new Uint8Array(Buffer.from(request.encryptedSymmetricKey || '', 'utf8'))
-      };
-
-      const response = await this.client.encrypt(encryptParams);
-
-      // Track successful operation cost
-      await this.trackOperationCost(
-        request.projectId,
+      // Use performance monitor to measure the entire operation
+      return await this.performanceMonitor?.measureOperation(
         'saveEncryptionKey',
-        request.accessControlConditions,
-        true,
+        async () => {
+          await this.ensureInitialized();
+          this.validateRequest(request);
+
+          // Track auth signature generation if needed
+          if (!request.authSig) {
+            await this.performanceMonitor?.measureOperation(
+              'generateAuthSignature',
+              async () => {
+                const sessionCapabilityObject = new (class implements ISessionCapabilityObject {
+                  private _attenuations: any = {};
+                  private _proofs: string[] = [];
+                  private _statement: string = '';
+
+                  get attenuations() { return this._attenuations; }
+                  get proofs() { return this._proofs; }
+                  get statement() { return this._statement; }
+
+                  addProof(proof: string) { this._proofs.push(proof); }
+                  addAttenuation(resource: string, namespace?: string, name?: string, restriction?: any) {
+                    if (!this._attenuations[resource]) {
+                      this._attenuations[resource] = {};
+                    }
+                    if (namespace && name) {
+                      if (!this._attenuations[resource][namespace]) {
+                        this._attenuations[resource][namespace] = [];
+                      }
+                      this._attenuations[resource][namespace].push({ name, ...restriction });
+                    }
+                  }
+                  addToSiweMessage(siwe: any) { return siwe; }
+                  encodeAsSiweResource() { return ''; }
+                  addCapabilityForResource(litResource: any, ability: LitAbility) {
+                    this.addAttenuation(litResource.getResourceKey(), 'lit-capability', ability);
+                  }
+                  verifyCapabilitiesForResource() { return true; }
+                  addAllCapabilitiesForResource() {}
+                })();
+
+                const resource = new LitAccessControlConditionResource('*');
+                sessionCapabilityObject.addCapabilityForResource(resource, 'access-control-condition-signing');
+
+                const walletSigProps: GetWalletSigProps = {
+                  chain: request.chain as Chain,
+                  sessionCapabilityObject,
+                  expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                  sessionKey: {
+                    publicKey: '',
+                    secretKey: ''
+                  },
+                  sessionKeyUri: '',
+                  nonce: Math.random().toString(36).substring(7)
+                };
+
+                request.authSig = await this.client.getWalletSig(walletSigProps);
+              },
+              { operation: 'auth_signature' }
+            );
+          }
+
+          // Track encryption operation
+          const encryptParams: EncryptSdkParams = {
+            accessControlConditions: request.accessControlConditions as unknown as AccessControlConditions,
+            dataToEncrypt: new Uint8Array(Buffer.from(request.encryptedSymmetricKey || '', 'utf8'))
+          };
+
+          const response = await this.performanceMonitor?.measureOperation(
+            'encrypt',
+            async () => this.client.encrypt(encryptParams),
+            {
+              operation: 'encrypt',
+              conditionsCount: String(request.accessControlConditions.length)
+            }
+          );
+
+          // Track memory usage
+          await this.performanceMonitor?.recordMemoryUsage();
+
+          // Track operation cost
+          await this.trackOperationCost(
+            request.projectId,
+            'saveEncryptionKey',
+            request.accessControlConditions,
+            true,
+            {
+              chain: request.chain
+            }
+          );
+
+          return {
+            encryptedSymmetricKey: response.ciphertext,
+            symmetricKey: new Uint8Array(Buffer.from(response.ciphertext, 'base64'))
+          };
+        },
         {
-          chain: request.chain,
-          duration: Date.now() - startTime
+          operation: 'saveEncryptionKey',
+          chain: request.chain
         }
-      );
-
-      logger.info('Encryption key saved successfully', {
-        chain: request.chain,
-        conditions: request.accessControlConditions.length
-      });
-
-      return {
-        encryptedSymmetricKey: response.ciphertext,
-        symmetricKey: new Uint8Array(Buffer.from(response.ciphertext, 'base64'))
-      };
+      ) || { encryptedSymmetricKey: '', symmetricKey: new Uint8Array() };
     } catch (error) {
-      logger.error('Failed to save encryption key', { error });
-      
-      // Track failed operation cost
+      // Track failed operation
       await this.trackOperationCost(
         request.projectId,
         'saveEncryptionKey',
@@ -241,8 +264,7 @@ export class LitService {
         false,
         {
           error: error?.message,
-          chain: request.chain,
-          duration: Date.now() - startTime
+          chain: request.chain
         }
       );
 
@@ -257,92 +279,118 @@ export class LitService {
    * Get encryption key if access conditions are met
    */
   public async getEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse> {
-    const startTime = Date.now();
+    // Create performance monitor if needed
+    if (this.analyticsService && !this.performanceMonitor) {
+      this.performanceMonitor = new PerformanceMonitor(this.analyticsService, request.projectId);
+    }
 
     try {
-      await this.ensureInitialized();
-      this.validateRequest(request);
-
-      // Generate auth signature if not provided
-      if (!request.authSig) {
-        const sessionCapabilityObject = new (class implements ISessionCapabilityObject {
-          private _attenuations: any = {};
-          private _proofs: string[] = [];
-          private _statement: string = '';
-
-          get attenuations() { return this._attenuations; }
-          get proofs() { return this._proofs; }
-          get statement() { return this._statement; }
-
-          addProof(proof: string) { this._proofs.push(proof); }
-          addAttenuation(resource: string, namespace?: string, name?: string, restriction?: any) {
-            if (!this._attenuations[resource]) {
-              this._attenuations[resource] = {};
-            }
-            if (namespace && name) {
-              if (!this._attenuations[resource][namespace]) {
-                this._attenuations[resource][namespace] = [];
-              }
-              this._attenuations[resource][namespace].push({ name, ...restriction });
-            }
-          }
-          addToSiweMessage(siwe: any) { return siwe; }
-          encodeAsSiweResource() { return ''; }
-          addCapabilityForResource(litResource: any, ability: LitAbility) {
-            this.addAttenuation(litResource.getResourceKey(), 'lit-capability', ability);
-          }
-          verifyCapabilitiesForResource() { return true; }
-          addAllCapabilitiesForResource() {}
-        })();
-
-        const resource = new LitAccessControlConditionResource('*');
-        sessionCapabilityObject.addCapabilityForResource(resource, 'access-control-condition-decryption');
-
-        const walletSigProps: GetWalletSigProps = {
-          chain: request.chain as Chain,
-          sessionCapabilityObject,
-          expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          sessionKey: {
-            publicKey: '',
-            secretKey: ''
-          },
-          sessionKeyUri: '',
-          nonce: Math.random().toString(36).substring(7)
-        };
-
-        request.authSig = await this.client.getWalletSig(walletSigProps);
-      }
-
-      // Get encryption key if access conditions are met
-      const decryptParams: DecryptRequest = {
-        accessControlConditions: request.accessControlConditions as unknown as AccessControlConditions,
-        chain: request.chain as Chain,
-        ciphertext: request.encryptedSymmetricKey!,
-        dataToEncryptHash: Buffer.from('').toString('hex')
-      };
-
-      const response = await this.client.decrypt(decryptParams);
-
-      // Track successful operation cost
-      await this.trackOperationCost(
-        request.projectId,
+      // Use performance monitor to measure the entire operation
+      return await this.performanceMonitor?.measureOperation(
         'getEncryptionKey',
-        request.accessControlConditions,
-        true,
+        async () => {
+          await this.ensureInitialized();
+          this.validateRequest(request);
+
+          // Track auth signature generation if needed
+          if (!request.authSig) {
+            await this.performanceMonitor?.measureOperation(
+              'generateAuthSignature',
+              async () => {
+                const sessionCapabilityObject = new (class implements ISessionCapabilityObject {
+                  private _attenuations: any = {};
+                  private _proofs: string[] = [];
+                  private _statement: string = '';
+
+                  get attenuations() { return this._attenuations; }
+                  get proofs() { return this._proofs; }
+                  get statement() { return this._statement; }
+
+                  addProof(proof: string) { this._proofs.push(proof); }
+                  addAttenuation(resource: string, namespace?: string, name?: string, restriction?: any) {
+                    if (!this._attenuations[resource]) {
+                      this._attenuations[resource] = {};
+                    }
+                    if (namespace && name) {
+                      if (!this._attenuations[resource][namespace]) {
+                        this._attenuations[resource][namespace] = [];
+                      }
+                      this._attenuations[resource][namespace].push({ name, ...restriction });
+                    }
+                  }
+                  addToSiweMessage(siwe: any) { return siwe; }
+                  encodeAsSiweResource() { return ''; }
+                  addCapabilityForResource(litResource: any, ability: LitAbility) {
+                    this.addAttenuation(litResource.getResourceKey(), 'lit-capability', ability);
+                  }
+                  verifyCapabilitiesForResource() { return true; }
+                  addAllCapabilitiesForResource() {}
+                })();
+
+                const resource = new LitAccessControlConditionResource('*');
+                sessionCapabilityObject.addCapabilityForResource(resource, 'access-control-condition-decryption');
+
+                const walletSigProps: GetWalletSigProps = {
+                  chain: request.chain as Chain,
+                  sessionCapabilityObject,
+                  expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                  sessionKey: {
+                    publicKey: '',
+                    secretKey: ''
+                  },
+                  sessionKeyUri: '',
+                  nonce: Math.random().toString(36).substring(7)
+                };
+
+                request.authSig = await this.client.getWalletSig(walletSigProps);
+              },
+              { operation: 'auth_signature' }
+            );
+          }
+
+          // Track decryption operation
+          const decryptParams: DecryptRequest = {
+            accessControlConditions: request.accessControlConditions as unknown as AccessControlConditions,
+            chain: request.chain as Chain,
+            ciphertext: request.encryptedSymmetricKey!,
+            dataToEncryptHash: Buffer.from('').toString('hex')
+          };
+
+          const response = await this.performanceMonitor?.measureOperation(
+            'decrypt',
+            async () => this.client.decrypt(decryptParams),
+            {
+              operation: 'decrypt',
+              conditionsCount: String(request.accessControlConditions.length)
+            }
+          );
+
+          // Track memory usage
+          await this.performanceMonitor?.recordMemoryUsage();
+
+          // Track operation cost
+          await this.trackOperationCost(
+            request.projectId,
+            'getEncryptionKey',
+            request.accessControlConditions,
+            true,
+            {
+              chain: request.chain
+            }
+          );
+
+          return {
+            encryptedSymmetricKey: response.decryptedData,
+            symmetricKey: response.decryptedSymmetricKey
+          };
+        },
         {
-          chain: request.chain,
-          duration: Date.now() - startTime
+          operation: 'getEncryptionKey',
+          chain: request.chain
         }
-      );
-
-      return {
-        encryptedSymmetricKey: response.decryptedData,
-        symmetricKey: response.decryptedSymmetricKey
-      };
+      ) || { encryptedSymmetricKey: '', symmetricKey: new Uint8Array() };
     } catch (error) {
-      logger.error('Failed to get encryption key', { error });
-
-      // Track failed operation cost
+      // Track failed operation
       await this.trackOperationCost(
         request.projectId,
         'getEncryptionKey',
@@ -350,8 +398,7 @@ export class LitService {
         false,
         {
           error: error?.message,
-          chain: request.chain,
-          duration: Date.now() - startTime
+          chain: request.chain
         }
       );
 
