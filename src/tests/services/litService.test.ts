@@ -9,12 +9,12 @@ jest.mock('@lit-protocol/lit-node-client', () => {
     LitNodeClient: jest.fn().mockImplementation(() => ({
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
-      saveEncryptionKey: jest.fn().mockResolvedValue({
-        encryptedSymmetricKey: 'mockEncryptedKey',
+      encrypt: jest.fn().mockResolvedValue({
+        encryptedString: 'mockEncryptedKey',
         symmetricKey: new Uint8Array([1, 2, 3])
       }),
-      getEncryptionKey: jest.fn().mockResolvedValue({
-        encryptedSymmetricKey: 'mockEncryptedKey',
+      decrypt: jest.fn().mockResolvedValue({
+        decryptedString: 'mockEncryptedKey',
         symmetricKey: new Uint8Array([1, 2, 3])
       }),
       getWalletSig: jest.fn().mockResolvedValue({
@@ -98,7 +98,13 @@ describe('LitService', () => {
       await service.initialize();
       await service.saveEncryptionKey(mockRequest);
       
-      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalled();
+      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith({
+        chain: mockRequest.chain,
+        resourceAbilityRequests: [{
+          resource: 'encryption',
+          ability: 'save'
+        }]
+      });
     });
 
     it('should validate request parameters', async () => {
@@ -127,7 +133,8 @@ describe('LitService', () => {
           }
         }
       ],
-      chain: 'base'
+      chain: 'base',
+      encryptedSymmetricKey: 'mockEncryptedKey'
     };
 
     it('should get encryption key successfully', async () => {
@@ -149,7 +156,13 @@ describe('LitService', () => {
       await service.initialize();
       await service.getEncryptionKey(mockRequest);
       
-      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalled();
+      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith({
+        chain: mockRequest.chain,
+        resourceAbilityRequests: [{
+          resource: 'encryption',
+          ability: 'decrypt'
+        }]
+      });
     });
 
     it('should validate request parameters', async () => {
