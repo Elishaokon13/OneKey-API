@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { Project, ProjectType, ProjectStatus, ProjectSettings } from '../../types/project';
-import { DatabaseError, NotFoundError } from '../../utils/errors';
+import { DatabaseError, NotFoundError, ValidationError } from '../../utils/errors';
 import { generateSlug } from '../../utils/slugGenerator';
 
 export class ProjectService {
