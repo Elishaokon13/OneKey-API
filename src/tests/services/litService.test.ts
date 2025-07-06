@@ -167,10 +167,10 @@ describe('LitService', () => {
       const conditions = service.createKycAccessConditions('userId123', 'projectId456');
       
       expect(conditions).toHaveLength(2);
-      expect(conditions[0].method).toBe('balanceOf');
-      expect(conditions[0].parameters).toContain('userId123');
-      expect(conditions[1].method).toBe('isProjectAuthorized');
-      expect(conditions[1].parameters).toContain('projectId456');
+      expect(conditions[0]!.method).toBe('balanceOf');
+      expect(conditions[0]!.parameters).toContain('userId123');
+      expect(conditions[1]!.method).toBe('isProjectAuthorized');
+      expect(conditions[1]!.parameters).toContain('projectId456');
     });
   });
 
