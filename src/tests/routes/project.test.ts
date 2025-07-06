@@ -63,9 +63,9 @@ describe('Project Routes', () => {
     };
 
     mockRes = {
-      json: jest.fn(),
+      json: jest.fn().mockReturnThis(),
       status: jest.fn().mockReturnThis(),
-      send: jest.fn()
+      send: jest.fn().mockReturnThis()
     };
 
     mockNext = jest.fn();
