@@ -39,7 +39,7 @@ describe('Project Routes', () => {
     name: 'Test Project',
     slug: 'test-project',
     organizationId: 'org123',
-    type: ProjectType.Web3,
+    type: ProjectType.Production,
     status: ProjectStatus.Active,
     createdAt: new Date('2025-07-06T01:29:26.221Z'),
     updatedAt: new Date('2025-07-06T01:29:26.221Z'),
@@ -52,7 +52,7 @@ describe('Project Routes', () => {
       name: 'Test Project 1',
       slug: 'test-project-1',
       organizationId: 'org123',
-      type: ProjectType.Web3,
+      type: ProjectType.Production,
       status: ProjectStatus.Active,
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
@@ -63,7 +63,7 @@ describe('Project Routes', () => {
       name: 'Test Project 2',
       slug: 'test-project-2',
       organizationId: 'org123',
-      type: ProjectType.Web3,
+      type: ProjectType.Sandbox,
       status: ProjectStatus.Active,
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
@@ -71,19 +71,22 @@ describe('Project Routes', () => {
     }
   ];
 
-  const testApiKey = {
-    id: '123',
-    projectId: 'proj123',
-    name: 'Test Key',
-    type: ApiKeyType.Secret,
-    status: ApiKeyStatus.Active,
-    permissions: ['read', 'write'],
-    hashedKey: 'hashed_key',
-    createdBy: 'user123',
-    createdAt: new Date('2025-07-06T01:29:26.221Z'),
-    updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-    lastUsedAt: null,
-    metadata: {}
+  const testApiKeyResponse = {
+    apiKey: 'sk_test_123',
+    apiKeyDetails: {
+      id: '123',
+      projectId: 'proj123',
+      name: 'Test Key',
+      type: ApiKeyType.Secret,
+      status: ApiKeyStatus.Active,
+      permissions: ['read', 'write'],
+      hashedKey: 'hashed_key',
+      createdBy: 'user123',
+      createdAt: new Date('2025-07-06T01:29:26.221Z'),
+      updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+      lastUsedAt: undefined,
+      metadata: {}
+    }
   };
 
   const testApiKeys = [
@@ -98,7 +101,7 @@ describe('Project Routes', () => {
       createdBy: 'user123',
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-      lastUsedAt: null,
+      lastUsedAt: undefined,
       metadata: {}
     },
     {
@@ -112,7 +115,7 @@ describe('Project Routes', () => {
       createdBy: 'user123',
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-      lastUsedAt: null,
+      lastUsedAt: undefined,
       metadata: {}
     }
   ];
@@ -129,7 +132,7 @@ describe('Project Routes', () => {
       mockReq.body = {
         name: 'Test Project',
         organizationId: 'org123',
-        type: ProjectType.Web3
+        type: ProjectType.Production
       };
 
       mockProjectService.createProject.mockResolvedValueOnce(testProject);
@@ -230,13 +233,13 @@ describe('Project Routes', () => {
       mockReq.params = { id: 'proj123' };
       mockReq.body = { name: 'Test Key' };
 
-      mockApiKeyService.createApiKey.mockResolvedValueOnce(testApiKey);
+      mockApiKeyService.createApiKey.mockResolvedValueOnce(testApiKeyResponse);
 
       // @ts-ignore
       await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes.json).toHaveBeenCalledWith(testApiKey);
+      expect(mockRes.json).toHaveBeenCalledWith(testApiKeyResponse);
     });
   });
 
@@ -284,13 +287,13 @@ describe('Project Routes', () => {
   describe('DELETE /api/projects/:projectId/api-keys/:keyId', () => {
     it('should revoke API key', async () => {
       mockReq.params = { projectId: 'proj123', keyId: '123' };
-      mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKey);
+      mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKeyResponse.apiKeyDetails);
 
       // @ts-ignore
       await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(testApiKey);
+      expect(mockRes.json).toHaveBeenCalledWith(testApiKeyResponse.apiKeyDetails);
     });
 
     it('should return 404 for non-existent API key', async () => {
