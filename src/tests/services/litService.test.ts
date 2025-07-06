@@ -1,6 +1,7 @@
 import { LitService } from '../../services/encryption/litService';
 import { LitNetwork, EncryptionKeyRequest } from '../../types/lit';
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
+import { LitAbility } from '@lit-protocol/types';
 import { config } from '../../config/environment';
 
 // Mock LitNodeClient
@@ -30,7 +31,7 @@ jest.mock('@lit-protocol/lit-node-client', () => {
 describe('LitService', () => {
   let service: LitService;
   const mockConfig = {
-    network: LitNetwork.Cayenne,
+    network: 'cayenne' as LitNetwork,
     debug: true,
     minNodeCount: 5,
     maxNodeCount: 10
@@ -98,13 +99,15 @@ describe('LitService', () => {
       await service.initialize();
       await service.saveEncryptionKey(mockRequest);
       
-      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith({
-        chain: mockRequest.chain,
-        resourceAbilityRequests: [{
-          resource: 'encryption',
-          ability: 'save'
-        }]
-      });
+      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chain: mockRequest.chain,
+          sessionCapabilityObject: expect.objectContaining({
+            allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
+            maxOperations: 100
+          })
+        })
+      );
     });
 
     it('should validate request parameters', async () => {
@@ -156,13 +159,15 @@ describe('LitService', () => {
       await service.initialize();
       await service.getEncryptionKey(mockRequest);
       
-      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith({
-        chain: mockRequest.chain,
-        resourceAbilityRequests: [{
-          resource: 'encryption',
-          ability: 'decrypt'
-        }]
-      });
+      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chain: mockRequest.chain,
+          sessionCapabilityObject: expect.objectContaining({
+            allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
+            maxOperations: 100
+          })
+        })
+      );
     });
 
     it('should validate request parameters', async () => {
