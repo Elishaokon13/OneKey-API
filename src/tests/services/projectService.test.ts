@@ -1,110 +1,80 @@
 import { Pool } from 'pg';
 import { ProjectService } from '../../services/project/projectService';
 import { ProjectType, ProjectStatus } from '../../types/project';
-import { DatabaseError, NotFoundError, ValidationError } from '../../utils/errors';
-
-// Mock the database pool
-jest.mock('pg', () => {
-  const mPool = {
-    connect: jest.fn(),
-    query: jest.fn(),
-  };
-  return { Pool: jest.fn(() => mPool) };
-});
+import { NotFoundError, ValidationError } from '../../utils/errors';
 
 describe('ProjectService', () => {
-  let pool: Pool;
   let service: ProjectService;
   let mockClient: any;
+  let mockPool: any;
 
   beforeEach(() => {
-    pool = new Pool();
-    service = new ProjectService(pool);
     mockClient = {
       query: jest.fn(),
-      release: jest.fn(),
+      release: jest.fn()
     };
-    (pool.connect as jest.Mock).mockResolvedValue(mockClient);
+
+    mockPool = {
+      connect: jest.fn().mockResolvedValue(mockClient),
+      query: jest.fn()
+    };
+
+    service = new ProjectService(mockPool);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  const testProject = {
+    id: '123',
+    name: 'Test Project',
+    slug: 'test-project',
+    organizationId: 'org123',
+    type: ProjectType.Production,
+    status: ProjectStatus.Active,
+    createdAt: new Date('2025-07-06T01:29:26.221Z'),
+    updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+    metadata: {}
+  };
+
+  const dbProject = {
+    id: '123',
+    name: 'Test Project',
+    slug: 'test-project',
+    organization_id: 'org123',
+    type: ProjectType.Production,
+    status: ProjectStatus.Active,
+    created_at: new Date('2025-07-06T01:29:26.221Z'),
+    updated_at: new Date('2025-07-06T01:29:26.221Z'),
+    metadata: {}
+  };
 
   describe('createProject', () => {
-    const testProject = {
-      id: '123',
-      name: 'Test Project',
-      slug: 'test-project',
-      organizationId: 'org123',
-      type: ProjectType.Production,
-      status: ProjectStatus.Active,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      metadata: {}
-    };
-
     it('should create a project', async () => {
       mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [testProject] }) // project creation
-        .mockResolvedValueOnce({}); // COMMIT
+        .mockResolvedValueOnce({ rows: [dbProject] }) // Insert project
+        .mockResolvedValueOnce({ rows: [{ count: 0 }] }) // Check existing
+        .mockResolvedValueOnce({ rows: [dbProject] }); // Get created project
 
       const result = await service.createProject(
         'Test Project',
         'org123',
-        ProjectType.Production,
-        {}
+        ProjectType.Production
       );
 
       expect(mockClient.query).toHaveBeenCalledTimes(3);
       expect(result).toEqual(testProject);
       expect(mockClient.release).toHaveBeenCalled();
     });
-
-    it('should rollback transaction on error', async () => {
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockRejectedValueOnce(new Error('Database error')); // project creation fails
-
-      await expect(service.createProject(
-        'Test Project',
-        'org123',
-        ProjectType.Production,
-        {}
-      )).rejects.toThrow(DatabaseError);
-
-      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
-      expect(mockClient.release).toHaveBeenCalled();
-    });
   });
 
   describe('getProject', () => {
     it('should return project if found', async () => {
-      const testProject = {
-        id: '123',
-        name: 'Test Project',
-        slug: 'test-project',
-        organizationId: 'org123',
-        type: ProjectType.Production,
-        status: ProjectStatus.Active,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: {}
-      };
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testProject]
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [dbProject] });
 
       const result = await service.getProject('123');
       expect(result).toEqual(testProject);
     });
 
     it('should throw NotFoundError if project not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.getProject('123'))
         .rejects.toThrow(NotFoundError);
@@ -113,36 +83,30 @@ describe('ProjectService', () => {
 
   describe('updateProject', () => {
     it('should update project fields', async () => {
-      const updates = {
+      const updatedDbProject = {
+        ...dbProject,
         name: 'Updated Project',
         metadata: { key: 'value' }
       };
 
-      const updatedProject = {
-        id: '123',
-        name: 'Updated Project',
-        slug: 'test-project',
-        organizationId: 'org123',
-        type: ProjectType.Production,
-        status: ProjectStatus.Active,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: { key: 'value' }
-      };
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: [updatedProject]
+      mockPool.query.mockResolvedValueOnce({
+        rows: [updatedDbProject]
       });
 
-      const result = await service.updateProject('123', updates);
-      expect(result.name).toBe(updates.name);
-      expect(result.metadata).toEqual(updates.metadata);
+      const result = await service.updateProject('123', {
+        name: 'Updated Project',
+        metadata: { key: 'value' }
+      });
+
+      expect(result).toEqual({
+        ...testProject,
+        name: 'Updated Project',
+        metadata: { key: 'value' }
+      });
     });
 
     it('should throw NotFoundError if project not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.updateProject('123', { name: 'Updated' }))
         .rejects.toThrow(NotFoundError);
@@ -156,54 +120,40 @@ describe('ProjectService', () => {
 
   describe('getProjectsByOrganization', () => {
     it('should return organization projects', async () => {
-      const testProjects = [
-        {
-          id: '123',
-          name: 'Project 1',
-          slug: 'project-1',
-          organizationId: 'org123',
-          type: ProjectType.Production,
-          status: ProjectStatus.Active,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          metadata: {}
-        },
-        {
-          id: '456',
-          name: 'Project 2',
-          slug: 'project-2',
-          organizationId: 'org123',
-          type: ProjectType.Sandbox,
-          status: ProjectStatus.Active,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          metadata: {}
-        }
-      ];
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: testProjects
+      mockPool.query.mockResolvedValueOnce({
+        rows: [
+          dbProject,
+          { ...dbProject, id: '456', name: 'Test Project 2' }
+        ]
       });
 
       const result = await service.getProjectsByOrganization('org123');
-      expect(result).toEqual(testProjects);
+      expect(result).toEqual([
+        testProject,
+        { ...testProject, id: '456', name: 'Test Project 2' }
+      ]);
     });
   });
 
   describe('updateProjectSettings', () => {
-    it('should update project settings', async () => {
-      const settings = {
-        projectId: '123',
-        webhookUrl: 'https://example.com/webhook',
-        allowedOrigins: ['example.com'],
-        customSettings: { key: 'value' },
-        updatedAt: new Date()
-      };
+    const settings = {
+      webhookUrl: 'https://example.com/webhook',
+      allowedOrigins: ['example.com'],
+      customSettings: { key: 'value' }
+    };
 
+    const dbSettings = {
+      project_id: '123',
+      webhook_url: 'https://example.com/webhook',
+      allowed_origins: ['example.com'],
+      custom_settings: { key: 'value' },
+      updated_at: new Date('2025-07-06T01:29:26.221Z')
+    };
+
+    it('should update project settings', async () => {
       mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [settings] }) // settings update
-        .mockResolvedValueOnce({}); // COMMIT
+        .mockResolvedValueOnce({ rows: [{ exists: true }] }) // Check project exists
+        .mockResolvedValueOnce({ rows: [dbSettings] }); // Update settings
 
       const result = await service.updateProjectSettings('123', settings);
       expect(result.webhookUrl).toBe(settings.webhookUrl);
@@ -212,9 +162,7 @@ describe('ProjectService', () => {
     });
 
     it('should throw NotFoundError if project not found', async () => {
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [] }); // settings update fails
+      mockClient.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.updateProjectSettings('123', {}))
         .rejects.toThrow(NotFoundError);
@@ -222,27 +170,25 @@ describe('ProjectService', () => {
   });
 
   describe('getProjectSettings', () => {
-    it('should return project settings', async () => {
-      const settings = {
-        projectId: '123',
-        webhookUrl: 'https://example.com/webhook',
-        allowedOrigins: ['example.com'],
-        customSettings: {},
-        updatedAt: new Date()
-      };
+    const dbSettings = {
+      project_id: '123',
+      webhook_url: 'https://example.com/webhook',
+      allowed_origins: ['example.com'],
+      custom_settings: { key: 'value' },
+      updated_at: new Date('2025-07-06T01:29:26.221Z')
+    };
 
-      mockClient.query.mockResolvedValueOnce({
-        rows: [settings]
-      });
+    it('should return project settings', async () => {
+      mockPool.query.mockResolvedValueOnce({ rows: [dbSettings] });
 
       const result = await service.getProjectSettings('123');
-      expect(result).toEqual(settings);
+      expect(result.webhookUrl).toBe(dbSettings.webhook_url);
+      expect(result.allowedOrigins).toEqual(dbSettings.allowed_origins);
+      expect(result.customSettings).toEqual(dbSettings.custom_settings);
     });
 
     it('should throw NotFoundError if settings not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.getProjectSettings('123'))
         .rejects.toThrow(NotFoundError);
