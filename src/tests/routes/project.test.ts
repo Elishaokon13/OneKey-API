@@ -10,8 +10,12 @@ jest.mock('../../services/project/projectService');
 jest.mock('../../services/project/organizationService');
 jest.mock('../../services/project/apiKeyService');
 
+interface RequestWithUser extends Request {
+  user?: { id: string };
+}
+
 describe('Project Routes', () => {
-  let mockReq: Partial<Request>;
+  let mockReq: Partial<RequestWithUser>;
   let mockRes: Partial<Response>;
   let mockProjectService: jest.Mocked<ProjectService>;
   let mockOrganizationService: jest.Mocked<OrganizationService>;
@@ -26,7 +30,7 @@ describe('Project Routes', () => {
       params: {},
       body: {},
       query: {},
-      path: '',
+      url: '',
       method: ''
     };
 
@@ -133,7 +137,7 @@ describe('Project Routes', () => {
 
   describe('POST /api/projects', () => {
     it('should create a new project', async () => {
-      mockReq.path = '/api/projects';
+      mockReq.url = '/api/projects';
       mockReq.method = 'POST';
       mockReq.body = {
         name: 'Test Project',
@@ -143,14 +147,14 @@ describe('Project Routes', () => {
 
       mockProjectService.createProject.mockResolvedValueOnce(testProject);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(testProject);
     });
 
     it('should return 400 for invalid input', async () => {
-      mockReq.path = '/api/projects';
+      mockReq.url = '/api/projects';
       mockReq.method = 'POST';
       mockReq.body = {
         name: '', // Invalid: empty name
@@ -158,7 +162,7 @@ describe('Project Routes', () => {
         type: 'invalid_type' // Invalid: wrong enum value
       };
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
     });
@@ -166,24 +170,24 @@ describe('Project Routes', () => {
 
   describe('GET /api/projects/:id', () => {
     it('should return project by id', async () => {
-      mockReq.path = '/api/projects/123';
+      mockReq.url = '/api/projects/123';
       mockReq.method = 'GET';
       mockReq.params = { id: '123' };
       mockProjectService.getProject.mockResolvedValueOnce(testProject);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testProject);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.path = '/api/projects/999';
+      mockReq.url = '/api/projects/999';
       mockReq.method = 'GET';
       mockReq.params = { id: '999' };
       mockProjectService.getProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -191,7 +195,7 @@ describe('Project Routes', () => {
 
   describe('PUT /api/projects/:id', () => {
     it('should update project', async () => {
-      mockReq.path = '/api/projects/123';
+      mockReq.url = '/api/projects/123';
       mockReq.method = 'PUT';
       mockReq.params = { id: '123' };
       mockReq.body = {
@@ -207,19 +211,19 @@ describe('Project Routes', () => {
 
       mockProjectService.updateProject.mockResolvedValueOnce(updatedProject);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updatedProject);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.path = '/api/projects/999';
+      mockReq.url = '/api/projects/999';
       mockReq.method = 'PUT';
       mockReq.params = { id: '999' };
       mockProjectService.updateProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -227,12 +231,12 @@ describe('Project Routes', () => {
 
   describe('GET /api/organizations/:id/projects', () => {
     it('should return organization projects', async () => {
-      mockReq.path = '/api/organizations/org123/projects';
+      mockReq.url = '/api/organizations/org123/projects';
       mockReq.method = 'GET';
       mockReq.params = { id: 'org123' };
       mockProjectService.getProjectsByOrganization.mockResolvedValueOnce(testProjects);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testProjects);
@@ -241,7 +245,7 @@ describe('Project Routes', () => {
 
   describe('POST /api/projects/:id/api-keys', () => {
     it('should create API key', async () => {
-      mockReq.path = '/api/projects/proj123/api-keys';
+      mockReq.url = '/api/projects/proj123/api-keys';
       mockReq.method = 'POST';
       mockReq.params = { id: 'proj123' };
       mockReq.body = { name: 'Test Key' };
@@ -254,7 +258,7 @@ describe('Project Routes', () => {
 
       mockApiKeyService.createApiKey.mockResolvedValueOnce(apiKeyResponse);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(apiKeyResponse);
@@ -263,12 +267,12 @@ describe('Project Routes', () => {
 
   describe('GET /api/projects/:id/api-keys', () => {
     it('should return project API keys', async () => {
-      mockReq.path = '/api/projects/proj123/api-keys';
+      mockReq.url = '/api/projects/proj123/api-keys';
       mockReq.method = 'GET';
       mockReq.params = { id: 'proj123' };
       mockApiKeyService.getProjectApiKeys.mockResolvedValueOnce(testApiKeys);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testApiKeys);
@@ -277,7 +281,7 @@ describe('Project Routes', () => {
 
   describe('PUT /api/projects/:id/settings', () => {
     it('should update project settings', async () => {
-      mockReq.path = '/api/projects/123/settings';
+      mockReq.url = '/api/projects/123/settings';
       mockReq.method = 'PUT';
       mockReq.params = { id: '123' };
       mockReq.body = {
@@ -288,19 +292,19 @@ describe('Project Routes', () => {
 
       mockProjectService.updateProjectSettings.mockResolvedValueOnce(testSettings);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testSettings);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.path = '/api/projects/999/settings';
+      mockReq.url = '/api/projects/999/settings';
       mockReq.method = 'PUT';
       mockReq.params = { id: '999' };
       mockProjectService.updateProjectSettings.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -308,24 +312,24 @@ describe('Project Routes', () => {
 
   describe('DELETE /api/projects/:projectId/api-keys/:keyId', () => {
     it('should revoke API key', async () => {
-      mockReq.path = '/api/projects/proj123/api-keys/123';
+      mockReq.url = '/api/projects/proj123/api-keys/123';
       mockReq.method = 'DELETE';
       mockReq.params = { projectId: 'proj123', keyId: '123' };
       mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKey);
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testApiKey);
     });
 
     it('should return 404 for non-existent API key', async () => {
-      mockReq.path = '/api/projects/proj123/api-keys/999';
+      mockReq.url = '/api/projects/proj123/api-keys/999';
       mockReq.method = 'DELETE';
       mockReq.params = { projectId: 'proj123', keyId: '999' };
       mockApiKeyService.revokeApiKey.mockRejectedValueOnce(new NotFoundError('API key not found'));
 
-      await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
+      await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
