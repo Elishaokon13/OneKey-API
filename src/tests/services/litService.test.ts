@@ -1,5 +1,5 @@
 import { LitService } from '../../services/encryption/litService';
-import { LitNetwork, EncryptionKeyRequest } from '../../types/lit';
+import { LitNetwork, EncryptionKeyRequest, LitNodeClient } from '../../types/lit';
 import { config } from '../../config/environment';
 
 // Mock LitNodeClient
@@ -48,12 +48,12 @@ describe('LitService', () => {
     it('should not reinitialize if already initialized', async () => {
       await service.initialize();
       await service.initialize();
-      expect(service['client'].connect).toHaveBeenCalledTimes(1);
+      expect((service['client'] as LitNodeClient).connect).toHaveBeenCalledTimes(1);
     });
 
     it('should handle initialization errors', async () => {
       const mockError = new Error('Connection failed');
-      jest.spyOn(service['client'], 'connect').mockRejectedValueOnce(mockError);
+      jest.spyOn(service['client'] as LitNodeClient, 'connect').mockRejectedValueOnce(mockError);
 
       await expect(service.initialize()).rejects.toThrow('Connection failed');
       expect(service['isInitialized']).toBe(false);
@@ -97,7 +97,7 @@ describe('LitService', () => {
       await service.initialize();
       await service.saveEncryptionKey(mockRequest);
       
-      expect(service['client'].generateAuthSig).toHaveBeenCalled();
+      expect((service['client'] as LitNodeClient).generateAuthSig).toHaveBeenCalled();
     });
 
     it('should validate request parameters', async () => {
@@ -148,7 +148,7 @@ describe('LitService', () => {
       await service.initialize();
       await service.getEncryptionKey(mockRequest);
       
-      expect(service['client'].generateAuthSig).toHaveBeenCalled();
+      expect((service['client'] as LitNodeClient).generateAuthSig).toHaveBeenCalled();
     });
 
     it('should validate request parameters', async () => {
@@ -180,13 +180,13 @@ describe('LitService', () => {
       await service.disconnect();
       
       expect(service['isInitialized']).toBe(false);
-      expect(service['client'].disconnect).toHaveBeenCalled();
+      expect((service['client'] as LitNodeClient).disconnect).toHaveBeenCalled();
     });
 
     it('should not attempt to disconnect when not initialized', async () => {
       await service.disconnect();
       
-      expect(service['client'].disconnect).not.toHaveBeenCalled();
+      expect((service['client'] as LitNodeClient).disconnect).not.toHaveBeenCalled();
     });
   });
 }); 
