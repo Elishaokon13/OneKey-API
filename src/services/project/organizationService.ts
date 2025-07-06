@@ -59,7 +59,7 @@ export class OrganizationService {
       return this.mapOrganizationFromDb(orgResult.rows[0]);
     } catch (error) {
       await client.query('ROLLBACK');
-      throw new DatabaseError('Failed to create organization', error);
+      throw new DatabaseError('Failed to create organization');
     } finally {
       client.release();
     }
@@ -96,9 +96,11 @@ export class OrganizationService {
       'subscriptionTier',
       'subscriptionStatus',
       'subscriptionExpiresAt'
-    ];
-    const updateFields = Object.keys(updates).filter(key => 
-      allowedUpdates.includes(key) && updates[key] !== undefined
+    ] as const;
+    type AllowedUpdate = typeof allowedUpdates[number];
+
+    const updateFields = Object.keys(updates).filter((key): key is AllowedUpdate =>
+      allowedUpdates.includes(key as AllowedUpdate) && updates[key as keyof Organization] !== undefined
     );
 
     if (updateFields.length === 0) {
@@ -108,7 +110,7 @@ export class OrganizationService {
     const setClause = updateFields
       .map((field, index) => `${this.toSnakeCase(field)} = $${index + 2}`)
       .join(', ');
-    const values = updateFields.map(field => updates[field]);
+    const values = updateFields.map(field => updates[field as keyof Organization]);
 
     const result = await this.pool.query(
       `UPDATE organizations 
