@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const baseConfig = {
   client: 'postgresql',
-  connection: process.env.DATABASE_URL || {
+  connection: process.env.SUPABASE_DB_URLDATABASE_URL || {
     host: 'localhost',
     port: 5432,
     database: 'onekey_api',
