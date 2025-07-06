@@ -18,8 +18,8 @@ export class MultiTenantMiddleware {
   private projectService: ProjectService;
   private rateLimiters: Map<string, ReturnType<typeof rateLimit>>;
 
-  constructor(pool: Pool) {
-    this.projectService = new ProjectService(pool);
+  constructor(projectService: ProjectService) {
+    this.projectService = projectService;
     this.rateLimiters = new Map();
   }
 
