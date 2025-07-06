@@ -49,9 +49,9 @@ describe('ProjectService', () => {
   describe('createProject', () => {
     it('should create a project', async () => {
       mockClient.query
+        .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [dbProject] }) // Insert project
-        .mockResolvedValueOnce({ rows: [{ count: 0 }] }) // Check existing
-        .mockResolvedValueOnce({ rows: [dbProject] }); // Get created project
+        .mockResolvedValueOnce({}); // COMMIT
 
       const result = await service.createProject(
         'Test Project',
@@ -152,8 +152,10 @@ describe('ProjectService', () => {
 
     it('should update project settings', async () => {
       mockClient.query
+        .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [{ exists: true }] }) // Check project exists
-        .mockResolvedValueOnce({ rows: [dbSettings] }); // Update settings
+        .mockResolvedValueOnce({ rows: [dbSettings] }) // Update settings
+        .mockResolvedValueOnce({}); // COMMIT
 
       const result = await service.updateProjectSettings('123', settings);
       expect(result.webhookUrl).toBe(settings.webhookUrl);
@@ -162,7 +164,9 @@ describe('ProjectService', () => {
     });
 
     it('should throw NotFoundError if project not found', async () => {
-      mockClient.query.mockResolvedValueOnce({ rows: [] });
+      mockClient.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [] }); // Check project exists
 
       await expect(service.updateProjectSettings('123', {}))
         .rejects.toThrow(NotFoundError);
