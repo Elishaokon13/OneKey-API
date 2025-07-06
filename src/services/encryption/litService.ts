@@ -11,7 +11,8 @@ import {
   ISessionCapabilityObject,
   AccessControlConditions,
   Chain,
-  LitResourceAbilityRequest
+  LitAbility,
+  LitResourcePrefix
 } from '@lit-protocol/types';
 import {
   LitConfig,
@@ -23,6 +24,27 @@ import {
 } from '@/types/lit';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
+
+class LitAccessControlConditionResource {
+  readonly resourcePrefix: LitResourcePrefix = 'lit-accesscontrolcondition';
+  readonly resource: string;
+
+  constructor(resource: string) {
+    this.resource = resource;
+  }
+
+  getResourceKey(): string {
+    return `${this.resourcePrefix}:${this.resource}`;
+  }
+
+  isValidLitAbility(litAbility: LitAbility): boolean {
+    return litAbility === 'access-control-condition-decryption' || litAbility === 'access-control-condition-signing';
+  }
+
+  toString(): string {
+    return this.getResourceKey();
+  }
+}
 
 export class LitService {
   private client!: LitNodeClient;
@@ -67,7 +89,8 @@ export class LitService {
       logger.info('Lit Protocol service initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize Lit Protocol service', { error });
-      throw this.wrapError(error, 'INITIALIZATION_FAILED');
+      this.isInitialized = false;
+      throw error;
     }
   }
 
@@ -83,29 +106,49 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        const resourceAbilityRequests: LitResourceAbilityRequest[] = [{
-          resource: {
-            path: '/*',
-            protocol: 'lit',
-            actions: ['encryption-sign', 'encryption-decrypt']
-          },
-          ability: 'encryption-sign'
-        }];
+        const sessionCapabilityObject = new (class implements ISessionCapabilityObject {
+          private _attenuations: any = {};
+          private _proofs: string[] = [];
+          private _statement: string = '';
+
+          get attenuations() { return this._attenuations; }
+          get proofs() { return this._proofs; }
+          get statement() { return this._statement; }
+
+          addProof(proof: string) { this._proofs.push(proof); }
+          addAttenuation(resource: string, namespace?: string, name?: string, restriction?: any) {
+            if (!this._attenuations[resource]) {
+              this._attenuations[resource] = {};
+            }
+            if (namespace && name) {
+              if (!this._attenuations[resource][namespace]) {
+                this._attenuations[resource][namespace] = [];
+              }
+              this._attenuations[resource][namespace].push({ name, ...restriction });
+            }
+          }
+          addToSiweMessage(siwe: any) { return siwe; }
+          encodeAsSiweResource() { return ''; }
+          addCapabilityForResource(litResource: any, ability: LitAbility) {
+            this.addAttenuation(litResource.getResourceKey(), 'lit-capability', ability);
+          }
+          verifyCapabilitiesForResource() { return true; }
+          addAllCapabilitiesForResource() {}
+        })();
+
+        const resource = new LitAccessControlConditionResource('*');
+        sessionCapabilityObject.addCapabilityForResource(resource, 'access-control-condition-signing');
 
         const walletSigProps: GetWalletSigProps = {
           chain: request.chain as Chain,
-          sessionCapabilityObject: {
-            maxOperations: 100,
-            validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-          },
+          sessionCapabilityObject,
           expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           sessionKey: {
             publicKey: '',
             secretKey: ''
           },
           sessionKeyUri: '',
-          nonce: Math.random().toString(36).substring(7),
-          resourceAbilityRequests
+          nonce: Math.random().toString(36).substring(7)
         };
 
         request.authSig = await this.client.getWalletSig(walletSigProps);
@@ -125,7 +168,7 @@ export class LitService {
       });
 
       return {
-        encryptedSymmetricKey: Buffer.from(response.ciphertext).toString('base64'),
+        encryptedSymmetricKey: response.ciphertext,
         symmetricKey: new Uint8Array(Buffer.from(response.ciphertext, 'base64'))
       };
     } catch (error) {
@@ -146,29 +189,49 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        const resourceAbilityRequests: LitResourceAbilityRequest[] = [{
-          resource: {
-            path: '/*',
-            protocol: 'lit',
-            actions: ['encryption-sign', 'encryption-decrypt']
-          },
-          ability: 'encryption-decrypt'
-        }];
+        const sessionCapabilityObject = new (class implements ISessionCapabilityObject {
+          private _attenuations: any = {};
+          private _proofs: string[] = [];
+          private _statement: string = '';
+
+          get attenuations() { return this._attenuations; }
+          get proofs() { return this._proofs; }
+          get statement() { return this._statement; }
+
+          addProof(proof: string) { this._proofs.push(proof); }
+          addAttenuation(resource: string, namespace?: string, name?: string, restriction?: any) {
+            if (!this._attenuations[resource]) {
+              this._attenuations[resource] = {};
+            }
+            if (namespace && name) {
+              if (!this._attenuations[resource][namespace]) {
+                this._attenuations[resource][namespace] = [];
+              }
+              this._attenuations[resource][namespace].push({ name, ...restriction });
+            }
+          }
+          addToSiweMessage(siwe: any) { return siwe; }
+          encodeAsSiweResource() { return ''; }
+          addCapabilityForResource(litResource: any, ability: LitAbility) {
+            this.addAttenuation(litResource.getResourceKey(), 'lit-capability', ability);
+          }
+          verifyCapabilitiesForResource() { return true; }
+          addAllCapabilitiesForResource() {}
+        })();
+
+        const resource = new LitAccessControlConditionResource('*');
+        sessionCapabilityObject.addCapabilityForResource(resource, 'access-control-condition-decryption');
 
         const walletSigProps: GetWalletSigProps = {
           chain: request.chain as Chain,
-          sessionCapabilityObject: {
-            maxOperations: 100,
-            validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-          },
+          sessionCapabilityObject,
           expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           sessionKey: {
             publicKey: '',
             secretKey: ''
           },
           sessionKeyUri: '',
-          nonce: Math.random().toString(36).substring(7),
-          resourceAbilityRequests
+          nonce: Math.random().toString(36).substring(7)
         };
 
         request.authSig = await this.client.getWalletSig(walletSigProps);
@@ -189,10 +252,9 @@ export class LitService {
         conditions: request.accessControlConditions.length
       });
 
-      const decryptedData = Buffer.from(response.decryptedData).toString('base64');
       return {
-        encryptedSymmetricKey: decryptedData,
-        symmetricKey: new Uint8Array(Buffer.from(decryptedData, 'base64'))
+        encryptedSymmetricKey: response.decryptedData,
+        symmetricKey: new Uint8Array(Buffer.from(response.decryptedData, 'base64'))
       };
     } catch (error) {
       logger.error('Failed to get encryption key', { error });
@@ -201,13 +263,9 @@ export class LitService {
   }
 
   /**
-   * Create access control conditions for KYC data
+   * Create access control conditions for KYC verification
    */
   public createKycAccessConditions(userId: string, projectId: string): AccessControlCondition[] {
-    // Example conditions:
-    // 1. User must own the data (userId match)
-    // 2. Project must be active and authorized
-    // 3. Request must be within allowed time window
     return [
       {
         contractAddress: config.blockchain.easContractAddress,
@@ -225,7 +283,7 @@ export class LitService {
         standardContractType: 'ERC1155',
         chain: 'base',
         method: 'isProjectAuthorized',
-        parameters: [projectId],
+        parameters: [':userAddress', projectId],
         returnValueTest: {
           comparator: '=',
           value: 'true'
@@ -245,29 +303,36 @@ export class LitService {
     }
   }
 
-  // ===== Private Helper Methods =====
-
+  /**
+   * Ensure client is initialized
+   */
   private async ensureInitialized(): Promise<void> {
     if (!this.isInitialized) {
       await this.initialize();
     }
   }
 
+  /**
+   * Validate encryption key request
+   */
   private validateRequest(request: EncryptionKeyRequest): void {
-    if (!request.accessControlConditions?.length) {
+    if (!request.accessControlConditions || request.accessControlConditions.length === 0) {
       throw new Error('Access control conditions are required');
     }
+
     if (!request.chain) {
       throw new Error('Chain is required');
     }
   }
 
-  private wrapError(error: any, code: string): LitError {
-    const litError: LitError = new Error(
-      error?.message || 'An error occurred with Lit Protocol'
-    ) as LitError;
-    litError.code = code;
-    litError.details = error;
-    return litError;
+  /**
+   * Wrap error with custom error type
+   */
+  private wrapError(error: any, type: string): LitError {
+    return {
+      type,
+      message: error.message || 'Unknown error',
+      details: error
+    };
   }
 } 
