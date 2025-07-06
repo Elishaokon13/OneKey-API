@@ -24,6 +24,8 @@ import {
 } from '@/types/lit';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
+import { AnalyticsService } from '@/services/analytics/analyticsService';
+import { CostMetric } from '@/types/analytics';
 
 class LitAccessControlConditionResource {
   readonly resourcePrefix: LitResourcePrefix = 'lit-accesscontrolcondition';
@@ -50,8 +52,9 @@ export class LitService {
   private client!: LitNodeClient;
   private isInitialized: boolean = false;
   private readonly config: LitConfig;
+  private readonly analyticsService?: AnalyticsService;
 
-  constructor(litConfig?: Partial<LitConfig>) {
+  constructor(litConfig?: Partial<LitConfig>, analyticsService?: AnalyticsService) {
     this.config = {
       network: (litConfig?.network || config.storage.litProtocolNetwork) as LitNetwork,
       debug: litConfig?.debug || false,
@@ -60,6 +63,38 @@ export class LitService {
       bootstrapUrls: litConfig?.bootstrapUrls || [],
       fallbackBootstrapUrls: litConfig?.fallbackBootstrapUrls || []
     };
+    this.analyticsService = analyticsService;
+  }
+
+  /**
+   * Track operation cost
+   */
+  private async trackOperationCost(
+    projectId: string,
+    operation: string,
+    cost: number,
+    success: boolean,
+    metadata: Record<string, any> = {}
+  ): Promise<void> {
+    if (!this.analyticsService) {
+      return;
+    }
+
+    try {
+      const costMetric: Omit<CostMetric, 'timestamp'> = {
+        projectId,
+        operation,
+        cost,
+        network: this.config.network,
+        success,
+        metadata
+      };
+
+      await this.analyticsService.trackCost(costMetric);
+    } catch (error) {
+      logger.error('Failed to track operation cost', { error, operation, projectId });
+      // Don't throw - we don't want analytics errors to affect core functionality
+    }
   }
 
   /**
@@ -98,10 +133,11 @@ export class LitService {
    * Save encryption key with access control conditions
    */
   public async saveEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse> {
+    const startTime = Date.now();
+    let success = false;
+    
     try {
       await this.ensureInitialized();
-
-      // Validate request
       this.validateRequest(request);
 
       // Generate auth signature if not provided
@@ -161,6 +197,20 @@ export class LitService {
       };
 
       const response = await this.client.encrypt(encryptParams);
+      success = true;
+
+      // Track operation cost - estimated for now, can be updated with actual costs later
+      await this.trackOperationCost(
+        request.projectId,
+        'saveEncryptionKey',
+        0, // Placeholder for actual cost
+        true,
+        {
+          conditionsCount: request.accessControlConditions.length,
+          chain: request.chain,
+          duration: Date.now() - startTime
+        }
+      );
 
       logger.info('Encryption key saved successfully', {
         chain: request.chain,
@@ -173,6 +223,20 @@ export class LitService {
       };
     } catch (error) {
       logger.error('Failed to save encryption key', { error });
+      
+      // Track failed operation
+      await this.trackOperationCost(
+        request.projectId,
+        'saveEncryptionKey',
+        0, // Placeholder for actual cost
+        false,
+        {
+          error: error?.message,
+          chain: request.chain,
+          duration: Date.now() - startTime
+        }
+      );
+
       const litError = new Error(error?.message || 'Unknown error') as LitError;
       litError.code = 'SAVE_KEY_FAILED';
       litError.details = error;
@@ -184,10 +248,11 @@ export class LitService {
    * Get encryption key if access conditions are met
    */
   public async getEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse> {
+    const startTime = Date.now();
+    let success = false;
+
     try {
       await this.ensureInitialized();
-
-      // Validate request
       this.validateRequest(request);
 
       // Generate auth signature if not provided
@@ -249,18 +314,41 @@ export class LitService {
       };
 
       const response = await this.client.decrypt(decryptParams);
+      success = true;
 
-      logger.info('Encryption key retrieved successfully', {
-        chain: request.chain,
-        conditions: request.accessControlConditions.length
-      });
+      // Track operation cost
+      await this.trackOperationCost(
+        request.projectId,
+        'getEncryptionKey',
+        0, // Placeholder for actual cost
+        true,
+        {
+          conditionsCount: request.accessControlConditions.length,
+          chain: request.chain,
+          duration: Date.now() - startTime
+        }
+      );
 
       return {
         encryptedSymmetricKey: response.decryptedData,
-        symmetricKey: new Uint8Array(Buffer.from(response.decryptedData, 'base64'))
+        symmetricKey: response.decryptedSymmetricKey
       };
     } catch (error) {
       logger.error('Failed to get encryption key', { error });
+
+      // Track failed operation
+      await this.trackOperationCost(
+        request.projectId,
+        'getEncryptionKey',
+        0, // Placeholder for actual cost
+        false,
+        {
+          error: error?.message,
+          chain: request.chain,
+          duration: Date.now() - startTime
+        }
+      );
+
       const litError = new Error(error?.message || 'Unknown error') as LitError;
       litError.code = 'GET_KEY_FAILED';
       litError.details = error;
