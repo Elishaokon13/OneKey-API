@@ -82,8 +82,8 @@ describe('Project Routes', () => {
     createdBy: 'user123',
     createdAt: new Date('2025-07-06T01:29:26.221Z'),
     updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-    lastUsedAt: null,
-    expiresAt: null,
+    lastUsedAt: undefined,
+    expiresAt: undefined,
     metadata: {}
   };
 
@@ -99,8 +99,8 @@ describe('Project Routes', () => {
       createdBy: 'user123',
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-      lastUsedAt: null,
-      expiresAt: null,
+      lastUsedAt: undefined,
+      expiresAt: undefined,
       metadata: {}
     },
     {
@@ -114,8 +114,8 @@ describe('Project Routes', () => {
       createdBy: 'user123',
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-      lastUsedAt: null,
-      expiresAt: null,
+      lastUsedAt: undefined,
+      expiresAt: undefined,
       metadata: {}
     }
   ];
