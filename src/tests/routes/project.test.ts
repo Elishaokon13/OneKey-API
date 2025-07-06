@@ -4,8 +4,8 @@ import { OrganizationService } from '../../services/project/organizationService'
 import { ApiKeyService } from '../../services/project/apiKeyService';
 import { ProjectType, ProjectStatus, ApiKeyType, ApiKeyStatus } from '../../types/project';
 import { NotFoundError } from '../../utils/errors';
+import { projectRouter } from '../../routes/project';
 
-// Mock services
 jest.mock('../../services/project/projectService');
 jest.mock('../../services/project/organizationService');
 jest.mock('../../services/project/apiKeyService');
@@ -71,22 +71,20 @@ describe('Project Routes', () => {
     }
   ];
 
-  const testApiKeyResponse = {
-    apiKey: 'sk_test_123',
-    apiKeyDetails: {
-      id: '123',
-      projectId: 'proj123',
-      name: 'Test Key',
-      type: ApiKeyType.Secret,
-      status: ApiKeyStatus.Active,
-      permissions: ['read', 'write'],
-      hashedKey: 'hashed_key',
-      createdBy: 'user123',
-      createdAt: new Date('2025-07-06T01:29:26.221Z'),
-      updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-      lastUsedAt: undefined,
-      metadata: {}
-    }
+  const testApiKey = {
+    id: '123',
+    projectId: 'proj123',
+    name: 'Test Key',
+    type: ApiKeyType.Secret,
+    status: ApiKeyStatus.Active,
+    permissions: ['read', 'write'],
+    hashedKey: 'hashed_key',
+    createdBy: 'user123',
+    createdAt: new Date('2025-07-06T01:29:26.221Z'),
+    updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+    lastUsedAt: null,
+    expiresAt: null,
+    metadata: {}
   };
 
   const testApiKeys = [
@@ -101,7 +99,8 @@ describe('Project Routes', () => {
       createdBy: 'user123',
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-      lastUsedAt: undefined,
+      lastUsedAt: null,
+      expiresAt: null,
       metadata: {}
     },
     {
@@ -115,7 +114,8 @@ describe('Project Routes', () => {
       createdBy: 'user123',
       createdAt: new Date('2025-07-06T01:29:26.221Z'),
       updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-      lastUsedAt: undefined,
+      lastUsedAt: null,
+      expiresAt: null,
       metadata: {}
     }
   ];
@@ -124,6 +124,7 @@ describe('Project Routes', () => {
     projectId: '123',
     webhookUrl: 'https://example.com/webhook',
     allowedOrigins: ['https://example.com'],
+    customSettings: { key: 'value' },
     updatedAt: new Date('2025-07-06T01:29:26.221Z')
   };
 
@@ -190,9 +191,9 @@ describe('Project Routes', () => {
       };
 
       const updatedProject = {
-        id: '123',
-        ...mockReq.body,
-        status: ProjectStatus.Active
+        ...testProject,
+        name: 'Updated Project',
+        metadata: { key: 'value' }
       };
 
       mockProjectService.updateProject.mockResolvedValueOnce(updatedProject);
@@ -233,13 +234,18 @@ describe('Project Routes', () => {
       mockReq.params = { id: 'proj123' };
       mockReq.body = { name: 'Test Key' };
 
-      mockApiKeyService.createApiKey.mockResolvedValueOnce(testApiKeyResponse);
+      const apiKeyResponse = {
+        apiKey: 'sk_test_123',
+        apiKeyDetails: testApiKey
+      };
+
+      mockApiKeyService.createApiKey.mockResolvedValueOnce(apiKeyResponse);
 
       // @ts-ignore
       await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes.json).toHaveBeenCalledWith(testApiKeyResponse);
+      expect(mockRes.json).toHaveBeenCalledWith(apiKeyResponse);
     });
   });
 
@@ -287,13 +293,13 @@ describe('Project Routes', () => {
   describe('DELETE /api/projects/:projectId/api-keys/:keyId', () => {
     it('should revoke API key', async () => {
       mockReq.params = { projectId: 'proj123', keyId: '123' };
-      mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKeyResponse.apiKeyDetails);
+      mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKey);
 
       // @ts-ignore
       await projectRouter(mockReq as Request, mockRes as Response, jest.fn());
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(testApiKeyResponse.apiKeyDetails);
+      expect(mockRes.json).toHaveBeenCalledWith(testApiKey);
     });
 
     it('should return 404 for non-existent API key', async () => {
