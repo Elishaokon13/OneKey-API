@@ -84,7 +84,13 @@ describe('ProjectService', () => {
       const testProject = {
         id: '123',
         name: 'Test Project',
-        status: ProjectStatus.Active
+        slug: 'test-project',
+        organizationId: 'org123',
+        type: ProjectType.Production,
+        status: ProjectStatus.Active,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: {}
       };
 
       mockClient.query.mockResolvedValueOnce({
@@ -112,8 +118,20 @@ describe('ProjectService', () => {
         metadata: { key: 'value' }
       };
 
+      const updatedProject = {
+        id: '123',
+        name: 'Updated Project',
+        slug: 'test-project',
+        organizationId: 'org123',
+        type: ProjectType.Production,
+        status: ProjectStatus.Active,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: { key: 'value' }
+      };
+
       mockClient.query.mockResolvedValueOnce({
-        rows: [{ ...updates, id: '123' }]
+        rows: [updatedProject]
       });
 
       const result = await service.updateProject('123', updates);
@@ -139,8 +157,28 @@ describe('ProjectService', () => {
   describe('getProjectsByOrganization', () => {
     it('should return organization projects', async () => {
       const testProjects = [
-        { id: '123', name: 'Project 1', type: ProjectType.Production },
-        { id: '456', name: 'Project 2', type: ProjectType.Sandbox }
+        {
+          id: '123',
+          name: 'Project 1',
+          slug: 'project-1',
+          organizationId: 'org123',
+          type: ProjectType.Production,
+          status: ProjectStatus.Active,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          metadata: {}
+        },
+        {
+          id: '456',
+          name: 'Project 2',
+          slug: 'project-2',
+          organizationId: 'org123',
+          type: ProjectType.Sandbox,
+          status: ProjectStatus.Active,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          metadata: {}
+        }
       ];
 
       mockClient.query.mockResolvedValueOnce({
@@ -155,14 +193,16 @@ describe('ProjectService', () => {
   describe('updateProjectSettings', () => {
     it('should update project settings', async () => {
       const settings = {
+        projectId: '123',
         webhookUrl: 'https://example.com/webhook',
         allowedOrigins: ['example.com'],
-        customSettings: { key: 'value' }
+        customSettings: { key: 'value' },
+        updatedAt: new Date()
       };
 
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [{ ...settings, projectId: '123' }] }) // settings update
+        .mockResolvedValueOnce({ rows: [settings] }) // settings update
         .mockResolvedValueOnce({}); // COMMIT
 
       const result = await service.updateProjectSettings('123', settings);
@@ -186,7 +226,9 @@ describe('ProjectService', () => {
       const settings = {
         projectId: '123',
         webhookUrl: 'https://example.com/webhook',
-        allowedOrigins: ['example.com']
+        allowedOrigins: ['example.com'],
+        customSettings: {},
+        updatedAt: new Date()
       };
 
       mockClient.query.mockResolvedValueOnce({
