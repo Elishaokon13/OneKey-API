@@ -13,15 +13,15 @@ const projectService = new ProjectService(pool);
 const organizationService = new OrganizationService(pool);
 const apiKeyService = new ApiKeyService(pool);
 
-// Create project
-router.post(
-  '/',
-  async (req: Request, res: Response, next: NextFunction) => {
+// Handler functions for testing
+export const handlers = {
+  createProject: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, organizationId, type } = req.body;
 
       if (!name || !organizationId || !type) {
-        throw new ValidationError('Missing required fields');
+        res.status(400).json({ error: 'Missing required fields' });
+        return;
       }
 
       const project = await projectService.createProject(
@@ -34,74 +34,72 @@ router.post(
     } catch (error) {
       next(error);
     }
-  }
-);
+  },
 
-// Get project by ID
-router.get(
-  '/:id',
-  async (req: Request, res: Response, next: NextFunction) => {
+  getProject: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new ValidationError('Project ID is required');
+        res.status(400).json({ error: 'Project ID is required' });
+        return;
       }
 
       const project = await projectService.getProject(id);
-      res.json(project);
+      res.status(200).json(project);
     } catch (error) {
-      next(error);
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+      } else {
+        next(error);
+      }
     }
-  }
-);
+  },
 
-// Update project
-router.put(
-  '/:id',
-  async (req: Request, res: Response, next: NextFunction) => {
+  updateProject: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new ValidationError('Project ID is required');
+        res.status(400).json({ error: 'Project ID is required' });
+        return;
       }
 
       const project = await projectService.updateProject(id, req.body);
-      res.json(project);
+      res.status(200).json(project);
     } catch (error) {
-      next(error);
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+      } else if (error instanceof ValidationError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        next(error);
+      }
     }
-  }
-);
+  },
 
-// Get organization projects
-router.get(
-  '/organizations/:id/projects',
-  async (req: Request, res: Response, next: NextFunction) => {
+  getOrganizationProjects: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new ValidationError('Organization ID is required');
+        res.status(400).json({ error: 'Organization ID is required' });
+        return;
       }
 
       const projects = await projectService.getProjectsByOrganization(id);
-      res.json(projects);
+      res.status(200).json(projects);
     } catch (error) {
       next(error);
     }
-  }
-);
+  },
 
-// Create API key
-router.post(
-  '/:id/api-keys',
-  async (req: Request, res: Response, next: NextFunction) => {
+  createApiKey: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       const { name, type, permissions } = req.body;
       const userId = req.user?.id;
 
       if (!id || !name || !userId) {
-        throw new ValidationError('Missing required fields');
+        res.status(400).json({ error: 'Missing required fields' });
+        return;
       }
 
       const apiKey = await apiKeyService.createApiKey(
@@ -116,61 +114,70 @@ router.post(
     } catch (error) {
       next(error);
     }
-  }
-);
+  },
 
-// Get project API keys
-router.get(
-  '/:id/api-keys',
-  async (req: Request, res: Response, next: NextFunction) => {
+  getProjectApiKeys: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new ValidationError('Project ID is required');
+        res.status(400).json({ error: 'Project ID is required' });
+        return;
       }
 
       const apiKeys = await apiKeyService.getProjectApiKeys(id);
-      res.json(apiKeys);
+      res.status(200).json(apiKeys);
     } catch (error) {
       next(error);
     }
-  }
-);
+  },
 
-// Update project settings
-router.put(
-  '/:id/settings',
-  async (req: Request, res: Response, next: NextFunction) => {
+  updateProjectSettings: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
       if (!id) {
-        throw new ValidationError('Project ID is required');
+        res.status(400).json({ error: 'Project ID is required' });
+        return;
       }
 
       const settings = await projectService.updateProjectSettings(id, req.body);
-      res.json(settings);
+      res.status(200).json(settings);
     } catch (error) {
-      next(error);
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+      } else {
+        next(error);
+      }
     }
-  }
-);
+  },
 
-// Revoke API key
-router.delete(
-  '/:projectId/api-keys/:keyId',
-  async (req: Request, res: Response, next: NextFunction) => {
+  revokeApiKey: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { keyId } = req.params;
       if (!keyId) {
-        throw new ValidationError('API Key ID is required');
+        res.status(400).json({ error: 'API Key ID is required' });
+        return;
       }
 
       const apiKey = await apiKeyService.revokeApiKey(keyId);
-      res.json(apiKey);
+      res.status(200).json(apiKey);
     } catch (error) {
-      next(error);
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+      } else {
+        next(error);
+      }
     }
   }
-);
+};
+
+// Routes
+router.post('/', handlers.createProject);
+router.get('/:id', handlers.getProject);
+router.put('/:id', handlers.updateProject);
+router.get('/organizations/:id/projects', handlers.getOrganizationProjects);
+router.post('/:id/api-keys', handlers.createApiKey);
+router.get('/:id/api-keys', handlers.getProjectApiKeys);
+router.put('/:id/settings', handlers.updateProjectSettings);
+router.delete('/:projectId/api-keys/:keyId', handlers.revokeApiKey);
 
 export { router as projectRouter }; 
