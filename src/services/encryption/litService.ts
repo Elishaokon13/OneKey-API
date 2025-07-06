@@ -3,7 +3,7 @@
 
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LIT_NETWORKS } from '@lit-protocol/constants';
-import { LitAbility, ILitResource } from '@lit-protocol/types';
+import { LitAbility, ILitResource, LitNodeClientConfig, GetWalletSigProps } from '@lit-protocol/types';
 import {
   LitConfig,
   LitNetwork,
@@ -45,12 +45,13 @@ export class LitService {
         minNodeCount: this.config.minNodeCount
       });
 
-      this.client = new LitNodeClient({
+      const clientConfig: LitNodeClientConfig = {
         litNetwork: this.config.network as keyof typeof LIT_NETWORKS,
         debug: this.config.debug,
-        minNodeCount: this.config.minNodeCount
-      });
+        minNodeCount: this.config.minNodeCount || 10
+      };
 
+      this.client = new LitNodeClient(clientConfig);
       await this.client.connect();
       this.isInitialized = true;
 
@@ -73,13 +74,24 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        request.authSig = await this.client.getWalletSig({
+        const walletSigProps: GetWalletSigProps = {
           chain: request.chain,
-          resourceAbilityRequests: [{
-            resource: 'encryption' as ILitResource,
-            ability: 'save' as LitAbility
-          }]
-        });
+          sessionCapabilityObject: {
+            capabilities: [{
+              resource: 'encryption' as ILitResource,
+              ability: 'save' as LitAbility
+            }]
+          },
+          expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          sessionKey: {
+            publicKey: '',
+            secretKey: ''
+          },
+          sessionKeyUri: '',
+          nonce: Math.random().toString(36).substring(7)
+        };
+
+        request.authSig = await this.client.getWalletSig(walletSigProps);
       }
 
       // Save encryption key with access control conditions
@@ -117,13 +129,24 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        request.authSig = await this.client.getWalletSig({
+        const walletSigProps: GetWalletSigProps = {
           chain: request.chain,
-          resourceAbilityRequests: [{
-            resource: 'encryption' as ILitResource,
-            ability: 'decrypt' as LitAbility
-          }]
-        });
+          sessionCapabilityObject: {
+            capabilities: [{
+              resource: 'encryption' as ILitResource,
+              ability: 'decrypt' as LitAbility
+            }]
+          },
+          expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          sessionKey: {
+            publicKey: '',
+            secretKey: ''
+          },
+          sessionKeyUri: '',
+          nonce: Math.random().toString(36).substring(7)
+        };
+
+        request.authSig = await this.client.getWalletSig(walletSigProps);
       }
 
       // Get encryption key if access conditions are met
