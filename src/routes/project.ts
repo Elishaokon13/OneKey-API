@@ -32,7 +32,11 @@ export const handlers = {
 
       res.status(201).json(project);
     } catch (error) {
-      next(error);
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: error.message });
+      } else {
+        next(error);
+      }
     }
   },
 
@@ -49,9 +53,9 @@ export const handlers = {
     } catch (error) {
       if (error instanceof NotFoundError) {
         res.status(404).json({ error: error.message });
-      } else {
-        next(error);
+        return;
       }
+      next(error);
     }
   },
 
@@ -68,11 +72,13 @@ export const handlers = {
     } catch (error) {
       if (error instanceof NotFoundError) {
         res.status(404).json({ error: error.message });
-      } else if (error instanceof ValidationError) {
-        res.status(400).json({ error: error.message });
-      } else {
-        next(error);
+        return;
       }
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      next(error);
     }
   },
 
@@ -87,6 +93,10 @@ export const handlers = {
       const projects = await projectService.getProjectsByOrganization(id);
       res.status(200).json(projects);
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
       next(error);
     }
   },
@@ -112,6 +122,14 @@ export const handlers = {
 
       res.status(201).json(apiKey);
     } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
       next(error);
     }
   },
@@ -127,6 +145,10 @@ export const handlers = {
       const apiKeys = await apiKeyService.getProjectApiKeys(id);
       res.status(200).json(apiKeys);
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
       next(error);
     }
   },
@@ -144,9 +166,9 @@ export const handlers = {
     } catch (error) {
       if (error instanceof NotFoundError) {
         res.status(404).json({ error: error.message });
-      } else {
-        next(error);
+        return;
       }
+      next(error);
     }
   },
 
@@ -163,9 +185,9 @@ export const handlers = {
     } catch (error) {
       if (error instanceof NotFoundError) {
         res.status(404).json({ error: error.message });
-      } else {
-        next(error);
+        return;
       }
+      next(error);
     }
   }
 };
