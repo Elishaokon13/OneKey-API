@@ -40,7 +40,17 @@ describe('Project Routes', () => {
       body: {},
       query: {},
       url: '',
-      method: ''
+      method: '',
+      user: {
+        id: 'user123',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        role: 'admin',
+        organizationId: 'org123',
+        createdAt: new Date('2025-07-06T01:29:26.221Z'),
+        updatedAt: new Date('2025-07-06T01:29:26.221Z')
+      }
     };
 
     mockRes = {
