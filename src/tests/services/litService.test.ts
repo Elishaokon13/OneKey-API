@@ -10,12 +10,12 @@ jest.mock('@lit-protocol/lit-node-client', () => {
       connect: jest.fn().mockResolvedValue(undefined),
       disconnect: jest.fn().mockResolvedValue(undefined),
       encrypt: jest.fn().mockResolvedValue({
-        encryptedString: 'mockEncryptedKey',
-        symmetricKey: new Uint8Array([1, 2, 3])
+        ciphertext: 'mockEncryptedKey',
+        key: new Uint8Array([1, 2, 3])
       }),
       decrypt: jest.fn().mockResolvedValue({
-        decryptedString: 'mockEncryptedKey',
-        symmetricKey: new Uint8Array([1, 2, 3])
+        decryptedData: 'mockEncryptedKey',
+        key: new Uint8Array([1, 2, 3])
       }),
       getWalletSig: jest.fn().mockResolvedValue({
         sig: 'mockSignature',
