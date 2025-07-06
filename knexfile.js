@@ -2,16 +2,31 @@
 require('ts-node/register');
 require('dotenv').config();
 
+const parseConnectionString = (connectionString) => {
+  if (!connectionString) return null;
+  
+  // Handle connection string with ssl parameter
+  const sslParam = connectionString.split('?')[1]?.split('&')
+    .find(param => param.startsWith('sslmode='));
+  
+  return {
+    connectionString,
+    ssl: sslParam === 'sslmode=disable' ? false : { rejectUnauthorized: false }
+  };
+};
+
 const baseConfig = {
   client: 'postgresql',
-  connection: process.env.SUPABASE_DB_URL || {
-    host: 'localhost',
-    port: 5432,
-    database: 'onekey_api',
-    user: 'postgres',
-    password: 'postgres',
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-  },
+  connection: process.env.DATABASE_URL ? 
+    parseConnectionString(process.env.DATABASE_URL) :
+    {
+      host: 'localhost',
+      port: 5432,
+      database: 'onekey_api',
+      user: 'postgres',
+      password: 'postgres',
+      ssl: false
+    },
   migrations: {
     directory: './src/migrations',
     extension: 'ts'
@@ -27,10 +42,6 @@ module.exports = {
     ...baseConfig
   },
   production: {
-    ...baseConfig,
-    connection: process.env.DATABASE_URL ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    } : baseConfig.connection
+    ...baseConfig
   }
 }; 
