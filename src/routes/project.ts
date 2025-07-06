@@ -42,7 +42,12 @@ router.get(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const project = await projectService.getProject(req.params.id);
+      const { id } = req.params;
+      if (!id) {
+        throw new ValidationError('Project ID is required');
+      }
+
+      const project = await projectService.getProject(id);
       res.json(project);
     } catch (error) {
       next(error);
@@ -55,10 +60,12 @@ router.put(
   '/:id',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const project = await projectService.updateProject(
-        req.params.id,
-        req.body
-      );
+      const { id } = req.params;
+      if (!id) {
+        throw new ValidationError('Project ID is required');
+      }
+
+      const project = await projectService.updateProject(id, req.body);
       res.json(project);
     } catch (error) {
       next(error);
@@ -71,9 +78,12 @@ router.get(
   '/organizations/:id/projects',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const projects = await projectService.getProjectsByOrganization(
-        req.params.id
-      );
+      const { id } = req.params;
+      if (!id) {
+        throw new ValidationError('Organization ID is required');
+      }
+
+      const projects = await projectService.getProjectsByOrganization(id);
       res.json(projects);
     } catch (error) {
       next(error);
@@ -86,15 +96,16 @@ router.post(
   '/:id/api-keys',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const { id } = req.params;
       const { name, type, permissions } = req.body;
       const userId = req.user?.id;
 
-      if (!name || !userId) {
+      if (!id || !name || !userId) {
         throw new ValidationError('Missing required fields');
       }
 
       const apiKey = await apiKeyService.createApiKey(
-        req.params.id,
+        id,
         name,
         type,
         permissions,
@@ -113,7 +124,12 @@ router.get(
   '/:id/api-keys',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const apiKeys = await apiKeyService.getProjectApiKeys(req.params.id);
+      const { id } = req.params;
+      if (!id) {
+        throw new ValidationError('Project ID is required');
+      }
+
+      const apiKeys = await apiKeyService.getProjectApiKeys(id);
       res.json(apiKeys);
     } catch (error) {
       next(error);
@@ -126,10 +142,12 @@ router.put(
   '/:id/settings',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const settings = await projectService.updateProjectSettings(
-        req.params.id,
-        req.body
-      );
+      const { id } = req.params;
+      if (!id) {
+        throw new ValidationError('Project ID is required');
+      }
+
+      const settings = await projectService.updateProjectSettings(id, req.body);
       res.json(settings);
     } catch (error) {
       next(error);
@@ -142,7 +160,12 @@ router.delete(
   '/:projectId/api-keys/:keyId',
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const apiKey = await apiKeyService.revokeApiKey(req.params.keyId);
+      const { keyId } = req.params;
+      if (!keyId) {
+        throw new ValidationError('API Key ID is required');
+      }
+
+      const apiKey = await apiKeyService.revokeApiKey(keyId);
       res.json(apiKey);
     } catch (error) {
       next(error);
