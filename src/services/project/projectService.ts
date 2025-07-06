@@ -52,9 +52,11 @@ export class ProjectService {
   }
 
   async updateProject(id: string, updates: Partial<Project>): Promise<Project> {
-    const allowedUpdates = ['name', 'metadata', 'status'];
-    const updateFields = Object.keys(updates).filter(key =>
-      allowedUpdates.includes(key) && updates[key] !== undefined
+    const allowedUpdates = ['name', 'metadata', 'status'] as const;
+    type AllowedUpdate = typeof allowedUpdates[number];
+
+    const updateFields = Object.keys(updates).filter((key): key is AllowedUpdate =>
+      allowedUpdates.includes(key as AllowedUpdate) && updates[key as keyof Project] !== undefined
     );
 
     if (updateFields.length === 0) {
@@ -65,7 +67,7 @@ export class ProjectService {
       .map((field, index) => `${this.toSnakeCase(field)} = $${index + 2}`)
       .join(', ');
 
-    const values = updateFields.map(field => updates[field]);
+    const values = updateFields.map(field => updates[field as keyof Project]);
 
     const result = await this.pool.query(
       `UPDATE projects
