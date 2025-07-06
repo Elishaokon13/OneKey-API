@@ -34,6 +34,7 @@ describe('ApiKeyService', () => {
     createdAt: new Date('2025-07-06T01:29:26.221Z'),
     updatedAt: new Date('2025-07-06T01:29:26.221Z'),
     lastUsedAt: undefined,
+    expiresAt: undefined,
     metadata: {}
   };
 
@@ -49,6 +50,7 @@ describe('ApiKeyService', () => {
     created_at: new Date('2025-07-06T01:29:26.221Z'),
     updated_at: new Date('2025-07-06T01:29:26.221Z'),
     last_used_at: null,
+    expires_at: null,
     metadata: {}
   };
 
@@ -59,11 +61,13 @@ describe('ApiKeyService', () => {
         .mockResolvedValueOnce({ rows: [{ count: 0 }] }) // Check existing keys
         .mockResolvedValueOnce({ rows: [dbApiKey] }); // Get created key
 
-      const result = await service.createApiKey('proj123', {
-        name: 'Test Key',
-        type: ApiKeyType.Secret,
-        permissions: ['read', 'write']
-      });
+      const result = await service.createApiKey(
+        'proj123',
+        'Test Key',
+        ApiKeyType.Secret,
+        ['read', 'write'],
+        'user123'
+      );
 
       expect(mockClient.query).toHaveBeenCalledTimes(3);
       expect(result.apiKey).toMatch(/^sk_/);
