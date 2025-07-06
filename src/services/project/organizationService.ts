@@ -27,10 +27,24 @@ export class OrganizationService {
 
       // Create organization
       const orgResult = await client.query(
-        `INSERT INTO organizations (name, slug, billing_email, status)
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [name, slug, billingEmail, OrganizationStatus.Active]
+        `INSERT INTO organizations (
+          name, 
+          slug, 
+          billing_email, 
+          status, 
+          subscription_tier, 
+          subscription_status
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *`,
+        [
+          name, 
+          slug, 
+          billingEmail, 
+          OrganizationStatus.Active,
+          'free', // Default subscription tier
+          'active' // Default subscription status
+        ]
       );
 
       // Add creator as owner
@@ -74,7 +88,15 @@ export class OrganizationService {
     id: string,
     updates: Partial<Organization>
   ): Promise<Organization> {
-    const allowedUpdates = ['name', 'billingEmail', 'status', 'metadata'];
+    const allowedUpdates = [
+      'name', 
+      'billingEmail', 
+      'status', 
+      'metadata',
+      'subscriptionTier',
+      'subscriptionStatus',
+      'subscriptionExpiresAt'
+    ];
     const updateFields = Object.keys(updates).filter(key => 
       allowedUpdates.includes(key) && updates[key] !== undefined
     );
