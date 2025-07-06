@@ -1,15 +1,16 @@
 // Import environment configuration
 require('ts-node/register');
+require('dotenv').config();
 
 const baseConfig = {
   client: 'postgresql',
-  connection: {
+  connection: process.env.DATABASE_URL || {
     host: 'localhost',
     port: 5432,
     database: 'onekey_api',
     user: 'postgres',
     password: 'postgres',
-    ssl: false
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   },
   migrations: {
     directory: './src/migrations',
@@ -27,9 +28,9 @@ module.exports = {
   },
   production: {
     ...baseConfig,
-    connection: {
-      ...baseConfig.connection,
+    connection: process.env.DATABASE_URL ? {
+      connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }
-    }
+    } : baseConfig.connection
   }
 }; 
