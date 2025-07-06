@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { ProjectService } from '../../services/project/projectService';
-import { ProjectStatus, ProjectType } from '../../types/project';
-import { DatabaseError, NotFoundError } from '../../utils/errors';
+import { ProjectType, ProjectStatus } from '../../types/project';
+import { DatabaseError, NotFoundError, ValidationError } from '../../utils/errors';
 
 // Mock the database pool
 jest.mock('pg', () => {
@@ -128,6 +128,11 @@ describe('ProjectService', () => {
 
       await expect(service.updateProject('123', { name: 'Updated' }))
         .rejects.toThrow(NotFoundError);
+    });
+
+    it('should throw ValidationError if no valid updates', async () => {
+      await expect(service.updateProject('123', {}))
+        .rejects.toThrow(ValidationError);
     });
   });
 
