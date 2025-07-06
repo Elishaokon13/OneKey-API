@@ -11,7 +11,16 @@ jest.mock('../../services/project/organizationService');
 jest.mock('../../services/project/apiKeyService');
 
 interface RequestWithUser extends Request {
-  user?: { id: string };
+  user?: {
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    role: string;
+    organizationId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
 }
 
 describe('Project Routes', () => {
