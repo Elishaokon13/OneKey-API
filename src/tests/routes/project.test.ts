@@ -4,7 +4,7 @@ import { OrganizationService } from '../../services/project/organizationService'
 import { ApiKeyService } from '../../services/project/apiKeyService';
 import { ProjectType, ProjectStatus, ApiKeyType, ApiKeyStatus } from '../../types/project';
 import { NotFoundError } from '../../utils/errors';
-import { projectRouter } from '../../routes/project';
+import { handlers } from '../../routes/project';
 
 jest.mock('../../services/project/projectService');
 jest.mock('../../services/project/organizationService');
@@ -167,8 +167,6 @@ describe('Project Routes', () => {
 
   describe('POST /api/projects', () => {
     it('should create a new project', async () => {
-      mockReq.url = '/api/projects';
-      mockReq.method = 'POST';
       mockReq.body = {
         name: 'Test Project',
         organizationId: 'org123',
@@ -177,31 +175,20 @@ describe('Project Routes', () => {
 
       mockProjectService.createProject.mockResolvedValueOnce(testProject);
 
-      const handler = projectRouter.stack.find(layer => 
-        layer.route?.path === '/' && 
-        layer.route?.methods.post
-      )?.route?.stack[0].handle;
-
-      if (!handler) {
-        throw new Error('Route handler not found');
-      }
-
-      await handler(mockReq as Request, mockRes as Response, mockNext);
+      await handlers.createProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(testProject);
     });
 
     it('should return 400 for invalid input', async () => {
-      mockReq.url = '/api/projects';
-      mockReq.method = 'POST';
       mockReq.body = {
         name: '', // Invalid: empty name
         organizationId: 'org123',
         type: 'invalid_type' // Invalid: wrong enum value
       };
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.createProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
     });
@@ -209,38 +196,20 @@ describe('Project Routes', () => {
 
   describe('GET /api/projects/:id', () => {
     it('should return project by id', async () => {
-      mockReq.url = '/api/projects/123';
-      mockReq.method = 'GET';
       mockReq.params = { id: '123' };
       mockProjectService.getProject.mockResolvedValueOnce(testProject);
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.getProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testProject);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.url = '/api/projects/999';
-      mockReq.method = 'GET';
       mockReq.params = { id: '999' };
-      mockReq.user = {
-        id: 'user123',
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        role: 'admin',
-        organizationId: 'org123',
-        createdAt: '2025-07-06T01:29:26.221Z',
-        updatedAt: '2025-07-06T01:29:26.221Z',
-        created_at: '2025-07-06T01:29:26.221Z',
-        updated_at: '2025-07-06T01:29:26.221Z',
-        is_active: true,
-        metadata: {}
-      };
       mockProjectService.getProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.getProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -248,8 +217,6 @@ describe('Project Routes', () => {
 
   describe('PUT /api/projects/:id', () => {
     it('should update project', async () => {
-      mockReq.url = '/api/projects/123';
-      mockReq.method = 'PUT';
       mockReq.params = { id: '123' };
       mockReq.body = {
         name: 'Updated Project',
@@ -264,19 +231,17 @@ describe('Project Routes', () => {
 
       mockProjectService.updateProject.mockResolvedValueOnce(updatedProject);
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.updateProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(updatedProject);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.url = '/api/projects/999';
-      mockReq.method = 'PUT';
       mockReq.params = { id: '999' };
       mockProjectService.updateProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.updateProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -284,12 +249,10 @@ describe('Project Routes', () => {
 
   describe('GET /api/organizations/:id/projects', () => {
     it('should return organization projects', async () => {
-      mockReq.url = '/api/organizations/org123/projects';
-      mockReq.method = 'GET';
       mockReq.params = { id: 'org123' };
       mockProjectService.getProjectsByOrganization.mockResolvedValueOnce(testProjects);
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.getOrganizationProjects(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testProjects);
@@ -298,24 +261,8 @@ describe('Project Routes', () => {
 
   describe('POST /api/projects/:id/api-keys', () => {
     it('should create API key', async () => {
-      mockReq.url = '/api/projects/proj123/api-keys';
-      mockReq.method = 'POST';
       mockReq.params = { id: 'proj123' };
       mockReq.body = { name: 'Test Key' };
-      mockReq.user = {
-        id: 'user123',
-        email: 'test@example.com',
-        firstName: 'Test',
-        lastName: 'User',
-        role: 'admin',
-        organizationId: 'org123',
-        createdAt: '2025-07-06T01:29:26.221Z',
-        updatedAt: '2025-07-06T01:29:26.221Z',
-        created_at: '2025-07-06T01:29:26.221Z',
-        updated_at: '2025-07-06T01:29:26.221Z',
-        is_active: true,
-        metadata: {}
-      };
 
       const apiKeyResponse = {
         apiKey: 'sk_test_123',
@@ -324,7 +271,7 @@ describe('Project Routes', () => {
 
       mockApiKeyService.createApiKey.mockResolvedValueOnce(apiKeyResponse);
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.createApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(apiKeyResponse);
@@ -333,12 +280,10 @@ describe('Project Routes', () => {
 
   describe('GET /api/projects/:id/api-keys', () => {
     it('should return project API keys', async () => {
-      mockReq.url = '/api/projects/proj123/api-keys';
-      mockReq.method = 'GET';
       mockReq.params = { id: 'proj123' };
       mockApiKeyService.getProjectApiKeys.mockResolvedValueOnce(testApiKeys);
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.getProjectApiKeys(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testApiKeys);
@@ -347,8 +292,6 @@ describe('Project Routes', () => {
 
   describe('PUT /api/projects/:id/settings', () => {
     it('should update project settings', async () => {
-      mockReq.url = '/api/projects/123/settings';
-      mockReq.method = 'PUT';
       mockReq.params = { id: '123' };
       mockReq.body = {
         webhookUrl: 'https://example.com/webhook',
@@ -358,19 +301,17 @@ describe('Project Routes', () => {
 
       mockProjectService.updateProjectSettings.mockResolvedValueOnce(testSettings);
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testSettings);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.url = '/api/projects/999/settings';
-      mockReq.method = 'PUT';
       mockReq.params = { id: '999' };
       mockProjectService.updateProjectSettings.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
@@ -378,24 +319,20 @@ describe('Project Routes', () => {
 
   describe('DELETE /api/projects/:projectId/api-keys/:keyId', () => {
     it('should revoke API key', async () => {
-      mockReq.url = '/api/projects/proj123/api-keys/123';
-      mockReq.method = 'DELETE';
       mockReq.params = { projectId: 'proj123', keyId: '123' };
       mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKey);
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith(testApiKey);
     });
 
     it('should return 404 for non-existent API key', async () => {
-      mockReq.url = '/api/projects/proj123/api-keys/999';
-      mockReq.method = 'DELETE';
       mockReq.params = { projectId: 'proj123', keyId: '999' };
       mockApiKeyService.revokeApiKey.mockRejectedValueOnce(new NotFoundError('API key not found'));
 
-      await projectRouter(mockReq as RequestWithUser, mockRes as Response, mockNext);
+      await handlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
     });
