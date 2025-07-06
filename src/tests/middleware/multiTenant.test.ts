@@ -59,8 +59,7 @@ describe('MultiTenantMiddleware', () => {
     } as unknown as jest.Mocked<ProjectService>;
 
     // Create middleware instance with mocked dependencies
-    const mockPool = {} as Pool;
-    middleware = new MultiTenantMiddleware(mockPool);
+    middleware = new MultiTenantMiddleware(mockProjectService);
 
     // Setup request mock
     mockReq = {
@@ -82,7 +81,6 @@ describe('MultiTenantMiddleware', () => {
     mockNext = jest.fn();
 
     // Mock ProjectService.getProject to return testProject by default
-    (ProjectService as jest.Mock).mockImplementation(() => mockProjectService);
     mockProjectService.getProject.mockResolvedValue(testProject);
   });
 
