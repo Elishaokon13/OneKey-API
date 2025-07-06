@@ -212,6 +212,20 @@ describe('Project Routes', () => {
       mockReq.url = '/api/projects/999';
       mockReq.method = 'GET';
       mockReq.params = { id: '999' };
+      mockReq.user = {
+        id: 'user123',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        role: 'admin',
+        organizationId: 'org123',
+        createdAt: new Date('2025-07-06T01:29:26.221Z'),
+        updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+        created_at: new Date('2025-07-06T01:29:26.221Z'),
+        updated_at: new Date('2025-07-06T01:29:26.221Z'),
+        is_active: true,
+        metadata: {}
+      };
       mockProjectService.getProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
       await projectRouter(mockReq as RequestWithUser, mockRes as Response, jest.fn());
