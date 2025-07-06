@@ -2,7 +2,7 @@
 // Handles access control and key sharing for encrypted data
 
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
-import { ethers } from 'ethers';
+import { LIT_NETWORKS } from '@lit-protocol/constants';
 import {
   LitConfig,
   LitNetwork,
@@ -15,7 +15,7 @@ import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 
 export class LitService {
-  private client: LitNodeClient;
+  private client!: LitNodeClient;
   private isInitialized: boolean = false;
   private readonly config: LitConfig;
 
@@ -25,8 +25,8 @@ export class LitService {
       debug: litConfig?.debug || false,
       minNodeCount: litConfig?.minNodeCount || 10,
       maxNodeCount: litConfig?.maxNodeCount || 15,
-      bootstrapUrls: litConfig?.bootstrapUrls,
-      fallbackBootstrapUrls: litConfig?.fallbackBootstrapUrls
+      bootstrapUrls: litConfig?.bootstrapUrls || [],
+      fallbackBootstrapUrls: litConfig?.fallbackBootstrapUrls || []
     };
   }
 
@@ -45,7 +45,7 @@ export class LitService {
       });
 
       this.client = new LitNodeClient({
-        litNetwork: this.config.network,
+        litNetwork: LIT_NETWORKS[this.config.network],
         debug: this.config.debug,
         minNodeCount: this.config.minNodeCount,
         maxNodeCount: this.config.maxNodeCount,
@@ -75,18 +75,32 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        request.authSig = await this.client.generateAuthSig();
+        request.authSig = await this.client.getWalletSig({
+          chain: request.chain,
+          resourceAbilityRequests: [{
+            resource: 'encryption',
+            ability: 'save'
+          }]
+        });
       }
 
       // Save encryption key with access control conditions
-      const response = await this.client.saveEncryptionKey(request);
+      const response = await this.client.encrypt({
+        accessControlConditions: request.accessControlConditions,
+        chain: request.chain,
+        authSig: request.authSig,
+        permanent: request.permanent
+      });
 
       logger.info('Encryption key saved successfully', {
         chain: request.chain,
         conditions: request.accessControlConditions.length
       });
 
-      return response;
+      return {
+        encryptedSymmetricKey: response.encryptedString,
+        symmetricKey: response.symmetricKey
+      };
     } catch (error) {
       logger.error('Failed to save encryption key', { error });
       throw this.wrapError(error, 'SAVE_KEY_FAILED');
@@ -105,18 +119,32 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        request.authSig = await this.client.generateAuthSig();
+        request.authSig = await this.client.getWalletSig({
+          chain: request.chain,
+          resourceAbilityRequests: [{
+            resource: 'encryption',
+            ability: 'decrypt'
+          }]
+        });
       }
 
       // Get encryption key if access conditions are met
-      const response = await this.client.getEncryptionKey(request);
+      const response = await this.client.decrypt({
+        accessControlConditions: request.accessControlConditions,
+        chain: request.chain,
+        authSig: request.authSig,
+        toDecrypt: request.encryptedSymmetricKey
+      });
 
       logger.info('Encryption key retrieved successfully', {
         chain: request.chain,
         conditions: request.accessControlConditions.length
       });
 
-      return response;
+      return {
+        encryptedSymmetricKey: response.decryptedString,
+        symmetricKey: response.symmetricKey
+      };
     } catch (error) {
       logger.error('Failed to get encryption key', { error });
       throw this.wrapError(error, 'GET_KEY_FAILED');
