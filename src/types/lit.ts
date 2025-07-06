@@ -1,12 +1,11 @@
 // OneKey KYC API - Lit Protocol Types
 import { LIT_NETWORKS } from '@lit-protocol/constants';
 import { 
-  ILitResource,
-  LitAbility,
   ISessionCapabilityObject,
   GetWalletSigProps,
   EncryptSdkParams,
-  DecryptRequest
+  DecryptRequest,
+  AccessControlConditions
 } from '@lit-protocol/types';
 
 export type LitNetwork = keyof typeof LIT_NETWORKS;
@@ -20,7 +19,7 @@ export interface LitConfig {
   fallbackBootstrapUrls: string[];
 }
 
-export interface AccessControlCondition {
+export type AccessControlCondition = {
   contractAddress: string;
   standardContractType: string;
   chain: string;
@@ -30,7 +29,7 @@ export interface AccessControlCondition {
     comparator: string;
     value: string;
   };
-}
+};
 
 export interface EncryptionKeyRequest {
   accessControlConditions: AccessControlCondition[];
@@ -51,7 +50,7 @@ export interface LitError extends Error {
 }
 
 // Re-export SDK types
-export { ILitResource, LitAbility, ISessionCapabilityObject, GetWalletSigProps, EncryptSdkParams, DecryptRequest };
+export { ISessionCapabilityObject, GetWalletSigProps, EncryptSdkParams, DecryptRequest };
 
 // Import the actual LitNodeClient type from the package
 import { LitNodeClient as ActualLitNodeClient } from '@lit-protocol/lit-node-client';

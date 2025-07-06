@@ -1,7 +1,6 @@
 import { LitService } from '../../services/encryption/litService';
 import { LitNetwork, EncryptionKeyRequest } from '../../types/lit';
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
-import { LitAbility } from '@lit-protocol/types';
 import { config } from '../../config/environment';
 
 // Mock LitNodeClient
@@ -12,11 +11,11 @@ jest.mock('@lit-protocol/lit-node-client', () => {
       disconnect: jest.fn().mockResolvedValue(undefined),
       encrypt: jest.fn().mockResolvedValue({
         ciphertext: 'mockEncryptedKey',
-        key: new Uint8Array([1, 2, 3])
+        encryptedSymmetricKey: new Uint8Array([1, 2, 3])
       }),
       decrypt: jest.fn().mockResolvedValue({
         decryptedData: 'mockEncryptedKey',
-        key: new Uint8Array([1, 2, 3])
+        decryptedSymmetricKey: new Uint8Array([1, 2, 3])
       }),
       getWalletSig: jest.fn().mockResolvedValue({
         sig: 'mockSignature',
@@ -103,7 +102,22 @@ describe('LitService', () => {
         expect.objectContaining({
           chain: mockRequest.chain,
           sessionCapabilityObject: expect.objectContaining({
-            allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
+            capabilities: expect.arrayContaining([
+              expect.objectContaining({
+                action: 'encryption-sign',
+                resource: expect.objectContaining({
+                  path: '/*',
+                  protocol: 'lit'
+                })
+              }),
+              expect.objectContaining({
+                action: 'encryption-decrypt',
+                resource: expect.objectContaining({
+                  path: '/*',
+                  protocol: 'lit'
+                })
+              })
+            ]),
             maxOperations: 100
           })
         })
@@ -163,7 +177,22 @@ describe('LitService', () => {
         expect.objectContaining({
           chain: mockRequest.chain,
           sessionCapabilityObject: expect.objectContaining({
-            allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
+            capabilities: expect.arrayContaining([
+              expect.objectContaining({
+                action: 'encryption-sign',
+                resource: expect.objectContaining({
+                  path: '/*',
+                  protocol: 'lit'
+                })
+              }),
+              expect.objectContaining({
+                action: 'encryption-decrypt',
+                resource: expect.objectContaining({
+                  path: '/*',
+                  protocol: 'lit'
+                })
+              })
+            ]),
             maxOperations: 100
           })
         })

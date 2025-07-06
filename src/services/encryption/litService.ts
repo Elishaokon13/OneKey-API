@@ -4,13 +4,14 @@
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LIT_NETWORKS } from '@lit-protocol/constants';
 import {
-  LitAbility,
-  ILitResource,
   LitNodeClientConfig,
   GetWalletSigProps,
   EncryptSdkParams,
   DecryptRequest,
-  ISessionCapabilityObject
+  ISessionCapabilityObject,
+  AccessControlConditions,
+  Chain,
+  LitResourceAbilityRequest
 } from '@lit-protocol/types';
 import {
   LitConfig,
@@ -82,22 +83,29 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        const sessionCapabilityObject: ISessionCapabilityObject = {
-          allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
-          maxOperations: 100,
-          validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        };
+        const resourceAbilityRequests: LitResourceAbilityRequest[] = [{
+          resource: {
+            path: '/*',
+            protocol: 'lit',
+            actions: ['encryption-sign', 'encryption-decrypt']
+          },
+          ability: 'encryption-sign'
+        }];
 
         const walletSigProps: GetWalletSigProps = {
-          chain: request.chain,
-          sessionCapabilityObject,
+          chain: request.chain as Chain,
+          sessionCapabilityObject: {
+            maxOperations: 100,
+            validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+          },
           expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           sessionKey: {
             publicKey: '',
             secretKey: ''
           },
           sessionKeyUri: '',
-          nonce: Math.random().toString(36).substring(7)
+          nonce: Math.random().toString(36).substring(7),
+          resourceAbilityRequests
         };
 
         request.authSig = await this.client.getWalletSig(walletSigProps);
@@ -105,9 +113,8 @@ export class LitService {
 
       // Save encryption key with access control conditions
       const encryptParams: EncryptSdkParams = {
-        accessControlConditions: request.accessControlConditions,
-        authSig: request.authSig,
-        permanent: request.permanent
+        accessControlConditions: request.accessControlConditions as unknown as AccessControlConditions,
+        dataToEncrypt: new Uint8Array(Buffer.from(request.encryptedSymmetricKey || '', 'utf8'))
       };
 
       const response = await this.client.encrypt(encryptParams);
@@ -118,8 +125,8 @@ export class LitService {
       });
 
       return {
-        encryptedSymmetricKey: response.ciphertext,
-        symmetricKey: response.key
+        encryptedSymmetricKey: Buffer.from(response.ciphertext).toString('base64'),
+        symmetricKey: new Uint8Array(Buffer.from(response.ciphertext, 'base64'))
       };
     } catch (error) {
       logger.error('Failed to save encryption key', { error });
@@ -139,22 +146,29 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
-        const sessionCapabilityObject: ISessionCapabilityObject = {
-          allowedActions: [LitAbility.EncryptionSign, LitAbility.EncryptionDecrypt],
-          maxOperations: 100,
-          validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-        };
+        const resourceAbilityRequests: LitResourceAbilityRequest[] = [{
+          resource: {
+            path: '/*',
+            protocol: 'lit',
+            actions: ['encryption-sign', 'encryption-decrypt']
+          },
+          ability: 'encryption-decrypt'
+        }];
 
         const walletSigProps: GetWalletSigProps = {
-          chain: request.chain,
-          sessionCapabilityObject,
+          chain: request.chain as Chain,
+          sessionCapabilityObject: {
+            maxOperations: 100,
+            validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+          },
           expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           sessionKey: {
             publicKey: '',
             secretKey: ''
           },
           sessionKeyUri: '',
-          nonce: Math.random().toString(36).substring(7)
+          nonce: Math.random().toString(36).substring(7),
+          resourceAbilityRequests
         };
 
         request.authSig = await this.client.getWalletSig(walletSigProps);
@@ -162,9 +176,10 @@ export class LitService {
 
       // Get encryption key if access conditions are met
       const decryptParams: DecryptRequest = {
-        accessControlConditions: request.accessControlConditions,
-        authSig: request.authSig,
-        ciphertext: request.encryptedSymmetricKey!
+        accessControlConditions: request.accessControlConditions as unknown as AccessControlConditions,
+        chain: request.chain as Chain,
+        ciphertext: request.encryptedSymmetricKey!,
+        dataToEncryptHash: Buffer.from('').toString('hex')
       };
 
       const response = await this.client.decrypt(decryptParams);
@@ -174,9 +189,10 @@ export class LitService {
         conditions: request.accessControlConditions.length
       });
 
+      const decryptedData = Buffer.from(response.decryptedData).toString('base64');
       return {
-        encryptedSymmetricKey: response.decryptedData,
-        symmetricKey: response.key
+        encryptedSymmetricKey: decryptedData,
+        symmetricKey: new Uint8Array(Buffer.from(decryptedData, 'base64'))
       };
     } catch (error) {
       logger.error('Failed to get encryption key', { error });
