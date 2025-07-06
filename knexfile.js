@@ -1,9 +1,16 @@
 // Import environment configuration
 require('ts-node/register');
-const { config } = require('./src/config/environment');
 
 const baseConfig = {
   client: 'postgresql',
+  connection: {
+    host: 'localhost',
+    port: 5432,
+    database: 'onekey_api',
+    user: 'postgres',
+    password: 'postgres',
+    ssl: false
+  },
   migrations: {
     directory: './src/migrations',
     extension: 'ts'
@@ -12,24 +19,12 @@ const baseConfig = {
 
 module.exports = {
   development: {
-    ...baseConfig,
-    connection: {
-      host: config.database.host,
-      port: config.database.port,
-      database: config.database.name,
-      user: config.database.user,
-      password: config.database.password,
-      ssl: false
-    }
+    ...baseConfig
   },
   production: {
     ...baseConfig,
     connection: {
-      host: config.database.host,
-      port: config.database.port,
-      database: config.database.name,
-      user: config.database.user,
-      password: config.database.password,
+      ...baseConfig.connection,
       ssl: { rejectUnauthorized: false }
     }
   }
