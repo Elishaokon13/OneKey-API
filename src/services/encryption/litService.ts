@@ -3,7 +3,15 @@
 
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LIT_NETWORKS } from '@lit-protocol/constants';
-import { LitAbility, ILitResource, LitNodeClientConfig, GetWalletSigProps } from '@lit-protocol/types';
+import {
+  LitAbility,
+  ILitResource,
+  LitNodeClientConfig,
+  GetWalletSigProps,
+  EncryptSdkParams,
+  DecryptRequest,
+  ISessionCapabilityObject
+} from '@lit-protocol/types';
 import {
   LitConfig,
   LitNetwork,
@@ -47,7 +55,7 @@ export class LitService {
 
       const clientConfig: LitNodeClientConfig = {
         litNetwork: this.config.network as keyof typeof LIT_NETWORKS,
-        debug: this.config.debug,
+        debug: this.config.debug || false,
         minNodeCount: this.config.minNodeCount || 10
       };
 
@@ -74,14 +82,15 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
+        const sessionCapabilityObject: ISessionCapabilityObject = {
+          allowedActions: ['encrypt', 'decrypt'],
+          maxOperations: 100,
+          validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        };
+
         const walletSigProps: GetWalletSigProps = {
           chain: request.chain,
-          sessionCapabilityObject: {
-            capabilities: [{
-              resource: 'encryption' as ILitResource,
-              ability: 'save' as LitAbility
-            }]
-          },
+          sessionCapabilityObject,
           expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           sessionKey: {
             publicKey: '',
@@ -95,12 +104,13 @@ export class LitService {
       }
 
       // Save encryption key with access control conditions
-      const response = await this.client.encrypt({
+      const encryptParams: EncryptSdkParams = {
         accessControlConditions: request.accessControlConditions as any,
-        chain: request.chain,
         authSig: request.authSig,
         permanent: request.permanent
-      });
+      };
+
+      const response = await this.client.encrypt(encryptParams);
 
       logger.info('Encryption key saved successfully', {
         chain: request.chain,
@@ -129,14 +139,15 @@ export class LitService {
 
       // Generate auth signature if not provided
       if (!request.authSig) {
+        const sessionCapabilityObject: ISessionCapabilityObject = {
+          allowedActions: ['encrypt', 'decrypt'],
+          maxOperations: 100,
+          validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        };
+
         const walletSigProps: GetWalletSigProps = {
           chain: request.chain,
-          sessionCapabilityObject: {
-            capabilities: [{
-              resource: 'encryption' as ILitResource,
-              ability: 'decrypt' as LitAbility
-            }]
-          },
+          sessionCapabilityObject,
           expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
           sessionKey: {
             publicKey: '',
@@ -150,12 +161,13 @@ export class LitService {
       }
 
       // Get encryption key if access conditions are met
-      const response = await this.client.decrypt({
+      const decryptParams: DecryptRequest = {
         accessControlConditions: request.accessControlConditions as any,
-        chain: request.chain,
         authSig: request.authSig,
-        toDecrypt: request.encryptedSymmetricKey
-      });
+        ciphertext: request.encryptedSymmetricKey
+      };
+
+      const response = await this.client.decrypt(decryptParams);
 
       logger.info('Encryption key retrieved successfully', {
         chain: request.chain,
