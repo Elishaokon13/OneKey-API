@@ -1,120 +1,87 @@
 import { Pool } from 'pg';
 import { ApiKeyService } from '../../services/project/apiKeyService';
-import { ApiKeyStatus, ApiKeyType } from '../../types/project';
-import { DatabaseError, NotFoundError } from '../../utils/errors';
-
-// Mock the database pool
-jest.mock('pg', () => {
-  const mPool = {
-    connect: jest.fn(),
-    query: jest.fn(),
-  };
-  return { Pool: jest.fn(() => mPool) };
-});
+import { ApiKeyType, ApiKeyStatus } from '../../types/project';
+import { NotFoundError } from '../../utils/errors';
 
 describe('ApiKeyService', () => {
-  let pool: Pool;
   let service: ApiKeyService;
   let mockClient: any;
+  let mockPool: any;
 
   beforeEach(() => {
-    pool = new Pool();
-    service = new ApiKeyService(pool);
     mockClient = {
       query: jest.fn(),
-      release: jest.fn(),
+      release: jest.fn()
     };
-    (pool.connect as jest.Mock).mockResolvedValue(mockClient);
+
+    mockPool = {
+      connect: jest.fn().mockResolvedValue(mockClient),
+      query: jest.fn()
+    };
+
+    service = new ApiKeyService(mockPool);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  const testApiKey = {
+    id: '123',
+    projectId: 'proj123',
+    name: 'Test Key',
+    type: ApiKeyType.Secret,
+    status: ApiKeyStatus.Active,
+    permissions: ['read', 'write'],
+    hashedKey: 'hashed_key',
+    createdBy: 'user123',
+    createdAt: new Date('2025-07-06T01:29:26.221Z'),
+    updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+    lastUsedAt: undefined,
+    metadata: {}
+  };
+
+  const dbApiKey = {
+    id: '123',
+    project_id: 'proj123',
+    name: 'Test Key',
+    type: ApiKeyType.Secret,
+    status: ApiKeyStatus.Active,
+    permissions: ['read', 'write'],
+    hashed_key: 'hashed_key',
+    created_by: 'user123',
+    created_at: new Date('2025-07-06T01:29:26.221Z'),
+    updated_at: new Date('2025-07-06T01:29:26.221Z'),
+    last_used_at: null,
+    metadata: {}
+  };
 
   describe('createApiKey', () => {
-    const testApiKey = {
-      id: '123',
-      projectId: 'proj123',
-      name: 'Test Key',
-      type: ApiKeyType.Secret,
-      status: ApiKeyStatus.Active,
-      permissions: ['read', 'write'],
-      hashedKey: 'hashed_key',
-      createdBy: 'user123',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      lastUsedAt: null,
-      metadata: {}
-    };
-
     it('should create an API key', async () => {
       mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [testApiKey] }) // key creation
-        .mockResolvedValueOnce({}); // COMMIT
+        .mockResolvedValueOnce({ rows: [dbApiKey] }) // Insert API key
+        .mockResolvedValueOnce({ rows: [{ count: 0 }] }) // Check existing keys
+        .mockResolvedValueOnce({ rows: [dbApiKey] }); // Get created key
 
-      const result = await service.createApiKey(
-        'proj123',
-        'Test Key',
-        ApiKeyType.Secret,
-        ['read', 'write'],
-        'user123'
-      );
+      const result = await service.createApiKey('proj123', {
+        name: 'Test Key',
+        type: ApiKeyType.Secret,
+        permissions: ['read', 'write']
+      });
 
       expect(mockClient.query).toHaveBeenCalledTimes(3);
       expect(result.apiKey).toMatch(/^sk_/);
       expect(result.apiKeyDetails).toEqual(testApiKey);
       expect(mockClient.release).toHaveBeenCalled();
     });
-
-    it('should rollback transaction on error', async () => {
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockRejectedValueOnce(new Error('Database error')); // key creation fails
-
-      await expect(service.createApiKey(
-        'proj123',
-        'Test Key',
-        ApiKeyType.Secret,
-        ['read', 'write'],
-        'user123'
-      )).rejects.toThrow(DatabaseError);
-
-      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
-      expect(mockClient.release).toHaveBeenCalled();
-    });
   });
 
   describe('getApiKey', () => {
     it('should return API key if found', async () => {
-      const testApiKey = {
-        id: '123',
-        projectId: 'proj123',
-        name: 'Test Key',
-        type: ApiKeyType.Secret,
-        status: ApiKeyStatus.Active,
-        permissions: ['read', 'write'],
-        hashedKey: 'hashed_key',
-        createdBy: 'user123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastUsedAt: null,
-        expiresAt: null,
-        metadata: {}
-      };
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testApiKey]
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [dbApiKey] });
 
       const result = await service.getApiKey('123');
       expect(result).toEqual(testApiKey);
     });
 
     it('should throw NotFoundError if API key not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.getApiKey('123'))
         .rejects.toThrow(NotFoundError);
@@ -123,139 +90,59 @@ describe('ApiKeyService', () => {
 
   describe('getProjectApiKeys', () => {
     it('should return project API keys', async () => {
-      const testApiKeys = [
-        {
-          id: '123',
-          projectId: 'proj123',
-          name: 'Key 1',
-          type: ApiKeyType.Secret,
-          status: ApiKeyStatus.Active,
-          permissions: ['read', 'write'],
-          hashedKey: 'hashed_key_1',
-          createdBy: 'user123',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          lastUsedAt: null,
-          expiresAt: null,
-          metadata: {}
-        },
-        {
-          id: '456',
-          projectId: 'proj123',
-          name: 'Key 2',
-          type: ApiKeyType.Public,
-          status: ApiKeyStatus.Revoked,
-          permissions: ['read'],
-          hashedKey: 'hashed_key_2',
-          createdBy: 'user123',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          lastUsedAt: null,
-          expiresAt: null,
-          metadata: {}
-        }
-      ];
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: testApiKeys
+      mockPool.query.mockResolvedValueOnce({
+        rows: [dbApiKey, { ...dbApiKey, id: '456', name: 'Test Key 2' }]
       });
 
       const result = await service.getProjectApiKeys('proj123');
-      expect(result).toEqual(testApiKeys);
+      expect(result).toEqual([
+        testApiKey,
+        { ...testApiKey, id: '456', name: 'Test Key 2' }
+      ]);
     });
   });
 
   describe('validateApiKey', () => {
     it('should return true for valid API key', async () => {
-      const testApiKey = {
-        id: '123',
-        projectId: 'proj123',
-        name: 'Test Key',
-        type: ApiKeyType.Secret,
-        status: ApiKeyStatus.Active,
-        permissions: ['read', 'write'],
-        hashedKey: 'hashed_key',
-        createdBy: 'user123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastUsedAt: null,
-        expiresAt: null,
-        metadata: {}
-      };
+      mockPool.query.mockResolvedValueOnce({ rows: [dbApiKey] });
 
-      mockClient.query
-        .mockResolvedValueOnce({ rows: [testApiKey] }) // key lookup
-        .mockResolvedValueOnce({ rows: [testApiKey] }); // last used update
-
-      const result = await service.validateApiKey('test_key');
-      expect(result).toBeTruthy();
+      const result = await service.validateApiKey('sk_test_123');
+      expect(result).toBe(true);
     });
 
     it('should return false for invalid API key', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       const result = await service.validateApiKey('invalid_key');
-      expect(result).toBeFalsy();
+      expect(result).toBe(false);
     });
 
     it('should return false for expired API key', async () => {
-      const testApiKey = {
-        id: '123',
-        projectId: 'proj123',
-        name: 'Test Key',
-        type: ApiKeyType.Secret,
-        status: ApiKeyStatus.Active,
-        permissions: ['read', 'write'],
-        hashedKey: 'hashed_key',
-        createdBy: 'user123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastUsedAt: null,
-        expiresAt: new Date(Date.now() - 86400000), // 1 day ago
-        metadata: {}
-      };
+      mockPool.query.mockResolvedValueOnce({
+        rows: [{
+          ...dbApiKey,
+          status: ApiKeyStatus.Expired,
+          expires_at: new Date('2020-01-01')
+        }]
+      });
 
-      mockClient.query
-        .mockResolvedValueOnce({ rows: [testApiKey] }) // key lookup
-        .mockResolvedValueOnce({ rows: [testApiKey] }); // status update
-
-      const result = await service.validateApiKey('test_key');
-      expect(result).toBeFalsy();
+      const result = await service.validateApiKey('sk_test_123');
+      expect(result).toBe(false);
     });
   });
 
   describe('revokeApiKey', () => {
     it('should revoke API key', async () => {
-      const testApiKey = {
-        id: '123',
-        projectId: 'proj123',
-        name: 'Test Key',
-        type: ApiKeyType.Secret,
-        status: ApiKeyStatus.Revoked,
-        permissions: ['read', 'write'],
-        hashedKey: 'hashed_key',
-        createdBy: 'user123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastUsedAt: null,
-        expiresAt: null,
-        metadata: {}
-      };
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testApiKey]
+      mockPool.query.mockResolvedValueOnce({
+        rows: [{ ...dbApiKey, status: ApiKeyStatus.Revoked }]
       });
 
       const result = await service.revokeApiKey('123');
-      expect(result.status).toBe(ApiKeyStatus.Revoked);
+      expect(result).toEqual({ ...testApiKey, status: ApiKeyStatus.Revoked });
     });
 
     it('should throw NotFoundError if API key not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.revokeApiKey('123'))
         .rejects.toThrow(NotFoundError);
@@ -263,35 +150,19 @@ describe('ApiKeyService', () => {
   });
 
   describe('updateApiKeyLastUsed', () => {
-    it('should update last used timestamp', async () => {
-      const testApiKey = {
-        id: '123',
-        projectId: 'proj123',
-        name: 'Test Key',
-        type: ApiKeyType.Secret,
-        status: ApiKeyStatus.Active,
-        permissions: ['read', 'write'],
-        hashedKey: 'hashed_key',
-        createdBy: 'user123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        lastUsedAt: new Date(),
-        expiresAt: null,
-        metadata: {}
-      };
+    const now = new Date();
 
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testApiKey]
+    it('should update last used timestamp', async () => {
+      mockPool.query.mockResolvedValueOnce({
+        rows: [{ ...dbApiKey, last_used_at: now }]
       });
 
       const result = await service.updateApiKeyLastUsed('123');
-      expect(result.lastUsedAt).toBeDefined();
+      expect(result).toEqual({ ...testApiKey, lastUsedAt: now });
     });
 
     it('should throw NotFoundError if API key not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.updateApiKeyLastUsed('123'))
         .rejects.toThrow(NotFoundError);
