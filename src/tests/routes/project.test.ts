@@ -18,10 +18,10 @@ interface RequestWithUser extends Request {
     lastName?: string;
     role: string;
     organizationId: string;
-    createdAt: Date;
-    updatedAt: Date;
-    created_at: Date;
-    updated_at: Date;
+    createdAt: string;
+    updatedAt: string;
+    created_at: string;
+    updated_at: string;
     is_active: boolean;
     metadata: Record<string, any>;
   };
@@ -52,10 +52,10 @@ describe('Project Routes', () => {
         lastName: 'User',
         role: 'admin',
         organizationId: 'org123',
-        createdAt: new Date('2025-07-06T01:29:26.221Z'),
-        updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-        created_at: new Date('2025-07-06T01:29:26.221Z'),
-        updated_at: new Date('2025-07-06T01:29:26.221Z'),
+        createdAt: '2025-07-06T01:29:26.221Z',
+        updatedAt: '2025-07-06T01:29:26.221Z',
+        created_at: '2025-07-06T01:29:26.221Z',
+        updated_at: '2025-07-06T01:29:26.221Z',
         is_active: true,
         metadata: {}
       }
@@ -219,10 +219,10 @@ describe('Project Routes', () => {
         lastName: 'User',
         role: 'admin',
         organizationId: 'org123',
-        createdAt: new Date('2025-07-06T01:29:26.221Z'),
-        updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-        created_at: new Date('2025-07-06T01:29:26.221Z'),
-        updated_at: new Date('2025-07-06T01:29:26.221Z'),
+        createdAt: '2025-07-06T01:29:26.221Z',
+        updatedAt: '2025-07-06T01:29:26.221Z',
+        created_at: '2025-07-06T01:29:26.221Z',
+        updated_at: '2025-07-06T01:29:26.221Z',
         is_active: true,
         metadata: {}
       };
