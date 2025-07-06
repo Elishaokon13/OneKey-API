@@ -290,7 +290,20 @@ describe('Project Routes', () => {
       mockReq.method = 'POST';
       mockReq.params = { id: 'proj123' };
       mockReq.body = { name: 'Test Key' };
-      mockReq.user = { id: 'user123' };
+      mockReq.user = {
+        id: 'user123',
+        email: 'test@example.com',
+        firstName: 'Test',
+        lastName: 'User',
+        role: 'admin',
+        organizationId: 'org123',
+        createdAt: '2025-07-06T01:29:26.221Z',
+        updatedAt: '2025-07-06T01:29:26.221Z',
+        created_at: '2025-07-06T01:29:26.221Z',
+        updated_at: '2025-07-06T01:29:26.221Z',
+        is_active: true,
+        metadata: {}
+      };
 
       const apiKeyResponse = {
         apiKey: 'sk_test_123',
