@@ -158,15 +158,20 @@ describe('ProjectService', () => {
         .mockResolvedValueOnce({}); // COMMIT
 
       const result = await service.updateProjectSettings('123', settings);
-      expect(result.webhookUrl).toBe(settings.webhookUrl);
-      expect(result.allowedOrigins).toEqual(settings.allowedOrigins);
-      expect(result.customSettings).toEqual(settings.customSettings);
+      expect(result).toEqual({
+        projectId: '123',
+        webhookUrl: settings.webhookUrl,
+        allowedOrigins: settings.allowedOrigins,
+        customSettings: settings.customSettings,
+        updatedAt: new Date('2025-07-06T01:29:26.221Z')
+      });
     });
 
     it('should throw NotFoundError if project not found', async () => {
       mockClient.query
         .mockResolvedValueOnce({}) // BEGIN
-        .mockResolvedValueOnce({ rows: [] }); // Check project exists
+        .mockResolvedValueOnce({ rows: [] }) // Check project exists
+        .mockResolvedValueOnce({}); // ROLLBACK
 
       await expect(service.updateProjectSettings('123', {}))
         .rejects.toThrow(NotFoundError);
