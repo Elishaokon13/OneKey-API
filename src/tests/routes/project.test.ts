@@ -20,6 +20,10 @@ interface RequestWithUser extends Request {
     organizationId: string;
     createdAt: Date;
     updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
+    is_active: boolean;
+    metadata: Record<string, any>;
   };
 }
 
@@ -49,7 +53,11 @@ describe('Project Routes', () => {
         role: 'admin',
         organizationId: 'org123',
         createdAt: new Date('2025-07-06T01:29:26.221Z'),
-        updatedAt: new Date('2025-07-06T01:29:26.221Z')
+        updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+        created_at: new Date('2025-07-06T01:29:26.221Z'),
+        updated_at: new Date('2025-07-06T01:29:26.221Z'),
+        is_active: true,
+        metadata: {}
       }
     };
 
