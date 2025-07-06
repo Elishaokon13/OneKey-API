@@ -4,7 +4,7 @@ import { ProjectService } from '../../services/project/projectService';
 import { OrganizationService } from '../../services/project/organizationService';
 import { ApiKeyService } from '../../services/project/apiKeyService';
 import { projectRouter } from '../../routes/project';
-import { ProjectType, ProjectStatus, ApiKeyStatus } from '../../types/project';
+import { ProjectType, ProjectStatus, ApiKeyType, ApiKeyStatus } from '../../types/project';
 import { NotFoundError } from '../../utils/errors';
 
 // Mock services
@@ -14,17 +14,16 @@ jest.mock('../../services/project/apiKeyService');
 
 describe('Project Routes', () => {
   let app: express.Application;
-  const mockProjectService = ProjectService as jest.Mocked<typeof ProjectService>;
-  const mockOrganizationService = OrganizationService as jest.Mocked<typeof OrganizationService>;
-  const mockApiKeyService = ApiKeyService as jest.Mocked<typeof ApiKeyService>;
+  const mockProjectService = new ProjectService() as jest.Mocked<ProjectService>;
+  const mockOrganizationService = new OrganizationService() as jest.Mocked<OrganizationService>;
+  const mockApiKeyService = new ApiKeyService() as jest.Mocked<ApiKeyService>;
 
   beforeEach(() => {
     app = express();
     app.use(express.json());
     app.use('/api/projects', projectRouter);
-  });
 
-  afterEach(() => {
+    // Reset all mocks
     jest.clearAllMocks();
   });
 
@@ -38,7 +37,8 @@ describe('Project Routes', () => {
         status: ProjectStatus.Active
       };
 
-      mockProjectService.prototype.createProject.mockResolvedValueOnce(testProject);
+      jest.spyOn(mockProjectService, 'createProject')
+        .mockResolvedValueOnce(testProject);
 
       const response = await request(app)
         .post('/api/projects')
@@ -73,7 +73,8 @@ describe('Project Routes', () => {
         status: ProjectStatus.Active
       };
 
-      mockProjectService.prototype.getProject.mockResolvedValueOnce(testProject);
+      jest.spyOn(mockProjectService, 'getProject')
+        .mockResolvedValueOnce(testProject);
 
       const response = await request(app)
         .get('/api/projects/123');
@@ -83,9 +84,8 @@ describe('Project Routes', () => {
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockProjectService.prototype.getProject.mockRejectedValueOnce(
-        new NotFoundError('Project not found')
-      );
+      jest.spyOn(mockProjectService, 'getProject')
+        .mockRejectedValueOnce(new NotFoundError('Project not found'));
 
       const response = await request(app)
         .get('/api/projects/999');
@@ -107,7 +107,8 @@ describe('Project Routes', () => {
         status: ProjectStatus.Active
       };
 
-      mockProjectService.prototype.updateProject.mockResolvedValueOnce(updatedProject);
+      jest.spyOn(mockProjectService, 'updateProject')
+        .mockResolvedValueOnce(updatedProject);
 
       const response = await request(app)
         .put('/api/projects/123')
@@ -118,9 +119,8 @@ describe('Project Routes', () => {
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockProjectService.prototype.updateProject.mockRejectedValueOnce(
-        new NotFoundError('Project not found')
-      );
+      jest.spyOn(mockProjectService, 'updateProject')
+        .mockRejectedValueOnce(new NotFoundError('Project not found'));
 
       const response = await request(app)
         .put('/api/projects/999')
@@ -137,7 +137,8 @@ describe('Project Routes', () => {
         { id: '456', name: 'Project 2', type: ProjectType.Sandbox }
       ];
 
-      mockProjectService.prototype.getProjectsByOrganization.mockResolvedValueOnce(testProjects);
+      jest.spyOn(mockProjectService, 'getProjectsByOrganization')
+        .mockResolvedValueOnce(testProjects);
 
       const response = await request(app)
         .get('/api/organizations/org123/projects');
@@ -150,14 +151,18 @@ describe('Project Routes', () => {
   describe('POST /api/projects/:id/api-keys', () => {
     it('should create API key', async () => {
       const testApiKey = {
-        id: '123',
-        projectId: 'proj123',
-        name: 'Test Key',
-        key: 'pk_test_123',
-        status: ApiKeyStatus.Active
+        apiKey: 'sk_test_123',
+        apiKeyDetails: {
+          id: '123',
+          projectId: 'proj123',
+          name: 'Test Key',
+          type: ApiKeyType.Secret,
+          status: ApiKeyStatus.Active
+        }
       };
 
-      mockApiKeyService.prototype.createApiKey.mockResolvedValueOnce(testApiKey);
+      jest.spyOn(mockApiKeyService, 'createApiKey')
+        .mockResolvedValueOnce(testApiKey);
 
       const response = await request(app)
         .post('/api/projects/proj123/api-keys')
@@ -175,7 +180,8 @@ describe('Project Routes', () => {
         { id: '456', name: 'Key 2', status: ApiKeyStatus.Revoked }
       ];
 
-      mockApiKeyService.prototype.getProjectApiKeys.mockResolvedValueOnce(testApiKeys);
+      jest.spyOn(mockApiKeyService, 'getProjectApiKeys')
+        .mockResolvedValueOnce(testApiKeys);
 
       const response = await request(app)
         .get('/api/projects/proj123/api-keys');
@@ -192,10 +198,11 @@ describe('Project Routes', () => {
         allowedOrigins: ['example.com']
       };
 
-      mockProjectService.prototype.updateProjectSettings.mockResolvedValueOnce({
-        projectId: '123',
-        ...settings
-      });
+      jest.spyOn(mockProjectService, 'updateProjectSettings')
+        .mockResolvedValueOnce({
+          projectId: '123',
+          ...settings
+        });
 
       const response = await request(app)
         .put('/api/projects/123/settings')
@@ -209,9 +216,8 @@ describe('Project Routes', () => {
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockProjectService.prototype.updateProjectSettings.mockRejectedValueOnce(
-        new NotFoundError('Project not found')
-      );
+      jest.spyOn(mockProjectService, 'updateProjectSettings')
+        .mockRejectedValueOnce(new NotFoundError('Project not found'));
 
       const response = await request(app)
         .put('/api/projects/999/settings')
@@ -228,7 +234,8 @@ describe('Project Routes', () => {
         status: ApiKeyStatus.Revoked
       };
 
-      mockApiKeyService.prototype.revokeApiKey.mockResolvedValueOnce(testApiKey);
+      jest.spyOn(mockApiKeyService, 'revokeApiKey')
+        .mockResolvedValueOnce(testApiKey);
 
       const response = await request(app)
         .delete('/api/projects/proj123/api-keys/123');
@@ -238,9 +245,8 @@ describe('Project Routes', () => {
     });
 
     it('should return 404 for non-existent API key', async () => {
-      mockApiKeyService.prototype.revokeApiKey.mockRejectedValueOnce(
-        new NotFoundError('API key not found')
-      );
+      jest.spyOn(mockApiKeyService, 'revokeApiKey')
+        .mockRejectedValueOnce(new NotFoundError('API key not found'));
 
       const response = await request(app)
         .delete('/api/projects/proj123/api-keys/999');
