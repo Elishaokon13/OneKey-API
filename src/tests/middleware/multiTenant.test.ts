@@ -3,7 +3,22 @@ import { Pool } from 'pg';
 import { MultiTenantMiddleware } from '../../middleware/multiTenant';
 import { ProjectService } from '../../services/project/projectService';
 import { ProjectType, ProjectStatus } from '../../types/project';
-import { NotFoundError, ValidationError, AuthorizationError } from '../../utils/errors';
+import { NotFoundError } from '../../utils/errors';
+
+// Mock express-rate-limit
+jest.mock('express-rate-limit', () => {
+  return jest.fn().mockImplementation((options) => {
+    let hits = 0;
+    return (req: Request, res: Response, next: Function) => {
+      hits++;
+      if (hits <= options.max(req)) {
+        next();
+      } else {
+        options.handler(req, res);
+      }
+    };
+  });
+});
 
 jest.mock('../../services/project/projectService');
 
@@ -25,7 +40,7 @@ describe('MultiTenantMiddleware', () => {
     createdAt: new Date('2025-07-06T01:29:26.221Z'),
     updatedAt: new Date('2025-07-06T01:29:26.221Z'),
     metadata: {
-      rateLimit: 200
+      rateLimit: 2 // Small number for testing
     }
   };
 
@@ -160,15 +175,15 @@ describe('MultiTenantMiddleware', () => {
       middleware.rateLimiting(mockReq as Request, mockRes as Response, mockNext);
       expect(mockNext).toHaveBeenCalled();
 
-      // Reset mockNext
+      // Second request should pass (limit is 2)
       mockNext.mockClear();
+      middleware.rateLimiting(mockReq as Request, mockRes as Response, mockNext);
+      expect(mockNext).toHaveBeenCalled();
 
-      // Simulate many requests to trigger rate limit
-      for (let i = 0; i < testProject.metadata.rateLimit + 1; i++) {
-        middleware.rateLimiting(mockReq as Request, mockRes as Response, mockNext);
-      }
-
-      // Last request should be rate limited
+      // Third request should be rate limited
+      mockNext.mockClear();
+      middleware.rateLimiting(mockReq as Request, mockRes as Response, mockNext);
+      expect(mockNext).not.toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(429);
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'Too many requests',
