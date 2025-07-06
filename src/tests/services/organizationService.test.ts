@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { OrganizationService } from '../../services/project/organizationService';
-import { OrganizationStatus, MemberRole, MemberStatus } from '../../types/project';
+import { OrganizationStatus, MemberRole, MemberStatus, SubscriptionTier, SubscriptionStatus } from '../../types/project';
 import { DatabaseError, NotFoundError } from '../../utils/errors';
 
 // Mock the database pool
@@ -38,6 +38,9 @@ describe('OrganizationService', () => {
       slug: 'test-org',
       billingEmail: 'test@example.com',
       status: OrganizationStatus.Active,
+      subscriptionTier: SubscriptionTier.Free,
+      subscriptionStatus: SubscriptionStatus.Active,
+      subscriptionExpiresAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       metadata: {}
@@ -80,10 +83,18 @@ describe('OrganizationService', () => {
       const testOrg = {
         id: '123',
         name: 'Test Org',
-        status: OrganizationStatus.Active
+        slug: 'test-org',
+        billingEmail: 'test@example.com',
+        status: OrganizationStatus.Active,
+        subscriptionTier: SubscriptionTier.Free,
+        subscriptionStatus: SubscriptionStatus.Active,
+        subscriptionExpiresAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: {}
       };
 
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: [testOrg]
       });
 
@@ -92,7 +103,7 @@ describe('OrganizationService', () => {
     });
 
     it('should throw NotFoundError if organization not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: []
       });
 
@@ -108,8 +119,22 @@ describe('OrganizationService', () => {
         metadata: { key: 'value' }
       };
 
-      (pool.query as jest.Mock).mockResolvedValueOnce({
-        rows: [{ ...updates, id: '123' }]
+      const updatedOrg = {
+        id: '123',
+        name: 'Updated Org',
+        slug: 'updated-org',
+        billingEmail: 'test@example.com',
+        status: OrganizationStatus.Active,
+        subscriptionTier: SubscriptionTier.Free,
+        subscriptionStatus: SubscriptionStatus.Active,
+        subscriptionExpiresAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: { key: 'value' }
+      };
+
+      mockClient.query.mockResolvedValueOnce({
+        rows: [updatedOrg]
       });
 
       const result = await service.updateOrganization('123', updates);
@@ -118,7 +143,7 @@ describe('OrganizationService', () => {
     });
 
     it('should throw NotFoundError if organization not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: []
       });
 
@@ -134,10 +159,14 @@ describe('OrganizationService', () => {
         organizationId: '123',
         userId: 'user123',
         role: MemberRole.Admin,
-        status: MemberStatus.Invited
+        status: MemberStatus.Invited,
+        invitedBy: 'inviter123',
+        invitedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: [testMember]
       });
 
@@ -156,10 +185,17 @@ describe('OrganizationService', () => {
     it('should update member role', async () => {
       const testMember = {
         id: '456',
-        role: MemberRole.Admin
+        organizationId: '123',
+        userId: 'user123',
+        role: MemberRole.Admin,
+        status: MemberStatus.Active,
+        invitedAt: new Date(),
+        joinedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: [testMember]
       });
 
@@ -173,7 +209,7 @@ describe('OrganizationService', () => {
     });
 
     it('should throw NotFoundError if member not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: []
       });
 
@@ -185,11 +221,31 @@ describe('OrganizationService', () => {
   describe('getMembers', () => {
     it('should return organization members', async () => {
       const testMembers = [
-        { id: '456', role: MemberRole.Owner },
-        { id: '789', role: MemberRole.Member }
+        {
+          id: '456',
+          organizationId: '123',
+          userId: 'user1',
+          role: MemberRole.Owner,
+          status: MemberStatus.Active,
+          invitedAt: new Date(),
+          joinedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          id: '789',
+          organizationId: '123',
+          userId: 'user2',
+          role: MemberRole.Member,
+          status: MemberStatus.Active,
+          invitedAt: new Date(),
+          joinedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
       ];
 
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: testMembers
       });
 
@@ -202,11 +258,17 @@ describe('OrganizationService', () => {
     it('should accept member invitation', async () => {
       const testMember = {
         id: '456',
+        organizationId: '123',
+        userId: 'user123',
+        role: MemberRole.Member,
         status: MemberStatus.Active,
-        joinedAt: new Date()
+        invitedAt: new Date(),
+        joinedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: [testMember]
       });
 
@@ -216,7 +278,7 @@ describe('OrganizationService', () => {
     });
 
     it('should throw NotFoundError if invitation not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValueOnce({
+      mockClient.query.mockResolvedValueOnce({
         rows: []
       });
 
@@ -224,4 +286,4 @@ describe('OrganizationService', () => {
         .rejects.toThrow(NotFoundError);
     });
   });
-}); 
+});
