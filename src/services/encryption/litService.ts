@@ -3,6 +3,7 @@
 
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { LIT_NETWORKS } from '@lit-protocol/constants';
+import { LitAbility, ILitResource } from '@lit-protocol/types';
 import {
   LitConfig,
   LitNetwork,
@@ -45,12 +46,9 @@ export class LitService {
       });
 
       this.client = new LitNodeClient({
-        litNetwork: LIT_NETWORKS[this.config.network],
+        litNetwork: this.config.network as keyof typeof LIT_NETWORKS,
         debug: this.config.debug,
-        minNodeCount: this.config.minNodeCount,
-        maxNodeCount: this.config.maxNodeCount,
-        bootstrapUrls: this.config.bootstrapUrls,
-        fallbackBootstrapUrls: this.config.fallbackBootstrapUrls
+        minNodeCount: this.config.minNodeCount
       });
 
       await this.client.connect();
@@ -78,15 +76,15 @@ export class LitService {
         request.authSig = await this.client.getWalletSig({
           chain: request.chain,
           resourceAbilityRequests: [{
-            resource: 'encryption',
-            ability: 'save'
+            resource: 'encryption' as ILitResource,
+            ability: 'save' as LitAbility
           }]
         });
       }
 
       // Save encryption key with access control conditions
       const response = await this.client.encrypt({
-        accessControlConditions: request.accessControlConditions,
+        accessControlConditions: request.accessControlConditions as any,
         chain: request.chain,
         authSig: request.authSig,
         permanent: request.permanent
@@ -98,8 +96,8 @@ export class LitService {
       });
 
       return {
-        encryptedSymmetricKey: response.encryptedString,
-        symmetricKey: response.symmetricKey
+        encryptedSymmetricKey: response.ciphertext,
+        symmetricKey: response.key
       };
     } catch (error) {
       logger.error('Failed to save encryption key', { error });
@@ -122,15 +120,15 @@ export class LitService {
         request.authSig = await this.client.getWalletSig({
           chain: request.chain,
           resourceAbilityRequests: [{
-            resource: 'encryption',
-            ability: 'decrypt'
+            resource: 'encryption' as ILitResource,
+            ability: 'decrypt' as LitAbility
           }]
         });
       }
 
       // Get encryption key if access conditions are met
       const response = await this.client.decrypt({
-        accessControlConditions: request.accessControlConditions,
+        accessControlConditions: request.accessControlConditions as any,
         chain: request.chain,
         authSig: request.authSig,
         toDecrypt: request.encryptedSymmetricKey
@@ -142,8 +140,8 @@ export class LitService {
       });
 
       return {
-        encryptedSymmetricKey: response.decryptedString,
-        symmetricKey: response.symmetricKey
+        encryptedSymmetricKey: response.decryptedData,
+        symmetricKey: response.key
       };
     } catch (error) {
       logger.error('Failed to get encryption key', { error });
