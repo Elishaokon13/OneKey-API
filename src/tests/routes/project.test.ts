@@ -63,10 +63,35 @@ describe('Project Routes', () => {
     };
 
     mockRes = {
-      json: jest.fn(),
+      json: jest.fn().mockReturnThis(),
       status: jest.fn().mockReturnThis(),
-      send: jest.fn().mockReturnThis()
+      send: jest.fn().mockReturnThis(),
+      locals: {},
+      _status: 200,
+      _json: null,
+      _sent: false
     } as Partial<Response>;
+
+    // Add getters for response state
+    Object.defineProperties(mockRes, {
+      statusCode: {
+        get() { return this._status; },
+        set(code) { this._status = code; }
+      }
+    });
+
+    // Override status method to track state
+    (mockRes.status as jest.Mock).mockImplementation(function(code) {
+      this._status = code;
+      return this;
+    });
+
+    // Override json method to track state
+    (mockRes.json as jest.Mock).mockImplementation(function(data) {
+      this._json = data;
+      this._sent = true;
+      return this;
+    });
 
     mockNext = jest.fn();
   });
