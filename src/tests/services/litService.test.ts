@@ -1,6 +1,6 @@
-import { LitService } from '@/services/encryption/litService';
-import { LitNetwork, EncryptionKeyRequest } from '@/types/lit';
-import { config } from '@/config/environment';
+import { LitService } from '../../services/encryption/litService';
+import { LitNetwork, EncryptionKeyRequest } from '../../types/lit';
+import { config } from '../../config/environment';
 
 // Mock LitNodeClient
 jest.mock('@lit-protocol/lit-node-client', () => {
