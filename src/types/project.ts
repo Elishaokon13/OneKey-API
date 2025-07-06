@@ -1,6 +1,40 @@
 import { z } from 'zod';
 
 // Enum definitions
+export enum ProjectStatus {
+  Active = 'active',
+  Suspended = 'suspended',
+  Deleted = 'deleted'
+}
+
+export enum ProjectType {
+  Production = 'production',
+  Sandbox = 'sandbox'
+}
+
+export enum ApiKeyStatus {
+  Active = 'active',
+  Revoked = 'revoked',
+  Expired = 'expired'
+}
+
+export enum ApiKeyType {
+  Secret = 'secret',
+  Public = 'public'
+}
+
+export enum MemberRole {
+  Owner = 'owner',
+  Admin = 'admin',
+  Member = 'member'
+}
+
+export enum MemberStatus {
+  Invited = 'invited',
+  Active = 'active',
+  Removed = 'removed'
+}
+
 export enum OrganizationStatus {
   Active = 'active',
   Suspended = 'suspended',
@@ -20,34 +54,10 @@ export enum SubscriptionStatus {
   Expired = 'expired'
 }
 
-export enum MemberRole {
-  Owner = 'owner',
-  Admin = 'admin',
-  Member = 'member'
-}
-
-export enum MemberStatus {
-  Active = 'active',
-  Invited = 'invited',
-  Removed = 'removed'
-}
-
 export enum ProjectEnvironment {
   Development = 'development',
   Staging = 'staging',
   Production = 'production'
-}
-
-export enum ProjectStatus {
-  Active = 'active',
-  Archived = 'archived',
-  Deleted = 'deleted'
-}
-
-export enum ApiKeyType {
-  Server = 'server',
-  Client = 'client',
-  Admin = 'admin'
 }
 
 // Interface definitions
@@ -57,12 +67,9 @@ export interface Organization {
   slug: string;
   billingEmail: string;
   status: OrganizationStatus;
-  subscriptionTier: SubscriptionTier;
-  subscriptionStatus: SubscriptionStatus;
-  subscriptionExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-  metadata: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 export interface OrganizationMember {
@@ -74,60 +81,52 @@ export interface OrganizationMember {
   invitedBy?: string;
   invitedAt: Date;
   joinedAt?: Date;
-  createdAt: Date;
   updatedAt: Date;
 }
 
 export interface Project {
   id: string;
-  organizationId: string;
   name: string;
   slug: string;
-  environment: ProjectEnvironment;
+  organizationId: string;
+  type: ProjectType;
   status: ProjectStatus;
-  kycProviders: string[];
-  webhookUrl?: string;
-  webhookSecret?: string;
   createdAt: Date;
   updatedAt: Date;
-  metadata: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 export interface ProjectSettings {
-  id: string;
   projectId: string;
-  key: string;
-  value: any;
-  createdAt: Date;
+  webhookUrl?: string;
+  allowedOrigins?: string[];
+  customSettings?: Record<string, any>;
   updatedAt: Date;
 }
 
 export interface ProjectApiKey {
   id: string;
   projectId: string;
-  keyHash: string;
   name: string;
   type: ApiKeyType;
+  status: ApiKeyStatus;
   permissions: string[];
-  createdBy?: string;
-  isActive: boolean;
+  hashedKey: string;
+  createdBy: string;
   createdAt: Date;
+  updatedAt: Date;
   lastUsedAt?: Date;
   expiresAt?: Date;
-  usageCount: number;
-  rateLimitOverride?: Record<string, any>;
-  metadata: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 export interface ProjectUsageStats {
-  id: string;
   projectId: string;
-  date: Date;
-  kycVerificationsCount: number;
-  attestationsCreatedCount: number;
-  storageBytesUsed: number;
-  apiRequestsCount: number;
-  createdAt: Date;
+  period: string;
+  requestCount: number;
+  successCount: number;
+  errorCount: number;
+  avgResponseTime: number;
   updatedAt: Date;
 }
 
