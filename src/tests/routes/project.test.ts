@@ -5,6 +5,7 @@ import { ApiKeyService } from '../../services/project/apiKeyService';
 import { ProjectType, ProjectStatus, ApiKeyType, ApiKeyStatus } from '../../types/project';
 import { NotFoundError } from '../../utils/errors';
 import { createHandlers } from '../../routes/project';
+import { ValidationError } from '../../utils/errors';
 
 jest.mock('../../services/project/projectService');
 jest.mock('../../services/project/organizationService');
@@ -223,6 +224,24 @@ describe('Project Routes', () => {
       await handlers.createProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes._json).toHaveProperty('error');
+    });
+
+    it('should handle service errors', async () => {
+      mockReq.body = {
+        name: 'Test Project',
+        organizationId: 'org123',
+        type: ProjectType.Production
+      };
+
+      mockProjectService.createProject.mockRejectedValueOnce(new Error('Database error'));
+
+      await handlers.createProject(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0];
+      expect(error).toBeInstanceOf(Error);
+      expect(error.message).toBe('Database error');
     });
   });
 
@@ -234,16 +253,26 @@ describe('Project Routes', () => {
       await handlers.getProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(testProject);
+      expect(mockRes._json).toEqual(testProject);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.params = { id: '999' };
+      mockReq.params = { id: 'nonexistent' };
       mockProjectService.getProject.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
       await handlers.getProject(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes._json).toEqual({ error: 'Project not found' });
+    });
+
+    it('should handle missing id parameter', async () => {
+      mockReq.params = {};
+
+      await handlers.getProject(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes._json).toEqual({ error: 'Project ID is required' });
     });
   });
 
@@ -287,26 +316,65 @@ describe('Project Routes', () => {
       await handlers.getOrganizationProjects(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(testProjects);
+      expect(mockRes._json).toEqual(testProjects);
+    });
+
+    it('should return 404 for non-existent organization', async () => {
+      mockReq.params = { id: 'nonexistent' };
+      mockProjectService.getProjectsByOrganization.mockRejectedValueOnce(new NotFoundError('Organization not found'));
+
+      await handlers.getOrganizationProjects(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes._json).toEqual({ error: 'Organization not found' });
     });
   });
 
   describe('POST /api/projects/:id/api-keys', () => {
-    it('should create API key', async () => {
+    it('should create a new API key', async () => {
       mockReq.params = { id: 'proj123' };
-      mockReq.body = { name: 'Test Key' };
-
-      const apiKeyResponse = {
-        apiKey: 'sk_test_123',
-        apiKeyDetails: testApiKey
+      mockReq.body = {
+        name: 'Test Key',
+        type: ApiKeyType.Secret,
+        permissions: ['read', 'write']
       };
 
-      mockApiKeyService.createApiKey.mockResolvedValueOnce(apiKeyResponse);
+      mockApiKeyService.createApiKey.mockResolvedValueOnce(testApiKey);
 
       await handlers.createApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes.json).toHaveBeenCalledWith(apiKeyResponse);
+      expect(mockRes._json).toEqual(testApiKey);
+    });
+
+    it('should return 400 for missing required fields', async () => {
+      mockReq.params = { id: 'proj123' };
+      mockReq.body = {
+        // Missing name
+        type: ApiKeyType.Secret,
+        permissions: ['read']
+      };
+
+      await handlers.createApiKey(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes._json).toEqual({ error: 'Missing required fields' });
+    });
+
+    it('should handle validation errors', async () => {
+      mockReq.params = { id: 'proj123' };
+      mockReq.body = {
+        name: 'Test Key',
+        type: ApiKeyType.Secret,
+        permissions: ['invalid']
+      };
+
+      mockApiKeyService.createApiKey.mockRejectedValueOnce(new ValidationError('Invalid permissions'));
+
+      await handlers.createApiKey(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes._json).toEqual({ error: 'Invalid permissions' });
     });
   });
 
