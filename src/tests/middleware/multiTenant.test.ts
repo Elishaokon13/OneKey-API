@@ -19,6 +19,7 @@ describe('MultiTenantMiddleware', () => {
     name: 'Test Project',
     slug: 'test-project',
     organizationId: 'org123',
+    environment: 'production',
     type: ProjectType.Production,
     status: ProjectStatus.Active,
     createdAt: new Date(),
@@ -96,7 +97,7 @@ describe('MultiTenantMiddleware', () => {
   describe('resourceIsolation', () => {
     it('should allow access to own project resources', async () => {
       mockReq.project = testProject;
-      mockReq.params.projectId = 'proj123';
+      mockReq.params = { projectId: 'proj123' };
 
       await middleware.resourceIsolation(mockReq as Request, mockRes as Response, mockNext);
 
@@ -105,7 +106,7 @@ describe('MultiTenantMiddleware', () => {
 
     it('should deny access to other project resources', async () => {
       mockReq.project = testProject;
-      mockReq.params.projectId = 'other123';
+      mockReq.params = { projectId: 'other123' };
 
       await middleware.resourceIsolation(mockReq as Request, mockRes as Response, mockNext);
 
@@ -116,7 +117,7 @@ describe('MultiTenantMiddleware', () => {
     });
 
     it('should handle missing project context', async () => {
-      mockReq.params.projectId = 'proj123';
+      mockReq.params = { projectId: 'proj123' };
 
       await middleware.resourceIsolation(mockReq as Request, mockRes as Response, mockNext);
 
