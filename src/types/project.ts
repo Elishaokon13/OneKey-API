@@ -1,26 +1,26 @@
 import { z } from 'zod';
 
 // Enum definitions
-export enum ProjectStatus {
-  Active = 'active',
-  Suspended = 'suspended',
-  Deleted = 'deleted'
-}
-
 export enum ProjectType {
   Production = 'production',
   Sandbox = 'sandbox'
+}
+
+export enum ProjectStatus {
+  Active = 'active',
+  Inactive = 'inactive',
+  Suspended = 'suspended'
+}
+
+export enum ApiKeyType {
+  Secret = 'secret',
+  Public = 'public'
 }
 
 export enum ApiKeyStatus {
   Active = 'active',
   Revoked = 'revoked',
   Expired = 'expired'
-}
-
-export enum ApiKeyType {
-  Secret = 'secret',
-  Public = 'public'
 }
 
 export enum MemberRole {
@@ -92,6 +92,7 @@ export interface Project {
   name: string;
   slug: string;
   organizationId: string;
+  environment: string;
   type: ProjectType;
   status: ProjectStatus;
   createdAt: Date;
