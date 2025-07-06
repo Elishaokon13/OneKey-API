@@ -101,6 +101,16 @@ export class ProjectService {
     try {
       await client.query('BEGIN');
 
+      // First check if project exists
+      const projectExists = await client.query(
+        'SELECT id FROM projects WHERE id = $1',
+        [projectId]
+      );
+
+      if (projectExists.rows.length === 0) {
+        throw new NotFoundError('Project not found');
+      }
+
       const result = await client.query(
         `INSERT INTO project_settings (project_id, webhook_url, allowed_origins, custom_settings)
          VALUES ($1, $2, $3, $4)
@@ -119,14 +129,13 @@ export class ProjectService {
         ]
       );
 
-      if (result.rows.length === 0) {
-        throw new NotFoundError('Project not found');
-      }
-
       await client.query('COMMIT');
       return this.mapSettingsRow(result.rows[0]);
     } catch (error) {
       await client.query('ROLLBACK');
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
       throw new DatabaseError('Failed to update project settings');
     } finally {
       client.release();
