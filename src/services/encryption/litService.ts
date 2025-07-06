@@ -26,6 +26,7 @@ import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import { AnalyticsService } from '@/services/analytics/analyticsService';
 import { CostMetric } from '@/types/analytics';
+import { LitCostEstimator } from '@/utils/litCostEstimator';
 
 class LitAccessControlConditionResource {
   readonly resourcePrefix: LitResourcePrefix = 'lit-accesscontrolcondition';
@@ -72,7 +73,7 @@ export class LitService {
   private async trackOperationCost(
     projectId: string,
     operation: string,
-    cost: number,
+    conditions: AccessControlCondition[],
     success: boolean,
     metadata: Record<string, any> = {}
   ): Promise<void> {
@@ -81,19 +82,30 @@ export class LitService {
     }
 
     try {
+      const cost = operation === 'saveEncryptionKey'
+        ? LitCostEstimator.estimateSaveKeyCost(conditions)
+        : LitCostEstimator.estimateGetKeyCost(conditions);
+
+      const costBreakdown = LitCostEstimator.getCostBreakdown(
+        operation === 'saveEncryptionKey' ? 'save' : 'get',
+        conditions
+      );
+
       const costMetric: Omit<CostMetric, 'timestamp'> = {
         projectId,
         operation,
-        cost,
+        cost: Number(cost),
         network: this.config.network,
         success,
-        metadata
+        metadata: {
+          ...metadata,
+          costBreakdown: costBreakdown.formatted
+        }
       };
 
       await this.analyticsService.trackCost(costMetric);
     } catch (error) {
       logger.error('Failed to track operation cost', { error, operation, projectId });
-      // Don't throw - we don't want analytics errors to affect core functionality
     }
   }
 
@@ -134,7 +146,6 @@ export class LitService {
    */
   public async saveEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse> {
     const startTime = Date.now();
-    let success = false;
     
     try {
       await this.ensureInitialized();
@@ -197,16 +208,14 @@ export class LitService {
       };
 
       const response = await this.client.encrypt(encryptParams);
-      success = true;
 
-      // Track operation cost - estimated for now, can be updated with actual costs later
+      // Track successful operation cost
       await this.trackOperationCost(
         request.projectId,
         'saveEncryptionKey',
-        0, // Placeholder for actual cost
+        request.accessControlConditions,
         true,
         {
-          conditionsCount: request.accessControlConditions.length,
           chain: request.chain,
           duration: Date.now() - startTime
         }
@@ -224,11 +233,11 @@ export class LitService {
     } catch (error) {
       logger.error('Failed to save encryption key', { error });
       
-      // Track failed operation
+      // Track failed operation cost
       await this.trackOperationCost(
         request.projectId,
         'saveEncryptionKey',
-        0, // Placeholder for actual cost
+        request.accessControlConditions,
         false,
         {
           error: error?.message,
@@ -249,7 +258,6 @@ export class LitService {
    */
   public async getEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse> {
     const startTime = Date.now();
-    let success = false;
 
     try {
       await this.ensureInitialized();
@@ -314,16 +322,14 @@ export class LitService {
       };
 
       const response = await this.client.decrypt(decryptParams);
-      success = true;
 
-      // Track operation cost
+      // Track successful operation cost
       await this.trackOperationCost(
         request.projectId,
         'getEncryptionKey',
-        0, // Placeholder for actual cost
+        request.accessControlConditions,
         true,
         {
-          conditionsCount: request.accessControlConditions.length,
           chain: request.chain,
           duration: Date.now() - startTime
         }
@@ -336,11 +342,11 @@ export class LitService {
     } catch (error) {
       logger.error('Failed to get encryption key', { error });
 
-      // Track failed operation
+      // Track failed operation cost
       await this.trackOperationCost(
         request.projectId,
         'getEncryptionKey',
-        0, // Placeholder for actual cost
+        request.accessControlConditions,
         false,
         {
           error: error?.message,
