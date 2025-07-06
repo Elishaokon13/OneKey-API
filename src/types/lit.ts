@@ -32,6 +32,7 @@ export type AccessControlCondition = {
 };
 
 export interface EncryptionKeyRequest {
+  projectId: string; // Added for analytics tracking
   accessControlConditions: AccessControlCondition[];
   chain: string;
   authSig?: any; // Will be typed by SDK's AuthSig
