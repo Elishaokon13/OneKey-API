@@ -404,37 +404,58 @@ describe('Project Routes', () => {
       await handlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(testSettings);
+      expect(mockRes._json).toEqual(testSettings);
     });
 
     it('should return 404 for non-existent project', async () => {
-      mockReq.params = { id: '999' };
+      mockReq.params = { id: 'nonexistent' };
       mockProjectService.updateProjectSettings.mockRejectedValueOnce(new NotFoundError('Project not found'));
 
       await handlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes._json).toEqual({ error: 'Project not found' });
+    });
+
+    it('should handle missing id parameter', async () => {
+      mockReq.params = {};
+
+      await handlers.updateProjectSettings(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes._json).toEqual({ error: 'Project ID is required' });
     });
   });
 
-  describe('DELETE /api/projects/:projectId/api-keys/:keyId', () => {
+  describe('DELETE /api/projects/api-keys/:keyId', () => {
     it('should revoke API key', async () => {
-      mockReq.params = { projectId: 'proj123', keyId: '123' };
-      mockApiKeyService.revokeApiKey.mockResolvedValueOnce(testApiKey);
+      mockReq.params = { keyId: '123' };
+      const revokedKey = { ...testApiKey, status: ApiKeyStatus.Revoked };
+      mockApiKeyService.revokeApiKey.mockResolvedValueOnce(revokedKey);
 
       await handlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(200);
-      expect(mockRes.json).toHaveBeenCalledWith(testApiKey);
+      expect(mockRes._json).toEqual(revokedKey);
     });
 
     it('should return 404 for non-existent API key', async () => {
-      mockReq.params = { projectId: 'proj123', keyId: '999' };
+      mockReq.params = { keyId: 'nonexistent' };
       mockApiKeyService.revokeApiKey.mockRejectedValueOnce(new NotFoundError('API key not found'));
 
       await handlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
+      expect(mockRes._json).toEqual({ error: 'API key not found' });
+    });
+
+    it('should handle missing keyId parameter', async () => {
+      mockReq.params = {};
+
+      await handlers.revokeApiKey(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes._json).toEqual({ error: 'API Key ID is required' });
     });
   });
 }); 
