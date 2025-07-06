@@ -17,7 +17,7 @@ jest.mock('@lit-protocol/lit-node-client', () => {
         encryptedSymmetricKey: 'mockEncryptedKey',
         symmetricKey: new Uint8Array([1, 2, 3])
       }),
-      generateAuthSig: jest.fn().mockResolvedValue({
+      getWalletSig: jest.fn().mockResolvedValue({
         sig: 'mockSignature',
         derivedVia: 'web3.eth.personal.sign',
         signedMessage: 'mockMessage',
@@ -98,7 +98,7 @@ describe('LitService', () => {
       await service.initialize();
       await service.saveEncryptionKey(mockRequest);
       
-      expect((service['client'] as unknown as LitNodeClient).generateAuthSig).toHaveBeenCalled();
+      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalled();
     });
 
     it('should validate request parameters', async () => {
@@ -149,7 +149,7 @@ describe('LitService', () => {
       await service.initialize();
       await service.getEncryptionKey(mockRequest);
       
-      expect((service['client'] as unknown as LitNodeClient).generateAuthSig).toHaveBeenCalled();
+      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalled();
     });
 
     it('should validate request parameters', async () => {
