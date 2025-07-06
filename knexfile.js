@@ -17,7 +17,7 @@ const parseConnectionString = (connectionString) => {
 
 const baseConfig = {
   client: 'postgresql',
-  connection: process.env.DATABASE_URL ? 
+  connection: process.env.SUPABASE_DB_URL ? 
     parseConnectionString(process.env.DATABASE_URL) :
     {
       host: 'localhost',
