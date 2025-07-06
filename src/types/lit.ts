@@ -44,15 +44,8 @@ export interface LitError extends Error {
   details?: any;
 }
 
-export interface LitNodeClient {
-  connect(): Promise<void>;
-  disconnect(): Promise<void>;
-  saveEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse>;
-  getEncryptionKey(request: EncryptionKeyRequest): Promise<EncryptionKeyResponse>;
-  generateAuthSig(): Promise<{
-    sig: string;
-    derivedVia: string;
-    signedMessage: string;
-    address: string;
-  }>;
-} 
+// Import the actual LitNodeClient type from the package
+import { LitNodeClient as ActualLitNodeClient } from '@lit-protocol/lit-node-client';
+
+// Re-export the type
+export type LitNodeClient = ActualLitNodeClient; 
