@@ -33,8 +33,8 @@ describe('ApiKeyService', () => {
     createdBy: 'user123',
     createdAt: new Date('2025-07-06T01:29:26.221Z'),
     updatedAt: new Date('2025-07-06T01:29:26.221Z'),
-    lastUsedAt: undefined,
-    expiresAt: undefined,
+    lastUsedAt: null,
+    expiresAt: null,
     metadata: {}
   };
 
@@ -108,7 +108,9 @@ describe('ApiKeyService', () => {
 
   describe('validateApiKey', () => {
     it('should return true for valid API key', async () => {
-      mockPool.query.mockResolvedValueOnce({ rows: [dbApiKey] });
+      mockPool.query
+        .mockResolvedValueOnce({ rows: [dbApiKey] }) // Key lookup
+        .mockResolvedValueOnce({ rows: [{ ...dbApiKey, last_used_at: new Date() }] }); // Update last used
 
       const result = await service.validateApiKey('sk_test_123');
       expect(result).toBe(true);
@@ -122,13 +124,15 @@ describe('ApiKeyService', () => {
     });
 
     it('should return false for expired API key', async () => {
-      mockPool.query.mockResolvedValueOnce({
-        rows: [{
-          ...dbApiKey,
-          status: ApiKeyStatus.Expired,
-          expires_at: new Date('2020-01-01')
-        }]
-      });
+      mockPool.query
+        .mockResolvedValueOnce({
+          rows: [{
+            ...dbApiKey,
+            status: ApiKeyStatus.Expired,
+            expires_at: new Date('2020-01-01')
+          }]
+        })
+        .mockResolvedValueOnce({ rows: [{ ...dbApiKey, status: ApiKeyStatus.Expired }] }); // Status update
 
       const result = await service.validateApiKey('sk_test_123');
       expect(result).toBe(false);
