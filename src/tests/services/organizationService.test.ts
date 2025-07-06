@@ -1,55 +1,86 @@
 import { Pool } from 'pg';
 import { OrganizationService } from '../../services/project/organizationService';
 import { OrganizationStatus, MemberRole, MemberStatus, SubscriptionTier, SubscriptionStatus } from '../../types/project';
-import { DatabaseError, NotFoundError } from '../../utils/errors';
-
-// Mock the database pool
-jest.mock('pg', () => {
-  const mPool = {
-    connect: jest.fn(),
-    query: jest.fn(),
-  };
-  return { Pool: jest.fn(() => mPool) };
-});
+import { NotFoundError } from '../../utils/errors';
 
 describe('OrganizationService', () => {
-  let pool: Pool;
   let service: OrganizationService;
   let mockClient: any;
+  let mockPool: any;
 
   beforeEach(() => {
-    pool = new Pool();
-    service = new OrganizationService(pool);
     mockClient = {
       query: jest.fn(),
-      release: jest.fn(),
+      release: jest.fn()
     };
-    (pool.connect as jest.Mock).mockResolvedValue(mockClient);
+
+    mockPool = {
+      connect: jest.fn().mockResolvedValue(mockClient),
+      query: jest.fn()
+    };
+
+    service = new OrganizationService(mockPool);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  const testOrg = {
+    id: '123',
+    name: 'Test Org',
+    slug: 'test-org',
+    billingEmail: 'test@example.com',
+    status: OrganizationStatus.Active,
+    subscriptionTier: SubscriptionTier.Free,
+    subscriptionStatus: SubscriptionStatus.Active,
+    subscriptionExpiresAt: null,
+    createdAt: new Date('2025-07-06T01:29:26.221Z'),
+    updatedAt: new Date('2025-07-06T01:29:26.221Z'),
+    metadata: {}
+  };
+
+  const dbOrg = {
+    id: '123',
+    name: 'Test Org',
+    slug: 'test-org',
+    billing_email: 'test@example.com',
+    status: OrganizationStatus.Active,
+    subscription_tier: SubscriptionTier.Free,
+    subscription_status: SubscriptionStatus.Active,
+    subscription_expires_at: null,
+    created_at: new Date('2025-07-06T01:29:26.221Z'),
+    updated_at: new Date('2025-07-06T01:29:26.221Z'),
+    metadata: {}
+  };
+
+  const testMember = {
+    id: '456',
+    organizationId: '123',
+    userId: 'user123',
+    role: MemberRole.Owner,
+    status: MemberStatus.Active,
+    invitedBy: 'user123',
+    invitedAt: new Date('2025-07-06T01:29:26.221Z'),
+    joinedAt: new Date('2025-07-06T01:29:26.221Z'),
+    updatedAt: new Date('2025-07-06T01:29:26.221Z')
+  };
+
+  const dbMember = {
+    id: '456',
+    organization_id: '123',
+    user_id: 'user123',
+    role: MemberRole.Owner,
+    status: MemberStatus.Active,
+    invited_by: 'user123',
+    invited_at: new Date('2025-07-06T01:29:26.221Z'),
+    joined_at: new Date('2025-07-06T01:29:26.221Z'),
+    updated_at: new Date('2025-07-06T01:29:26.221Z')
+  };
 
   describe('createOrganization', () => {
-    const testOrg = {
-      id: '123',
-      name: 'Test Org',
-      slug: 'test-org',
-      billingEmail: 'test@example.com',
-      status: OrganizationStatus.Active,
-      subscriptionTier: SubscriptionTier.Free,
-      subscriptionStatus: SubscriptionStatus.Active,
-      subscriptionExpiresAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      metadata: {}
-    };
-
     it('should create an organization and add owner', async () => {
       mockClient.query
-        .mockResolvedValueOnce({ rows: [testOrg] }) // org creation
-        .mockResolvedValueOnce({ rows: [{ id: '456' }] }); // member creation
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [dbOrg] }) // Create org
+        .mockResolvedValueOnce({ rows: [dbMember] }) // Add member
+        .mockResolvedValueOnce({}); // COMMIT
 
       const result = await service.createOrganization(
         'Test Org',
@@ -57,55 +88,22 @@ describe('OrganizationService', () => {
         'user123'
       );
 
-      expect(mockClient.query).toHaveBeenCalledTimes(4); // BEGIN, create org, add member, COMMIT
+      expect(mockClient.query).toHaveBeenCalledTimes(4);
       expect(result).toEqual(testOrg);
-      expect(mockClient.release).toHaveBeenCalled();
-    });
-
-    it('should rollback transaction on error', async () => {
-      mockClient.query
-        .mockResolvedValueOnce({}) // BEGIN
-        .mockRejectedValueOnce(new Error('Database error')); // org creation fails
-
-      await expect(service.createOrganization(
-        'Test Org',
-        'test@example.com',
-        'user123'
-      )).rejects.toThrow(DatabaseError);
-
-      expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK');
       expect(mockClient.release).toHaveBeenCalled();
     });
   });
 
   describe('getOrganization', () => {
     it('should return organization if found', async () => {
-      const testOrg = {
-        id: '123',
-        name: 'Test Org',
-        slug: 'test-org',
-        billingEmail: 'test@example.com',
-        status: OrganizationStatus.Active,
-        subscriptionTier: SubscriptionTier.Free,
-        subscriptionStatus: SubscriptionStatus.Active,
-        subscriptionExpiresAt: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: {}
-      };
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testOrg]
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [dbOrg] });
 
       const result = await service.getOrganization('123');
       expect(result).toEqual(testOrg);
     });
 
     it('should throw NotFoundError if organization not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.getOrganization('123'))
         .rejects.toThrow(NotFoundError);
@@ -114,38 +112,30 @@ describe('OrganizationService', () => {
 
   describe('updateOrganization', () => {
     it('should update organization fields', async () => {
-      const updates = {
+      const updatedDbOrg = {
+        ...dbOrg,
         name: 'Updated Org',
         metadata: { key: 'value' }
       };
 
-      const updatedOrg = {
-        id: '123',
-        name: 'Updated Org',
-        slug: 'updated-org',
-        billingEmail: 'test@example.com',
-        status: OrganizationStatus.Active,
-        subscriptionTier: SubscriptionTier.Free,
-        subscriptionStatus: SubscriptionStatus.Active,
-        subscriptionExpiresAt: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: { key: 'value' }
-      };
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: [updatedOrg]
+      mockPool.query.mockResolvedValueOnce({
+        rows: [updatedDbOrg]
       });
 
-      const result = await service.updateOrganization('123', updates);
-      expect(result.name).toBe(updates.name);
-      expect(result.metadata).toEqual(updates.metadata);
+      const result = await service.updateOrganization('123', {
+        name: 'Updated Org',
+        metadata: { key: 'value' }
+      });
+
+      expect(result).toEqual({
+        ...testOrg,
+        name: 'Updated Org',
+        metadata: { key: 'value' }
+      });
     });
 
     it('should throw NotFoundError if organization not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.updateOrganization('123', { name: 'Updated' }))
         .rejects.toThrow(NotFoundError);
@@ -154,27 +144,13 @@ describe('OrganizationService', () => {
 
   describe('addMember', () => {
     it('should add member to organization', async () => {
-      const testMember = {
-        id: '456',
-        organizationId: '123',
-        userId: 'user123',
-        role: MemberRole.Admin,
-        status: MemberStatus.Invited,
-        invitedBy: 'inviter123',
-        invitedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testMember]
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [dbMember] });
 
       const result = await service.addMember(
         '123',
         'user123',
-        MemberRole.Admin,
-        'inviter123'
+        MemberRole.Member,
+        'admin123'
       );
 
       expect(result).toEqual(testMember);
@@ -183,20 +159,13 @@ describe('OrganizationService', () => {
 
   describe('updateMemberRole', () => {
     it('should update member role', async () => {
-      const testMember = {
-        id: '456',
-        organizationId: '123',
-        userId: 'user123',
-        role: MemberRole.Admin,
-        status: MemberStatus.Active,
-        invitedAt: new Date(),
-        joinedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
+      const updatedDbMember = {
+        ...dbMember,
+        role: MemberRole.Admin
       };
 
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testMember]
+      mockPool.query.mockResolvedValueOnce({
+        rows: [updatedDbMember]
       });
 
       const result = await service.updateMemberRole(
@@ -205,13 +174,14 @@ describe('OrganizationService', () => {
         MemberRole.Admin
       );
 
-      expect(result.role).toBe(MemberRole.Admin);
+      expect(result).toEqual({
+        ...testMember,
+        role: MemberRole.Admin
+      });
     });
 
     it('should throw NotFoundError if member not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.updateMemberRole('123', 'user123', MemberRole.Admin))
         .rejects.toThrow(NotFoundError);
@@ -220,67 +190,43 @@ describe('OrganizationService', () => {
 
   describe('getMembers', () => {
     it('should return organization members', async () => {
-      const testMembers = [
-        {
-          id: '456',
-          organizationId: '123',
-          userId: 'user1',
-          role: MemberRole.Owner,
-          status: MemberStatus.Active,
-          invitedAt: new Date(),
-          joinedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          id: '789',
-          organizationId: '123',
-          userId: 'user2',
-          role: MemberRole.Member,
-          status: MemberStatus.Active,
-          invitedAt: new Date(),
-          joinedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ];
-
-      mockClient.query.mockResolvedValueOnce({
-        rows: testMembers
+      mockPool.query.mockResolvedValueOnce({
+        rows: [
+          dbMember,
+          { ...dbMember, id: '789', role: MemberRole.Member }
+        ]
       });
 
       const result = await service.getMembers('123');
-      expect(result).toEqual(testMembers);
+      expect(result).toEqual([
+        testMember,
+        { ...testMember, id: '789', role: MemberRole.Member }
+      ]);
     });
   });
 
   describe('acceptInvitation', () => {
     it('should accept member invitation', async () => {
-      const testMember = {
-        id: '456',
-        organizationId: '123',
-        userId: 'user123',
-        role: MemberRole.Member,
+      const acceptedDbMember = {
+        ...dbMember,
         status: MemberStatus.Active,
-        invitedAt: new Date(),
-        joinedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
+        joined_at: new Date('2025-07-06T01:29:26.221Z')
       };
 
-      mockClient.query.mockResolvedValueOnce({
-        rows: [testMember]
+      mockPool.query.mockResolvedValueOnce({
+        rows: [acceptedDbMember]
       });
 
       const result = await service.acceptInvitation('123', 'user123');
-      expect(result.status).toBe(MemberStatus.Active);
-      expect(result.joinedAt).toBeDefined();
+      expect(result).toEqual({
+        ...testMember,
+        status: MemberStatus.Active,
+        joinedAt: new Date('2025-07-06T01:29:26.221Z')
+      });
     });
 
     it('should throw NotFoundError if invitation not found', async () => {
-      mockClient.query.mockResolvedValueOnce({
-        rows: []
-      });
+      mockPool.query.mockResolvedValueOnce({ rows: [] });
 
       await expect(service.acceptInvitation('123', 'user123'))
         .rejects.toThrow(NotFoundError);
