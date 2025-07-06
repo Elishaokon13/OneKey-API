@@ -116,15 +116,15 @@ export class ProjectService {
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (project_id)
          DO UPDATE SET
-           webhook_url = EXCLUDED.webhook_url,
-           allowed_origins = EXCLUDED.allowed_origins,
-           custom_settings = EXCLUDED.custom_settings,
+           webhook_url = COALESCE(EXCLUDED.webhook_url, project_settings.webhook_url),
+           allowed_origins = COALESCE(EXCLUDED.allowed_origins, project_settings.allowed_origins),
+           custom_settings = COALESCE(EXCLUDED.custom_settings, project_settings.custom_settings),
            updated_at = NOW()
          RETURNING *`,
         [
           projectId,
           settings.webhookUrl,
-          settings.allowedOrigins,
+          settings.allowedOrigins || [],
           settings.customSettings || {}
         ]
       );
@@ -135,6 +135,9 @@ export class ProjectService {
       await client.query('ROLLBACK');
       if (error instanceof NotFoundError) {
         throw error;
+      }
+      if (error instanceof Error) {
+        throw new DatabaseError(`Failed to update project settings: ${error.message}`);
       }
       throw new DatabaseError('Failed to update project settings');
     } finally {
