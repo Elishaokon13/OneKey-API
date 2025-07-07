@@ -5,20 +5,19 @@ require('dotenv').config();
 const parseConnectionString = (connectionString) => {
   if (!connectionString) return null;
   
-  // Handle connection string with ssl parameter
-  const sslParam = connectionString.split('?')[1]?.split('&')
-    .find(param => param.startsWith('sslmode='));
-  
   return {
     connectionString,
-    ssl: sslParam === 'sslmode=disable' ? false : { rejectUnauthorized: false }
+    ssl: {
+      rejectUnauthorized: false,
+      ca: process.env.CA_CERT
+    }
   };
 };
 
 const baseConfig = {
   client: 'postgresql',
-  connection: process.env.SUPABASE_DB_URL ? 
-    parseConnectionString(process.env.SUPABASE_DB_URL) :
+  connection: process.env.DATABASE_URL ? 
+    parseConnectionString(process.env.DATABASE_URL) :
     {
       host: 'localhost',
       port: 5432,
@@ -34,6 +33,10 @@ const baseConfig = {
   seeds: {
     directory: './src/seeds',
     extension: 'ts'
+  },
+  pool: {
+    min: 2,
+    max: 10
   }
 };
 
