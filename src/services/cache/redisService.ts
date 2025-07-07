@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import Redis, { RedisOptions } from 'ioredis';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 
@@ -30,7 +30,7 @@ export class RedisService {
         retryStrategy: (times: number): number => {
           return Math.min(times * 50, 2000);
         }
-      } as Redis.RedisOptions);
+      } as RedisOptions);
 
       this.client.on('connect', () => {
         logger.info('Redis client connected successfully');
