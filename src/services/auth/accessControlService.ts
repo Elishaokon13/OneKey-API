@@ -2,12 +2,14 @@ import { Knex } from 'knex';
 import { RBACConfig, ABACConfig, Permission, Role } from '../../types/access-control';
 import { knex } from '../../config/database';
 import { RedisService } from '../cache/redisService';
+import { AuditLogQueue } from '../analytics/auditLogQueue';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 
 export class AccessControlService {
   private db: Knex;
   private redis: RedisService;
+  private auditLogQueue: AuditLogQueue;
   private readonly RBAC_CACHE_TTL = 3600; // 1 hour
   private readonly ABAC_CACHE_TTL = 3600; // 1 hour
   private readonly USER_CACHE_TTL = 900; // 15 minutes
@@ -15,6 +17,7 @@ export class AccessControlService {
   constructor(transaction?: Knex.Transaction) {
     this.db = transaction || knex;
     this.redis = RedisService.getInstance();
+    this.auditLogQueue = AuditLogQueue.getInstance();
   }
 
   async getRBACConfig(projectId: string): Promise<RBACConfig | null> {
@@ -226,7 +229,7 @@ export class AccessControlService {
     allowed: boolean,
     context: Record<string, any>
   ): Promise<void> {
-    await this.db('audit_logs').insert({
+    await this.auditLogQueue.enqueue({
       user_id: userId,
       project_id: projectId,
       action,
