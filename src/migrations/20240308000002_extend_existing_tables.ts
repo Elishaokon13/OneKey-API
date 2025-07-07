@@ -1,1 +1,2 @@
+import { Knex } from 'knex';
  
