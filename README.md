@@ -203,3 +203,43 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+
+## Performance Optimizations
+
+### Materialized Views
+
+The system uses materialized views to optimize common permission queries:
+
+#### Available Views
+- `mv_user_roles`: User roles with inheritance
+- `mv_user_permissions`: Flattened user permissions
+- `mv_project_rbac_config`: Project RBAC configurations
+- `mv_project_abac_config`: Project ABAC configurations
+- `mv_user_attributes`: User attributes for ABAC
+
+#### Features
+- Automatic refresh via database triggers
+- Concurrent refresh support
+- Performance monitoring and statistics
+- Configurable refresh thresholds
+
+#### View Management
+The `ViewManager` service provides methods to:
+- Refresh views manually or automatically
+- Monitor view statistics
+- Check view freshness
+- Handle view maintenance
+
+#### Performance Impact
+- Reduced query complexity for permission checks
+- Faster role hierarchy traversal
+- Optimized RBAC/ABAC evaluations
+- Improved response times for common operations
+
+#### Maintenance
+Views are automatically refreshed when:
+- Role assignments change
+- Project settings update
+- User attributes change
+
+Manual refresh can be triggered via the `ViewManager` service if needed. 
