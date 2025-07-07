@@ -5,6 +5,7 @@ import { logger } from '@/utils/logger';
 export class RedisService {
   private static instance: RedisService;
   private client: Redis | null = null;
+  private isAvailable: boolean = false;
 
   private constructor() {
     if (config.redis.enabled) {
@@ -28,25 +29,42 @@ export class RedisService {
         db: config.redis.db,
         keyPrefix: config.redis.keyPrefix,
         retryStrategy: (times: number): number => {
-          return Math.min(times * 50, 2000);
-        }
+          // Only retry 3 times with exponential backoff
+          if (times > 3) {
+            this.isAvailable = false;
+            return null as any; // Stop retrying
+          }
+          return Math.min(times * 100, 3000);
+        },
+        maxRetriesPerRequest: 3,
+        connectTimeout: 5000,
+        lazyConnect: true // Don't connect immediately
       } as RedisOptions);
 
       this.client.on('connect', () => {
+        this.isAvailable = true;
         logger.info('Redis client connected successfully');
       });
 
       this.client.on('error', (error: Error) => {
+        this.isAvailable = false;
         logger.error('Redis client error:', { error: error.message });
       });
+
+      // Try to connect
+      this.client.connect().catch((error: Error) => {
+        this.isAvailable = false;
+        logger.error('Failed to connect to Redis:', { error: error.message });
+      });
     } catch (error) {
+      this.isAvailable = false;
       logger.error('Failed to initialize Redis client:', { error: error instanceof Error ? error.message : String(error) });
       this.client = null;
     }
   }
 
   public async get<T>(key: string): Promise<T | null> {
-    if (!this.client || !config.redis.enabled) return null;
+    if (!this.client || !config.redis.enabled || !this.isAvailable) return null;
 
     try {
       const value = await this.client.get(key);
@@ -58,7 +76,7 @@ export class RedisService {
   }
 
   public async set(key: string, value: any, ttl?: number): Promise<boolean> {
-    if (!this.client || !config.redis.enabled) return false;
+    if (!this.client || !config.redis.enabled || !this.isAvailable) return false;
 
     try {
       const serializedValue = JSON.stringify(value);
@@ -75,7 +93,7 @@ export class RedisService {
   }
 
   public async del(key: string): Promise<boolean> {
-    if (!this.client || !config.redis.enabled) return false;
+    if (!this.client || !config.redis.enabled || !this.isAvailable) return false;
 
     try {
       await this.client.del(key);
@@ -87,7 +105,7 @@ export class RedisService {
   }
 
   public async clearCache(): Promise<boolean> {
-    if (!this.client || !config.redis.enabled) return false;
+    if (!this.client || !config.redis.enabled || !this.isAvailable) return false;
 
     try {
       await this.client.flushdb();
@@ -99,7 +117,7 @@ export class RedisService {
   }
 
   public isEnabled(): boolean {
-    return config.redis.enabled && this.client !== null;
+    return config.redis.enabled && this.client !== null && this.isAvailable;
   }
 
   public getClient(): Redis | null {
@@ -110,6 +128,7 @@ export class RedisService {
     if (this.client) {
       await this.client.quit();
       this.client = null;
+      this.isAvailable = false;
     }
   }
 } 
