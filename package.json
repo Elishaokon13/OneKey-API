@@ -57,7 +57,7 @@
   "dependencies": {
     "@ethereum-attestation-service/eas-sdk": "^2.7.0",
     "@lit-protocol/constants": "^7.2.0",
-    "@lit-protocol/lit-node-client": "^7.2.0",
+    "@lit-protocol/lit-node-client": "^3.2.1",
     "@lit-protocol/types": "^7.2.0",
     "@privy-io/server-auth": "^1.28.2",
     "@supabase/supabase-js": "^2.50.2",
