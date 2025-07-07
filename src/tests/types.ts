@@ -1,11 +1,7 @@
 import { Knex } from 'knex';
 
 declare global {
-  namespace NodeJS {
-    interface Global {
-      testTransaction: Knex.Transaction;
-    }
-  }
+  var testTransaction: Knex.Transaction | null;
 }
 
 export {};
