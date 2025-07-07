@@ -2,9 +2,46 @@ import { LitService } from '../../services/encryption/litService';
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
 import { RedisService } from '../../services/cache/redisService';
 import { EncryptionKeyRequest } from '../../types/lit';
+import { ISessionCapabilityObject, LitAbility } from '@lit-protocol/types';
+import { logger } from '../../utils/logger';
 
 jest.mock('@lit-protocol/lit-node-client');
 jest.mock('../../services/cache/redisService');
+jest.mock('../../utils/logger');
+
+class MockSessionCapabilityObject implements ISessionCapabilityObject {
+  private _attenuations: Record<string, Record<string, any[]>> = {};
+  private _proofs: string[] = [];
+  private _statement: string = '';
+
+  get attenuations() { return this._attenuations; }
+  get proofs() { return this._proofs; }
+  get statement() { return this._statement; }
+
+  addProof(proof: string) { this._proofs.push(proof); }
+  
+  addAttenuation(resource: string, namespace?: string, name?: string, restriction?: any) {
+    if (!this._attenuations[resource]) {
+      this._attenuations[resource] = {};
+    }
+    if (namespace && name) {
+      if (!this._attenuations[resource][namespace]) {
+        this._attenuations[resource][namespace] = [];
+      }
+      this._attenuations[resource][namespace].push({ name, ...restriction });
+    }
+  }
+
+  addToSiweMessage(siwe: any) { return siwe; }
+  encodeAsSiweResource() { return ''; }
+  
+  addCapabilityForResource(litResource: any, ability: LitAbility) {
+    this.addAttenuation(litResource.getResourceKey(), 'lit-capability', ability);
+  }
+  
+  verifyCapabilitiesForResource() { return true; }
+  addAllCapabilitiesForResource() {}
+}
 
 describe('LitService', () => {
   let service: LitService;
@@ -32,8 +69,8 @@ describe('LitService', () => {
   beforeEach(() => {
     mockLitNodeClient = {
       connect: jest.fn().mockResolvedValue(undefined),
-      saveEncryptionKey: jest.fn().mockResolvedValue('encryptionKey123'),
-      getEncryptionKey: jest.fn().mockResolvedValue('encryptionKey123'),
+      saveEncryptionKey: jest.fn().mockResolvedValue({ encryptedSymmetricKey: 'encryptedKey123', symmetricKey: new Uint8Array([1, 2, 3]) }),
+      getEncryptionKey: jest.fn().mockResolvedValue({ encryptedSymmetricKey: 'encryptedKey123', symmetricKey: new Uint8Array([1, 2, 3]) }),
       disconnect: jest.fn().mockResolvedValue(undefined)
     } as unknown as jest.Mocked<LitNodeClient>;
 
@@ -55,7 +92,10 @@ describe('LitService', () => {
   describe('saveEncryptionKey', () => {
     it('should save encryption key successfully', async () => {
       const result = await service.saveEncryptionKey(mockRequest);
-      expect(result).toBe('encryptionKey123');
+      expect(result).toEqual({
+        encryptedSymmetricKey: 'encryptedKey123',
+        symmetricKey: expect.any(Uint8Array)
+      });
       expect(mockLitNodeClient.saveEncryptionKey).toHaveBeenCalledWith({
         accessControlConditions: mockRequest.accessControlConditions,
         chain: mockRequest.chain,
@@ -69,13 +109,17 @@ describe('LitService', () => {
 
       await expect(service.saveEncryptionKey(mockRequest))
         .rejects.toThrow('Failed to save encryption key');
+      expect(logger.error).toHaveBeenCalledWith('Failed to save encryption key', { error });
     });
   });
 
   describe('getEncryptionKey', () => {
     it('should get encryption key successfully', async () => {
       const result = await service.getEncryptionKey(mockRequest);
-      expect(result).toBe('encryptionKey123');
+      expect(result).toEqual({
+        encryptedSymmetricKey: 'encryptedKey123',
+        symmetricKey: expect.any(Uint8Array)
+      });
       expect(mockLitNodeClient.getEncryptionKey).toHaveBeenCalledWith({
         accessControlConditions: mockRequest.accessControlConditions,
         chain: mockRequest.chain,
@@ -89,6 +133,17 @@ describe('LitService', () => {
 
       await expect(service.getEncryptionKey(mockRequest))
         .rejects.toThrow('Failed to get encryption key');
+      expect(logger.error).toHaveBeenCalledWith('Failed to get encryption key', { error });
+    });
+
+    it('should handle null response gracefully', async () => {
+      mockLitNodeClient.getEncryptionKey.mockResolvedValueOnce(null);
+
+      const result = await service.getEncryptionKey(mockRequest);
+      expect(result).toEqual({
+        encryptedSymmetricKey: '',
+        symmetricKey: new Uint8Array()
+      });
     });
   });
 
