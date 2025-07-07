@@ -51,13 +51,11 @@ export const createTestProject = async (organizationId: string, trx: Knex = knex
         },
         developer: {
           description: 'Developer role',
-          permissions: ['api:write', 'api:read'],
-          parent: 'admin'
+          permissions: ['api:write', 'api:read']
         },
         user: {
           description: 'Regular user role',
-          permissions: ['api:read'],
-          parent: 'developer'
+          permissions: ['api:read']
         }
       }
     }
