@@ -19,6 +19,9 @@ A secure and scalable API service for managing user authentication, authorizatio
 
 - **Performance Optimizations**
   - Redis caching for RBAC/ABAC configurations
+    - Configurable TTL for different cache types
+    - Automatic cache invalidation
+    - Graceful fallback when Redis is unavailable
   - Batch processing for audit logs
   - Materialized views for common queries
   - Optimized database schema
@@ -45,6 +48,10 @@ A secure and scalable API service for managing user authentication, authorizatio
 
 - **Caching Layer**
   - Redis integration
+    - Configurable connection settings
+    - Automatic reconnection
+    - Error handling and logging
+    - Cache key prefixing
   - Configurable TTL
   - Cache invalidation
   - Performance monitoring
@@ -54,7 +61,7 @@ A secure and scalable API service for managing user authentication, authorizatio
 ### Prerequisites
 - Node.js 18+
 - PostgreSQL 14+
-- Redis 6+
+- Redis 6+ (optional)
 
 ### Environment Setup
 1. Clone the repository
@@ -64,7 +71,7 @@ A secure and scalable API service for managing user authentication, authorizatio
    # Database
    DATABASE_URL=postgresql://user:password@localhost:5432/onekey
    
-   # Redis
+   # Redis (optional)
    REDIS_ENABLED=true
    REDIS_HOST=localhost
    REDIS_PORT=6379
@@ -113,10 +120,11 @@ npm run dev
 
 ### Performance Features
 1. **Caching Strategy**
-   - RBAC/ABAC config caching
-   - User role/attribute caching
+   - RBAC/ABAC config caching (1 hour TTL)
+   - User role/attribute caching (15 minutes TTL)
    - Session capability caching
-   - Configurable TTL
+   - Automatic cache invalidation
+   - Graceful fallback when Redis is unavailable
 
 2. **Database Optimizations**
    - Materialized views
@@ -152,6 +160,12 @@ npm test -- --grep "AccessControl"
 # Run with coverage
 npm run test:coverage
 ```
+
+### Test Environment
+- Tests use a separate database (`onekey_test_db`)
+- Redis tests handle Redis not being available
+- Mock services for external dependencies
+- Transaction-based test isolation
 
 ## Contributing
 
