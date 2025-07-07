@@ -1,7 +1,8 @@
 import { knex } from '../../config/database';
 import { v4 as uuidv4 } from 'uuid';
+import { Knex } from 'knex';
 
-export const createTestOrganization = async (trx = knex) => {
+export const createTestOrganization = async (trx: Knex = knex) => {
   const [org] = await trx('organizations')
     .insert({
       name: 'Test Organization',
@@ -23,7 +24,7 @@ export const createTestOrganization = async (trx = knex) => {
   return org;
 };
 
-export const createTestProject = async (organizationId: string, trx = knex) => {
+export const createTestProject = async (organizationId: string, trx: Knex = knex) => {
   const [project] = await trx('projects')
     .insert({
       organization_id: organizationId,
@@ -96,7 +97,7 @@ export const createTestUser = async (
   projectId: string,
   role: string = 'user',
   email?: string,
-  trx = knex
+  trx: Knex = knex
 ) => {
   const [user] = await trx('users')
     .insert({
