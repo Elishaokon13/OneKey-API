@@ -1,12 +1,12 @@
 import { Knex } from 'knex';
 import { RBACConfig, ABACConfig, Permission, Role } from '../../types/access-control';
-import { db } from '../../config/database';
+import { knex } from '../../config/database';
 
 export class AccessControlService {
   private db: Knex;
 
   constructor(transaction?: Knex.Transaction) {
-    this.db = transaction || db;
+    this.db = transaction || knex;
   }
 
   async getRBACConfig(projectId: string): Promise<RBACConfig | null> {
