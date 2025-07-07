@@ -62,7 +62,7 @@ export class AccessControlService {
       // Check parent role if exists
       if (role.parent && rbacConfig.roles[role.parent]) {
         const parentRole = rbacConfig.roles[role.parent];
-        if (this.roleHasPermission(parentRole, requiredPermission)) {
+        if (parentRole && this.roleHasPermission(parentRole, requiredPermission)) {
           return true;
         }
       }
@@ -72,7 +72,7 @@ export class AccessControlService {
   }
 
   private roleHasPermission(role: Role, requiredPermission: Permission): boolean {
-    return role.permissions.some(permission => {
+    return role.permissions.some((permission: Permission) => {
       // Check for wildcard permissions
       if (permission === 'all:*') return true;
       
@@ -105,7 +105,7 @@ export class AccessControlService {
 
       // Check required roles if specified
       if (conditions.requiredRoles?.length) {
-        const hasRequiredRole = conditions.requiredRoles.some(role => 
+        const hasRequiredRole = conditions.requiredRoles.some((role: string) => 
           userRoles.includes(role)
         );
         if (!hasRequiredRole) continue;
