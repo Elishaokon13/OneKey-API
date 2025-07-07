@@ -154,6 +154,8 @@ CREATE TABLE audit_logs (
     ip_address VARCHAR(45), -- IPv4 or IPv6 address
     user_agent TEXT, -- Browser/client user agent
     request_id UUID, -- Link to request ID for tracing
+    allowed BOOLEAN DEFAULT false, -- Whether the action was allowed
+    details JSONB DEFAULT '{}', -- Additional audit details
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     metadata JSONB DEFAULT '{}' -- Additional audit metadata
 );
