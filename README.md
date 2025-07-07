@@ -243,3 +243,30 @@ Views are automatically refreshed when:
 - User attributes change
 
 Manual refresh can be triggered via the `ViewManager` service if needed. 
+
+## Security Features
+
+### Rate Limiting
+
+The system implements comprehensive rate limiting:
+
+#### Access Control Rate Limiting
+- Per-user, per-project, and per-action rate limits
+- Configurable time windows and request limits
+- Automatic blocking of excessive requests
+- Redis-based distributed rate limiting
+- Graceful fallback when Redis is unavailable
+
+Configuration via environment variables:
+```env
+ACCESS_CONTROL_RATE_LIMIT_WINDOW_MS=60000      # 1 minute window
+ACCESS_CONTROL_RATE_LIMIT_MAX_REQUESTS=100     # 100 requests per window
+ACCESS_CONTROL_RATE_LIMIT_BLOCK_DURATION_MS=300000  # 5 minutes block duration
+```
+
+Features:
+- Separate limits for permission checks and ABAC evaluations
+- Automatic blocking after limit exceeded
+- Configurable block duration
+- Rate limit reset capability
+- Detailed logging and monitoring 

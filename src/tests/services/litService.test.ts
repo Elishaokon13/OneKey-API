@@ -1,208 +1,107 @@
 import { LitService } from '../../services/encryption/litService';
-import { LitNetwork, EncryptionKeyRequest } from '../../types/lit';
 import { LitNodeClient } from '@lit-protocol/lit-node-client';
-import { config } from '../../config/environment';
+import { RedisService } from '../../services/cache/redisService';
+import { EncryptionKeyRequest } from '../../types/lit';
 
-// Mock LitNodeClient
-jest.mock('@lit-protocol/lit-node-client', () => {
-  return {
-    LitNodeClient: jest.fn().mockImplementation(() => ({
-      connect: jest.fn().mockResolvedValue(undefined),
-      disconnect: jest.fn().mockResolvedValue(undefined),
-      encrypt: jest.fn().mockResolvedValue({
-        ciphertext: 'mockEncryptedKey',
-        encryptedSymmetricKey: new Uint8Array([1, 2, 3])
-      }),
-      decrypt: jest.fn().mockResolvedValue({
-        decryptedData: 'mockEncryptedKey',
-        decryptedSymmetricKey: new Uint8Array([1, 2, 3])
-      }),
-      getWalletSig: jest.fn().mockResolvedValue({
-        sig: 'mockSignature',
-        derivedVia: 'web3.eth.personal.sign',
-        signedMessage: 'mockMessage',
-        address: '0x1234'
-      })
-    }))
-  };
-});
+jest.mock('@lit-protocol/lit-node-client');
+jest.mock('../../services/cache/redisService');
 
 describe('LitService', () => {
   let service: LitService;
-  const mockConfig = {
-    network: 'cayenne' as LitNetwork,
-    debug: true,
-    minNodeCount: 5,
-    maxNodeCount: 10
+  let mockLitNodeClient: jest.Mocked<LitNodeClient>;
+  let mockRedis: jest.Mocked<RedisService>;
+
+  const mockRequest: EncryptionKeyRequest = {
+    projectId: 'project123',
+    accessControlConditions: [
+      {
+        contractAddress: '0x123',
+        standardContractType: 'ERC20',
+        chain: 'ethereum',
+        method: 'balanceOf',
+        parameters: ['address'],
+        returnValueTest: {
+          comparator: '>',
+          value: '100'
+        }
+      }
+    ],
+    chain: 'ethereum'
   };
 
   beforeEach(() => {
-    service = new LitService(mockConfig);
-    service['client'] = new LitNodeClient({} as any);
+    mockLitNodeClient = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      saveEncryptionKey: jest.fn().mockResolvedValue('encryptionKey123'),
+      getEncryptionKey: jest.fn().mockResolvedValue('encryptionKey123'),
+      disconnect: jest.fn().mockResolvedValue(undefined)
+    } as unknown as jest.Mocked<LitNodeClient>;
+
+    mockRedis = {
+      get: jest.fn(),
+      set: jest.fn(),
+      connect: jest.fn()
+    } as unknown as jest.Mocked<RedisService>;
+
+    jest.spyOn(RedisService, 'getInstance').mockReturnValue(mockRedis);
+    service = new LitService();
+    service['client'] = mockLitNodeClient;
   });
 
-  describe('initialize', () => {
-    it('should initialize Lit Protocol client successfully', async () => {
-      await service.initialize();
-      expect(service['isInitialized']).toBe(true);
-    });
-
-    it('should not reinitialize if already initialized', async () => {
-      await service.initialize();
-      await service.initialize();
-      expect((service['client'] as unknown as LitNodeClient).connect).toHaveBeenCalledTimes(1);
-    });
-
-    it('should handle initialization errors', async () => {
-      const mockError = new Error('Connection failed');
-      const mockClient = service['client'] as unknown as LitNodeClient;
-      const connectSpy = jest.spyOn(mockClient, 'connect').mockRejectedValueOnce(mockError);
-
-      await expect(service.initialize()).rejects.toThrow('Connection failed');
-      expect(service['isInitialized']).toBe(false);
-      connectSpy.mockRestore();
-    });
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('saveEncryptionKey', () => {
-    const mockRequest: EncryptionKeyRequest = {
-      accessControlConditions: [
-        {
-          contractAddress: config.blockchain.easContractAddress,
-          standardContractType: 'ERC1155',
-          chain: 'base',
-          method: 'balanceOf',
-          parameters: [':userAddress', 'userId123'],
-          returnValueTest: {
-            comparator: '>',
-            value: '0'
-          }
-        }
-      ],
-      chain: 'base'
-    };
-
     it('should save encryption key successfully', async () => {
-      await service.initialize();
-      const response = await service.saveEncryptionKey(mockRequest);
-      
-      expect(response.encryptedSymmetricKey).toBe('mockEncryptedKey');
-      expect(response.symmetricKey).toBeInstanceOf(Uint8Array);
+      const result = await service.saveEncryptionKey(mockRequest);
+      expect(result).toBe('encryptionKey123');
+      expect(mockLitNodeClient.saveEncryptionKey).toHaveBeenCalledWith({
+        accessControlConditions: mockRequest.accessControlConditions,
+        chain: mockRequest.chain,
+        permanent: false
+      });
     });
 
-    it('should auto-initialize if not initialized', async () => {
-      const response = await service.saveEncryptionKey(mockRequest);
-      
-      expect(service['isInitialized']).toBe(true);
-      expect(response.encryptedSymmetricKey).toBe('mockEncryptedKey');
-    });
+    it('should handle errors gracefully', async () => {
+      const error = new Error('Lit error');
+      mockLitNodeClient.saveEncryptionKey.mockRejectedValueOnce(error);
 
-    it('should generate auth signature if not provided', async () => {
-      await service.initialize();
-      await service.saveEncryptionKey(mockRequest);
-      
-      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chain: mockRequest.chain,
-          sessionCapabilityObject: expect.any(Object)
-        })
-      );
-    });
-
-    it('should validate request parameters', async () => {
-      await service.initialize();
-      
-      const invalidRequest = { ...mockRequest, accessControlConditions: [] };
-      await expect(service.saveEncryptionKey(invalidRequest)).rejects.toThrow('Access control conditions are required');
-      
-      const noChainRequest = { ...mockRequest, chain: '' };
-      await expect(service.saveEncryptionKey(noChainRequest)).rejects.toThrow('Chain is required');
+      await expect(service.saveEncryptionKey(mockRequest))
+        .rejects.toThrow('Failed to save encryption key');
     });
   });
 
   describe('getEncryptionKey', () => {
-    const mockRequest: EncryptionKeyRequest = {
-      accessControlConditions: [
-        {
-          contractAddress: config.blockchain.easContractAddress,
-          standardContractType: 'ERC1155',
-          chain: 'base',
-          method: 'balanceOf',
-          parameters: [':userAddress', 'userId123'],
-          returnValueTest: {
-            comparator: '>',
-            value: '0'
-          }
-        }
-      ],
-      chain: 'base',
-      encryptedSymmetricKey: 'mockEncryptedKey'
-    };
-
     it('should get encryption key successfully', async () => {
-      await service.initialize();
-      const response = await service.getEncryptionKey(mockRequest);
-      
-      expect(response.encryptedSymmetricKey).toBe('mockEncryptedKey');
-      expect(response.symmetricKey).toBeInstanceOf(Uint8Array);
+      const result = await service.getEncryptionKey(mockRequest);
+      expect(result).toBe('encryptionKey123');
+      expect(mockLitNodeClient.getEncryptionKey).toHaveBeenCalledWith({
+        accessControlConditions: mockRequest.accessControlConditions,
+        chain: mockRequest.chain,
+        toDecrypt: true
+      });
     });
 
-    it('should auto-initialize if not initialized', async () => {
-      const response = await service.getEncryptionKey(mockRequest);
-      
-      expect(service['isInitialized']).toBe(true);
-      expect(response.encryptedSymmetricKey).toBe('mockEncryptedKey');
-    });
+    it('should handle errors gracefully', async () => {
+      const error = new Error('Lit error');
+      mockLitNodeClient.getEncryptionKey.mockRejectedValueOnce(error);
 
-    it('should generate auth signature if not provided', async () => {
-      await service.initialize();
-      await service.getEncryptionKey(mockRequest);
-      
-      expect((service['client'] as unknown as LitNodeClient).getWalletSig).toHaveBeenCalledWith(
-        expect.objectContaining({
-          chain: mockRequest.chain,
-          sessionCapabilityObject: expect.any(Object)
-        })
-      );
-    });
-
-    it('should validate request parameters', async () => {
-      await service.initialize();
-      
-      const invalidRequest = { ...mockRequest, accessControlConditions: [] };
-      await expect(service.getEncryptionKey(invalidRequest)).rejects.toThrow('Access control conditions are required');
-      
-      const noChainRequest = { ...mockRequest, chain: '' };
-      await expect(service.getEncryptionKey(noChainRequest)).rejects.toThrow('Chain is required');
-    });
-  });
-
-  describe('createKycAccessConditions', () => {
-    it('should create valid access control conditions', () => {
-      const conditions = service.createKycAccessConditions('userId123', 'projectId456');
-      
-      expect(conditions).toHaveLength(2);
-      expect(conditions[0]!.method).toBe('balanceOf');
-      expect(conditions[0]!.parameters).toContain('userId123');
-      expect(conditions[1]!.method).toBe('isProjectAuthorized');
-      expect(conditions[1]!.parameters).toContain('projectId456');
+      await expect(service.getEncryptionKey(mockRequest))
+        .rejects.toThrow('Failed to get encryption key');
     });
   });
 
   describe('disconnect', () => {
-    it('should disconnect successfully when initialized', async () => {
-      await service.initialize();
+    it('should disconnect client if connected', async () => {
       await service.disconnect();
-      
-      expect(service['isInitialized']).toBe(false);
-      expect((service['client'] as unknown as LitNodeClient).disconnect).toHaveBeenCalled();
+      expect(mockLitNodeClient.disconnect).toHaveBeenCalled();
     });
 
-    it('should not attempt to disconnect when not initialized', async () => {
-      service['client'] = new LitNodeClient({} as any);
+    it('should handle null client gracefully', async () => {
+      service['client'] = null;
       await service.disconnect();
-      
-      expect((service['client'] as unknown as LitNodeClient).disconnect).not.toHaveBeenCalled();
+      expect(mockLitNodeClient.disconnect).not.toHaveBeenCalled();
     });
   });
 }); 

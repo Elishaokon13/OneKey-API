@@ -1,271 +1,108 @@
-import { Knex } from 'knex';
-import { RBACConfig, ABACConfig, Permission, Role } from '../../types/access-control';
-import { knex } from '../../config/database';
+import { Pool } from 'pg';
+import { RateLimitService } from '../access/rateLimitService';
 import { RedisService } from '../cache/redisService';
-import { AuditLogQueue } from '../analytics/auditLogQueue';
-import { config } from '@/config/environment';
-import { logger } from '@/utils/logger';
+import { Logger } from '../../utils/logger';
+import { AccessControlError } from '../../utils/errors';
+import { AccessControlPolicy, AccessLevel, ProjectType } from '../../types/accessControl';
 
 export class AccessControlService {
-  private db: Knex;
-  private redis: RedisService;
-  private auditLogQueue: AuditLogQueue;
-  private readonly RBAC_CACHE_TTL = 3600; // 1 hour
-  private readonly ABAC_CACHE_TTL = 3600; // 1 hour
-  private readonly USER_CACHE_TTL = 900; // 15 minutes
+  private static instance: AccessControlService;
+  private pool: Pool;
+  private redisService: RedisService;
+  private rateLimitService: RateLimitService;
 
-  constructor(transaction?: Knex.Transaction) {
-    this.db = transaction || knex;
-    this.redis = RedisService.getInstance();
-    this.auditLogQueue = AuditLogQueue.getInstance();
+  private constructor(pool: Pool) {
+    this.pool = pool;
+    this.redisService = RedisService.getInstance();
+    this.rateLimitService = RateLimitService.getInstance();
   }
 
-  async getRBACConfig(projectId: string): Promise<RBACConfig | null> {
-    const cacheKey = `rbac:${projectId}`;
-    
-    if (this.redis.isEnabled()) {
-      const cached = await this.redis.get<RBACConfig>(cacheKey);
-      if (cached) {
-        logger.debug('RBAC config cache hit', { projectId });
-        return cached;
-      }
+  public static getInstance(pool: Pool): AccessControlService {
+    if (!AccessControlService.instance) {
+      AccessControlService.instance = new AccessControlService(pool);
     }
-
-    const result = await this.db('mv_project_rbac_config')
-      .where({ project_id: projectId })
-      .first();
-    
-    const config = result?.rbac_config as RBACConfig;
-    
-    if (config && this.redis.isEnabled()) {
-      await this.redis.set(cacheKey, config, this.RBAC_CACHE_TTL);
-      logger.debug('RBAC config cached', { projectId });
-    }
-
-    return config;
+    return AccessControlService.instance;
   }
 
-  async getABACConfig(projectId: string): Promise<ABACConfig | null> {
-    const cacheKey = `abac:${projectId}`;
-    
-    if (this.redis.isEnabled()) {
-      const cached = await this.redis.get<ABACConfig>(cacheKey);
-      if (cached) {
-        logger.debug('ABAC config cache hit', { projectId });
-        return cached;
+  public async checkAccess(userId: string, projectId: string, requiredLevel: AccessLevel): Promise<boolean> {
+    try {
+      // Check rate limits first
+      if (await this.rateLimitService.isRateLimited(userId, projectId)) {
+        throw new AccessControlError('Rate limit exceeded');
       }
-    }
 
-    const result = await this.db('mv_project_abac_config')
-      .where({ project_id: projectId })
-      .first();
-    
-    const config = result?.abac_config as ABACConfig;
-    
-    if (config && this.redis.isEnabled()) {
-      await this.redis.set(cacheKey, config, this.ABAC_CACHE_TTL);
-      logger.debug('ABAC config cached', { projectId });
-    }
+      // Increment request count
+      await this.rateLimitService.incrementRequestCount(userId, projectId);
 
-    return config;
+      // Check access level
+      const policy = await this.getPolicy(userId, projectId);
+      if (!policy) {
+        return false;
+      }
+
+      const hasAccess = this.evaluatePolicy(policy, requiredLevel);
+      if (!hasAccess) {
+        Logger.warn('Access denied', { userId, projectId, requiredLevel });
+      }
+
+      return hasAccess;
+    } catch (error) {
+      if (error instanceof AccessControlError) {
+        throw error;
+      }
+      Logger.error('Access check failed', { error });
+      return false;
+    }
   }
 
-  async getUserRoles(userId: string): Promise<string[]> {
-    const cacheKey = `user:roles:${userId}`;
-    
-    if (this.redis.isEnabled()) {
-      const cached = await this.redis.get<string[]>(cacheKey);
-      if (cached) {
-        logger.debug('User roles cache hit', { userId });
-        return cached;
+  private async getPolicy(userId: string, projectId: string): Promise<AccessControlPolicy | null> {
+    const cacheKey = `policy:${userId}:${projectId}`;
+    try {
+      // Try cache first
+      const cachedPolicy = await this.redisService.get<AccessControlPolicy>(cacheKey);
+      if (cachedPolicy) {
+        return cachedPolicy;
       }
-    }
 
-    const roles = await this.db('mv_user_roles')
-      .where({ user_id: userId, active: true })
-      .pluck('role');
-    
-    if (roles.length && this.redis.isEnabled()) {
-      await this.redis.set(cacheKey, roles, this.USER_CACHE_TTL);
-      logger.debug('User roles cached', { userId });
-    }
+      // Query database
+      const result = await this.pool.query(
+        'SELECT * FROM access_control_policies WHERE user_id = $1 AND project_id = $2',
+        [userId, projectId]
+      );
 
-    return roles;
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const policy = result.rows[0] as AccessControlPolicy;
+      
+      // Cache policy
+      await this.redisService.set(cacheKey, policy, 300); // Cache for 5 minutes
+      
+      return policy;
+    } catch (error) {
+      Logger.error('Failed to get policy', { error });
+      return null;
+    }
   }
 
-  async getUserAttributes(userId: string): Promise<Record<string, any>> {
-    const cacheKey = `user:attributes:${userId}`;
-    
-    if (this.redis.isEnabled()) {
-      const cached = await this.redis.get<Record<string, any>>(cacheKey);
-      if (cached) {
-        logger.debug('User attributes cache hit', { userId });
-        return cached;
-      }
-    }
-
-    const result = await this.db('mv_user_attributes')
-      .where({ user_id: userId })
-      .first();
-    
-    const attributes = result?.attributes ? JSON.parse(result.attributes) : {};
-    
-    if (Object.keys(attributes).length && this.redis.isEnabled()) {
-      await this.redis.set(cacheKey, attributes, this.USER_CACHE_TTL);
-      logger.debug('User attributes cached', { userId });
-    }
-
-    return attributes;
-  }
-
-  async hasPermission(userId: string, projectId: string, requiredPermission: Permission): Promise<boolean> {
-    // First check Redis cache
-    const cacheKey = `permission:${userId}:${projectId}:${requiredPermission}`;
-    
-    if (this.redis.isEnabled()) {
-      const cached = await this.redis.get<boolean>(cacheKey);
-      if (cached !== null) {
-        logger.debug('Permission check cache hit', { userId, requiredPermission });
-        return cached;
-      }
-    }
-
-    // Check materialized view for direct permission
-    const hasDirectPermission = await this.db('mv_user_permissions')
-      .where({
-        user_id: userId,
-        project_id: projectId,
-        permission: requiredPermission
-      })
-      .first()
-      .then(result => !!result);
-
-    if (hasDirectPermission) {
-      if (this.redis.isEnabled()) {
-        await this.redis.set(cacheKey, true, this.USER_CACHE_TTL);
-      }
+  private evaluatePolicy(policy: AccessControlPolicy, requiredLevel: AccessLevel): boolean {
+    // Basic level check
+    if (policy.accessLevel >= requiredLevel) {
       return true;
     }
 
-    // Check for wildcard permissions
-    const hasWildcardPermission = await this.db('mv_user_permissions')
-      .where({
-        user_id: userId,
-        project_id: projectId,
-        permission: 'all:*'
-      })
-      .orWhere({
-        user_id: userId,
-        project_id: projectId,
-        permission: `${requiredPermission.split(':')[0]}:*`
-      })
-      .first()
-      .then(result => !!result);
-
-    if (this.redis.isEnabled()) {
-      await this.redis.set(cacheKey, hasWildcardPermission, this.USER_CACHE_TTL);
-    }
-
-    return hasWildcardPermission;
-  }
-
-  async evaluateABACRules(
-    userId: string, 
-    projectId: string, 
-    context: Record<string, any>
-  ): Promise<boolean> {
-    const [userRoles, userAttributes, abacConfig] = await Promise.all([
-      this.getUserRoles(userId),
-      this.getUserAttributes(userId),
-      this.getABACConfig(projectId)
-    ]);
-
-    if (!abacConfig?.enabled) {
-      return false;
-    }
-
-    // Evaluate each ABAC rule
-    for (const rule of abacConfig.rules) {
-      const conditions = rule.conditions;
-
-      // Check required roles if specified
-      if (conditions.requiredRoles?.length) {
-        const hasRequiredRole = conditions.requiredRoles.some((role: string) => 
-          userRoles.includes(role)
-        );
-        if (!hasRequiredRole) continue;
-      }
-
-      // Check all other conditions
-      const contextMatch = Object.entries(conditions).every(([key, value]) => {
-        if (key === 'requiredRoles') return true; // Already checked
-        
-        // Check user attributes
-        if (key in userAttributes) {
-          return userAttributes[key] === value;
-        }
-        
-        // Check context attributes
-        if (key in context) {
-          return context[key] === value;
-        }
-        
-        return false;
-      });
-
-      if (contextMatch) return true;
+    // Check project type specific rules
+    if (policy.projectType === ProjectType.WEB3) {
+      return this.evaluateWeb3Policy(policy, requiredLevel);
     }
 
     return false;
   }
 
-  async logAccessAttempt(
-    userId: string,
-    projectId: string,
-    action: string,
-    allowed: boolean,
-    context: Record<string, any>
-  ): Promise<void> {
-    await this.auditLogQueue.enqueue({
-      user_id: userId,
-      project_id: projectId,
-      action,
-      allowed,
-      details: context,
-      created_at: new Date()
-    });
-  }
-
-  /**
-   * Invalidate cached RBAC configuration for a project
-   */
-  public async invalidateRBACCache(projectId: string): Promise<void> {
-    if (this.redis.isEnabled()) {
-      await this.redis.del(`rbac:${projectId}`);
-      logger.debug('RBAC config cache invalidated', { projectId });
-    }
-  }
-
-  /**
-   * Invalidate cached ABAC configuration for a project
-   */
-  public async invalidateABACCache(projectId: string): Promise<void> {
-    if (this.redis.isEnabled()) {
-      await this.redis.del(`abac:${projectId}`);
-      logger.debug('ABAC config cache invalidated', { projectId });
-    }
-  }
-
-  /**
-   * Invalidate cached user data
-   */
-  public async invalidateUserCache(userId: string): Promise<void> {
-    if (this.redis.isEnabled()) {
-      await Promise.all([
-        this.redis.del(`user:roles:${userId}`),
-        this.redis.del(`user:attributes:${userId}`)
-      ]);
-      logger.debug('User cache invalidated', { userId });
-    }
+  private evaluateWeb3Policy(policy: AccessControlPolicy, requiredLevel: AccessLevel): boolean {
+    // Add Web3 specific policy evaluation logic here
+    // For example, checking token holdings, NFT ownership, etc.
+    return false;
   }
 } 

@@ -1,210 +1,158 @@
 import { RedisService } from '../../../services/cache/redisService';
-import { config } from '../../../config/environment';
+import Redis from 'ioredis';
+
+jest.mock('ioredis');
 
 describe('RedisService', () => {
   let redisService: RedisService;
+  let mockRedisClient: jest.Mocked<Redis>;
 
-  beforeAll(() => {
-    // Enable Redis for tests
-    config.redis.enabled = true;
+  beforeEach(() => {
+    mockRedisClient = {
+      get: jest.fn(),
+      set: jest.fn(),
+      setex: jest.fn(),
+      del: jest.fn(),
+      flushdb: jest.fn(),
+      quit: jest.fn(),
+      on: jest.fn(),
+      connect: jest.fn()
+    } as unknown as jest.Mocked<Redis>;
+
     redisService = RedisService.getInstance();
+    redisService.setClient(mockRedisClient);
   });
 
-  afterAll(async () => {
-    await redisService.disconnect();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  beforeEach(async () => {
-    // Only try to clear cache if Redis is available
-    if (redisService.isEnabled()) {
-      await redisService.clearCache();
-    }
-  });
+  describe('get', () => {
+    it('should return parsed value when key exists', async () => {
+      const testKey = 'test-key';
+      const testValue = { foo: 'bar' };
+      mockRedisClient.get.mockResolvedValue(JSON.stringify(testValue));
 
-  describe('Basic Operations', () => {
-    it('should handle Redis not being available', async () => {
-      const key = 'test:key';
-      const value = { foo: 'bar' };
+      const result = await redisService.get<typeof testValue>(testKey);
+      expect(result).toEqual(testValue);
+      expect(mockRedisClient.get).toHaveBeenCalledWith(testKey);
+    });
 
-      // If Redis is not available, operations should fail gracefully
-      const setResult = await redisService.set(key, value);
-      expect(setResult).toBe(false);
+    it('should return null when key does not exist', async () => {
+      const testKey = 'non-existent-key';
+      mockRedisClient.get.mockResolvedValue(null);
 
-      const result = await redisService.get<typeof value>(key);
+      const result = await redisService.get(testKey);
       expect(result).toBeNull();
-
-      const deleteResult = await redisService.del(key);
-      expect(deleteResult).toBe(false);
-
-      const clearResult = await redisService.clearCache();
-      expect(clearResult).toBe(false);
+      expect(mockRedisClient.get).toHaveBeenCalledWith(testKey);
     });
 
-    // Only run these tests if Redis is available
-    describe('Redis Available', () => {
-      beforeEach(() => {
-        // Skip tests if Redis is not available
-        if (!redisService.isEnabled()) {
-          console.log('Redis is not available, skipping tests');
-          return;
-        }
-      });
+    it('should handle invalid JSON', async () => {
+      const testKey = 'invalid-json-key';
+      mockRedisClient.get.mockResolvedValue('invalid json');
 
-      it('should set and get a value', async () => {
-        if (!redisService.isEnabled()) {
-          console.log('Redis is not available, skipping test');
-          return;
-        }
+      const result = await redisService.get(testKey);
+      expect(result).toBeNull();
+      expect(mockRedisClient.get).toHaveBeenCalledWith(testKey);
+    });
 
-        const key = 'test:key';
-        const value = { foo: 'bar' };
+    it('should handle Redis errors', async () => {
+      const testKey = 'error-key';
+      mockRedisClient.get.mockRejectedValue(new Error('Redis error'));
 
-        const setResult = await redisService.set(key, value);
-        expect(setResult).toBe(true);
-
-        const result = await redisService.get<typeof value>(key);
-        expect(result).toEqual(value);
-      });
-
-      it('should set a value with TTL', async () => {
-        if (!redisService.isEnabled()) {
-          console.log('Redis is not available, skipping test');
-          return;
-        }
-
-        const key = 'test:ttl';
-        const value = { foo: 'bar' };
-        const ttl = 1; // 1 second
-
-        await redisService.set(key, value, ttl);
-        
-        // Value should exist initially
-        let result = await redisService.get<typeof value>(key);
-        expect(result).toEqual(value);
-
-        // Wait for TTL to expire
-        await new Promise(resolve => setTimeout(resolve, 1100));
-
-        // Value should be null after TTL
-        result = await redisService.get<typeof value>(key);
-        expect(result).toBeNull();
-      });
-
-      it('should delete a value', async () => {
-        if (!redisService.isEnabled()) {
-          console.log('Redis is not available, skipping test');
-          return;
-        }
-
-        const key = 'test:delete';
-        const value = { foo: 'bar' };
-
-        await redisService.set(key, value);
-        const deleteResult = await redisService.del(key);
-        expect(deleteResult).toBe(true);
-
-        const result = await redisService.get<typeof value>(key);
-        expect(result).toBeNull();
-      });
-
-      it('should clear all values', async () => {
-        if (!redisService.isEnabled()) {
-          console.log('Redis is not available, skipping test');
-          return;
-        }
-
-        const keys = ['test:1', 'test:2', 'test:3'];
-        const value = { foo: 'bar' };
-
-        // Set multiple values
-        await Promise.all(keys.map(key => redisService.set(key, value)));
-
-        // Clear cache
-        const clearResult = await redisService.clearCache();
-        expect(clearResult).toBe(true);
-
-        // All values should be null
-        const results = await Promise.all(keys.map(key => redisService.get<typeof value>(key)));
-        results.forEach(result => expect(result).toBeNull());
-      });
+      const result = await redisService.get(testKey);
+      expect(result).toBeNull();
+      expect(mockRedisClient.get).toHaveBeenCalledWith(testKey);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle invalid JSON gracefully', async () => {
-      if (!redisService.isEnabled()) {
-        console.log('Redis is not available, skipping test');
-        return;
-      }
+  describe('set', () => {
+    it('should set value with TTL when provided', async () => {
+      const testKey = 'test-key';
+      const testValue = { foo: 'bar' };
+      const ttl = 3600;
+      mockRedisClient.setex.mockResolvedValue('OK');
 
-      const key = 'test:invalid';
-      const client = redisService.getClient();
-      
-      // Manually set invalid JSON
-      if (client) {
-        await client.set(key, 'invalid json');
-      }
-
-      const result = await redisService.get(key);
-      expect(result).toBeNull();
+      const result = await redisService.set(testKey, testValue, ttl);
+      expect(result).toBe(true);
+      expect(mockRedisClient.setex).toHaveBeenCalledWith(
+        testKey,
+        ttl,
+        JSON.stringify(testValue)
+      );
     });
 
-    it('should handle Redis client errors gracefully', async () => {
-      // Force disconnect Redis client
+    it('should set value without TTL', async () => {
+      const testKey = 'test-key';
+      const testValue = { foo: 'bar' };
+      mockRedisClient.set.mockResolvedValue('OK');
+
+      const result = await redisService.set(testKey, testValue);
+      expect(result).toBe(true);
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        testKey,
+        JSON.stringify(testValue)
+      );
+    });
+
+    it('should handle Redis errors', async () => {
+      const testKey = 'error-key';
+      const testValue = { foo: 'bar' };
+      mockRedisClient.set.mockRejectedValue(new Error('Redis error'));
+
+      const result = await redisService.set(testKey, testValue);
+      expect(result).toBe(false);
+      expect(mockRedisClient.set).toHaveBeenCalledWith(
+        testKey,
+        JSON.stringify(testValue)
+      );
+    });
+  });
+
+  describe('del', () => {
+    it('should delete key successfully', async () => {
+      const testKey = 'test-key';
+      mockRedisClient.del.mockResolvedValue(1);
+
+      const result = await redisService.del(testKey);
+      expect(result).toBe(true);
+      expect(mockRedisClient.del).toHaveBeenCalledWith(testKey);
+    });
+
+    it('should handle Redis errors', async () => {
+      const testKey = 'error-key';
+      mockRedisClient.del.mockRejectedValue(new Error('Redis error'));
+
+      const result = await redisService.del(testKey);
+      expect(result).toBe(false);
+      expect(mockRedisClient.del).toHaveBeenCalledWith(testKey);
+    });
+  });
+
+  describe('clearCache', () => {
+    it('should clear cache successfully', async () => {
+      mockRedisClient.flushdb.mockResolvedValue('OK');
+
+      const result = await redisService.clearCache();
+      expect(result).toBe(true);
+      expect(mockRedisClient.flushdb).toHaveBeenCalled();
+    });
+
+    it('should handle Redis errors', async () => {
+      mockRedisClient.flushdb.mockRejectedValue(new Error('Redis error'));
+
+      const result = await redisService.clearCache();
+      expect(result).toBe(false);
+      expect(mockRedisClient.flushdb).toHaveBeenCalled();
+    });
+  });
+
+  describe('disconnect', () => {
+    it('should disconnect successfully', async () => {
+      mockRedisClient.quit.mockResolvedValue('OK');
+
       await redisService.disconnect();
-
-      const key = 'test:error';
-      const value = { foo: 'bar' };
-
-      const setResult = await redisService.set(key, value);
-      expect(setResult).toBe(false);
-
-      const getResult = await redisService.get(key);
-      expect(getResult).toBeNull();
-
-      const deleteResult = await redisService.del(key);
-      expect(deleteResult).toBe(false);
-
-      const clearResult = await redisService.clearCache();
-      expect(clearResult).toBe(false);
-    });
-  });
-
-  describe('Configuration', () => {
-    it('should respect Redis enabled flag', async () => {
-      // Disable Redis
-      config.redis.enabled = false;
-
-      const key = 'test:disabled';
-      const value = { foo: 'bar' };
-
-      const setResult = await redisService.set(key, value);
-      expect(setResult).toBe(false);
-
-      const getResult = await redisService.get(key);
-      expect(getResult).toBeNull();
-
-      // Re-enable Redis for other tests
-      config.redis.enabled = true;
-    });
-
-    it('should use configured key prefix', async () => {
-      if (!redisService.isEnabled()) {
-        console.log('Redis is not available, skipping test');
-        return;
-      }
-
-      const key = 'test:prefix';
-      const value = { foo: 'bar' };
-      const client = redisService.getClient();
-
-      await redisService.set(key, value);
-
-      if (client) {
-        // Check if key exists with prefix
-        const exists = await client.exists(config.redis.keyPrefix + key);
-        expect(exists).toBe(1);
-      }
+      expect(mockRedisClient.quit).toHaveBeenCalled();
     });
   });
 }); 

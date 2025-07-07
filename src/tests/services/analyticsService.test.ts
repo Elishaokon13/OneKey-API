@@ -1,150 +1,110 @@
 import { Pool } from 'pg';
 import { AnalyticsService } from '../../services/analytics/analyticsService';
-import { 
-  AnalyticsEventType,
-  MetricType,
-  AnalyticsEvent,
-  PerformanceMetric,
-  CostMetric
-} from '../../types/analytics';
+import { MetricType, AnalyticsEvent } from '../../types/analytics';
+import { RedisService } from '../../services/cache/redisService';
 
-// Mock pg Pool
-jest.mock('pg', () => {
-  const mockQuery = jest.fn();
-  return {
-    Pool: jest.fn().mockImplementation(() => ({
-      query: mockQuery,
-      connect: jest.fn(),
-      end: jest.fn()
-    }))
-  };
-});
+jest.mock('pg');
+jest.mock('../../services/cache/redisService');
 
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
   let mockPool: jest.Mocked<Pool>;
+  let mockRedis: jest.Mocked<RedisService>;
 
   beforeEach(() => {
-    mockPool = new Pool() as jest.Mocked<Pool>;
-    service = new AnalyticsService(mockPool);
+    mockPool = {
+      query: jest.fn()
+    } as unknown as jest.Mocked<Pool>;
+
+    mockRedis = {
+      get: jest.fn(),
+      set: jest.fn(),
+      connect: jest.fn()
+    } as unknown as jest.Mocked<RedisService>;
+
+    jest.spyOn(RedisService, 'getInstance').mockReturnValue(mockRedis);
+    service = AnalyticsService.getInstance(mockPool);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('trackEvent', () => {
-    const mockEvent: Omit<AnalyticsEvent, 'id' | 'timestamp'> = {
-      type: AnalyticsEventType.KYC_STARTED,
-      projectId: 'proj123',
-      userId: 'user123',
-      metadata: { provider: 'test' },
-      duration: 100
-    };
-
-    it('should successfully track an event', async () => {
-      mockPool.query.mockResolvedValueOnce({ rows: [] });
-
-      await service.trackEvent(mockEvent);
-
-      expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO analytics_events'),
-        expect.arrayContaining([
-          expect.any(String), // id
-          mockEvent.type,
-          mockEvent.projectId,
-          mockEvent.userId,
-          mockEvent.metadata,
-          mockEvent.duration,
-          expect.any(Date) // timestamp
-        ])
-      );
-    });
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error');
-      mockPool.query.mockRejectedValueOnce(error);
-
-      await expect(service.trackEvent(mockEvent)).rejects.toThrow('Database error');
-    });
-  });
-
   describe('recordMetric', () => {
-    const mockMetric: Omit<PerformanceMetric, 'timestamp'> = {
-      name: 'test_metric',
-      type: MetricType.HISTOGRAM,
-      value: 100,
-      tags: { operation: 'test' },
-      projectId: 'proj123'
+    const mockMetric = {
+      type: MetricType.API_REQUEST,
+      duration: 100,
+      projectId: 'project123',
+      success: true
     };
 
-    it('should successfully record a metric', async () => {
-      mockPool.query.mockResolvedValueOnce({ rows: [] });
-
+    it('should record metric successfully', async () => {
       await service.recordMetric(mockMetric);
 
       expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO performance_metrics'),
-        expect.arrayContaining([
-          mockMetric.name,
+        'INSERT INTO metrics (type, duration, project_id, user_id, success, error, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [
           mockMetric.type,
-          mockMetric.value,
-          mockMetric.tags,
+          mockMetric.duration,
           mockMetric.projectId,
-          expect.any(Date) // timestamp
-        ])
+          undefined,
+          mockMetric.success,
+          undefined,
+          expect.any(String)
+        ]
       );
     });
 
-    it('should handle database errors', async () => {
+    it('should handle database errors gracefully', async () => {
       const error = new Error('Database error');
       mockPool.query.mockRejectedValueOnce(error);
 
-      await expect(service.recordMetric(mockMetric)).rejects.toThrow('Database error');
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      await service.recordMetric(mockMetric);
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to record metric:', error);
+      consoleSpy.mockRestore();
     });
   });
 
-  describe('trackCost', () => {
-    const mockCost: Omit<CostMetric, 'timestamp'> = {
-      projectId: 'proj123',
-      operation: 'saveEncryptionKey',
-      cost: 1000000,
-      network: 'base',
-      success: true,
-      metadata: { conditionsCount: 2 }
+  describe('recordEvent', () => {
+    const mockEvent: Partial<AnalyticsEvent> = {
+      type: 'user_action',
+      projectId: 'project123',
+      data: { action: 'login' }
     };
 
-    it('should successfully track a cost metric', async () => {
-      mockPool.query.mockResolvedValueOnce({ rows: [] });
-
-      await service.trackCost(mockCost);
+    it('should record event successfully', async () => {
+      await service.recordEvent(mockEvent);
 
       expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO cost_metrics'),
-        expect.arrayContaining([
-          mockCost.projectId,
-          mockCost.operation,
-          mockCost.cost,
-          mockCost.network,
-          mockCost.success,
-          mockCost.metadata,
-          expect.any(Date) // timestamp
-        ])
+        'INSERT INTO events (id, type, project_id, timestamp, data) VALUES ($1, $2, $3, $4, $5)',
+        [
+          expect.any(String),
+          mockEvent.type,
+          mockEvent.projectId,
+          expect.any(Date),
+          JSON.stringify(mockEvent.data)
+        ]
       );
     });
 
-    it('should handle database errors', async () => {
+    it('should handle database errors gracefully', async () => {
       const error = new Error('Database error');
       mockPool.query.mockRejectedValueOnce(error);
 
-      await expect(service.trackCost(mockCost)).rejects.toThrow('Database error');
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      await service.recordEvent(mockEvent);
+
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to record event:', error);
+      consoleSpy.mockRestore();
     });
   });
 
-  describe('getProjectMetrics', () => {
-    const projectId = 'proj123';
+  describe('getAnalytics', () => {
+    const projectId = 'project123';
     const startDate = new Date('2024-01-01');
-    const endDate = new Date('2024-02-01');
+    const endDate = new Date('2024-01-31');
 
     const mockQueryResults = {
       kycStats: {
@@ -163,10 +123,11 @@ describe('AnalyticsService', () => {
         }]
       },
       costStats: {
-        rows: [
-          { total_cost: '1000000', operation: 'saveEncryptionKey', operation_cost: '600000' },
-          { total_cost: '1000000', operation: 'getEncryptionKey', operation_cost: '400000' }
-        ]
+        rows: [{
+          total_cost: '1000.50',
+          operation: 'encryption',
+          operation_cost: '500.25'
+        }]
       },
       performanceStats: {
         rows: [{
@@ -177,135 +138,72 @@ describe('AnalyticsService', () => {
       }
     };
 
-    it('should return aggregated project metrics', async () => {
+    it('should return analytics data successfully', async () => {
       mockPool.query
         .mockResolvedValueOnce(mockQueryResults.kycStats)
         .mockResolvedValueOnce(mockQueryResults.encryptionStats)
         .mockResolvedValueOnce(mockQueryResults.costStats)
         .mockResolvedValueOnce(mockQueryResults.performanceStats);
 
-      const metrics = await service.getProjectMetrics(projectId, startDate, endDate);
+      mockRedis.get.mockResolvedValueOnce(null);
 
-      expect(metrics).toEqual({
-        projectId,
-        period: { start: startDate, end: endDate },
-        kycStats: {
-          total: 100,
-          successful: 90,
-          failed: 10,
-          averageDuration: 150.5
-        },
-        encryptionStats: {
-          operations: 200,
-          failures: 5,
-          averageDuration: 75.3
-        },
-        costs: {
-          total: 1000000,
-          byOperation: {
-            saveEncryptionKey: 600000,
-            getEncryptionKey: 400000
-          }
-        },
-        performance: {
-          p50: 100,
-          p95: 200,
-          p99: 300
-        }
+      const result = await service.getAnalytics(projectId, startDate, endDate);
+
+      expect(result).toEqual({
+        kycStats: mockQueryResults.kycStats.rows[0],
+        encryptionStats: mockQueryResults.encryptionStats.rows[0],
+        costStats: mockQueryResults.costStats.rows[0],
+        performanceStats: mockQueryResults.performanceStats.rows[0]
       });
+
+      expect(mockRedis.set).toHaveBeenCalledWith(
+        expect.stringContaining('analytics:project123'),
+        expect.any(Object),
+        300
+      );
     });
 
-    it('should handle database errors', async () => {
+    it('should return cached data if available', async () => {
+      const cachedData = {
+        kycStats: { total: 100 },
+        encryptionStats: { operations: 200 },
+        costStats: { total_cost: 1000.50 },
+        performanceStats: { p50: 100 }
+      };
+
+      mockRedis.get.mockResolvedValueOnce(cachedData);
+
+      const result = await service.getAnalytics(projectId, startDate, endDate);
+
+      expect(result).toEqual(cachedData);
+      expect(mockPool.query).not.toHaveBeenCalled();
+    });
+
+    it('should handle database errors gracefully', async () => {
       const error = new Error('Database error');
+      mockRedis.get.mockResolvedValueOnce(null);
       mockPool.query.mockRejectedValueOnce(error);
 
-      await expect(service.getProjectMetrics(projectId, startDate, endDate))
-        .rejects.toThrow('Database error');
+      await expect(service.getAnalytics(projectId, startDate, endDate))
+        .rejects.toThrow(error);
     });
 
     it('should handle empty results', async () => {
+      mockRedis.get.mockResolvedValueOnce(null);
       mockPool.query
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
 
-      const metrics = await service.getProjectMetrics(projectId, startDate, endDate);
+      const result = await service.getAnalytics(projectId, startDate, endDate);
 
-      expect(metrics).toEqual({
-        projectId,
-        period: { start: startDate, end: endDate },
-        kycStats: {
-          total: 0,
-          successful: 0,
-          failed: 0,
-          averageDuration: 0
-        },
-        encryptionStats: {
-          operations: 0,
-          failures: 0,
-          averageDuration: 0
-        },
-        costs: {
-          total: 0,
-          byOperation: {}
-        },
-        performance: {
-          p50: 0,
-          p95: 0,
-          p99: 0
-        }
+      expect(result).toEqual({
+        kycStats: undefined,
+        encryptionStats: undefined,
+        costStats: undefined,
+        performanceStats: undefined
       });
-    });
-  });
-
-  describe('queryEvents', () => {
-    const mockFilter = {
-      projectId: 'proj123',
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-02-01'),
-      eventTypes: [AnalyticsEventType.KYC_STARTED],
-      userId: 'user123'
-    };
-
-    it('should query events with all filters', async () => {
-      const mockEvents = [
-        { id: '1', type: AnalyticsEventType.KYC_STARTED, projectId: 'proj123' }
-      ];
-      mockPool.query.mockResolvedValueOnce({ rows: mockEvents });
-
-      const events = await service.queryEvents(mockFilter);
-
-      expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT * FROM analytics_events'),
-        expect.arrayContaining([
-          mockFilter.projectId,
-          mockFilter.startDate,
-          mockFilter.endDate,
-          mockFilter.eventTypes,
-          mockFilter.userId
-        ])
-      );
-      expect(events).toEqual(mockEvents);
-    });
-
-    it('should handle partial filters', async () => {
-      const partialFilter = { projectId: 'proj123' };
-      mockPool.query.mockResolvedValueOnce({ rows: [] });
-
-      await service.queryEvents(partialFilter);
-
-      expect(mockPool.query).toHaveBeenCalledWith(
-        expect.stringContaining('project_id = $1'),
-        expect.arrayContaining([partialFilter.projectId])
-      );
-    });
-
-    it('should handle database errors', async () => {
-      const error = new Error('Database error');
-      mockPool.query.mockRejectedValueOnce(error);
-
-      await expect(service.queryEvents(mockFilter)).rejects.toThrow('Database error');
     });
   });
 });

@@ -17,6 +17,7 @@ import { ABACService } from '@/services/access/abacService';
 import { PolicyEngine } from '@/services/access/policyEngine';
 import { LitIntegrationService } from '@/services/access/litIntegration';
 import { AccessControlMiddleware } from '@/middleware/accessControl';
+import { ProjectType } from '@/types/project';
 
 // Mock database pool
 const mockPool = {
@@ -226,12 +227,25 @@ describe('Access Control System', () => {
       mockReq = {
         user: {
           id: 'user123',
-          roles: [Role.MANAGER],
-          organizationId: 'org123'
+          email: 'test@example.com',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_active: true,
+          metadata: {
+            roles: [Role.MANAGER]
+          }
         },
         project: {
           id: 'proj123',
-          environment: 'production'
+          name: 'Test Project',
+          slug: 'test-project',
+          organizationId: 'org123',
+          environment: 'production',
+          type: ProjectType.WEB3,
+          status: 'active',
+          metadata: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
         },
         ip: '127.0.0.1',
         method: 'GET',
@@ -257,7 +271,7 @@ describe('Access Control System', () => {
     });
 
     it('should deny access with invalid permission', async () => {
-      mockReq.user!.roles = [Role.VIEWER];
+      mockReq.user!.metadata.roles = [Role.VIEWER];
       const middleware = accessControl.checkPermission(Permission.DELETE_PROJECT);
       await middleware(mockReq as Request, mockRes as Response, mockNext);
 

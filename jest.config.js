@@ -26,5 +26,9 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1'
   },
   maxWorkers: 1,
-  workerIdleMemoryLimit: '512MB'
+  workerIdleMemoryLimit: '512MB',
+  testTimeout: 10000,
+  setupFiles: ['<rootDir>/src/tests/env.ts'],
+  globalSetup: '<rootDir>/src/tests/globalSetup.ts',
+  globalTeardown: '<rootDir>/src/tests/globalTeardown.ts'
 }; 

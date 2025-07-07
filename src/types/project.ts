@@ -93,6 +93,7 @@ export interface Project {
   slug: string;
   organizationId: string;
   environment: string;
+  type: ProjectType;
   status: string;
   metadata: Record<string, any>;
   createdAt: Date;
