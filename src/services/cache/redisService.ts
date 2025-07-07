@@ -27,21 +27,20 @@ export class RedisService {
         password: config.redis.password || undefined,
         db: config.redis.db,
         keyPrefix: config.redis.keyPrefix,
-        retryStrategy: (times) => {
-          const delay = Math.min(times * 50, 2000);
-          return delay;
+        retryStrategy: (times: number): number => {
+          return Math.min(times * 50, 2000);
         }
-      });
+      } as Redis.RedisOptions);
 
       this.client.on('connect', () => {
         logger.info('Redis client connected successfully');
       });
 
-      this.client.on('error', (error) => {
-        logger.error('Redis client error:', error);
+      this.client.on('error', (error: Error) => {
+        logger.error('Redis client error:', { error: error.message });
       });
     } catch (error) {
-      logger.error('Failed to initialize Redis client:', error);
+      logger.error('Failed to initialize Redis client:', { error: error instanceof Error ? error.message : String(error) });
       this.client = null;
     }
   }
@@ -53,7 +52,7 @@ export class RedisService {
       const value = await this.client.get(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
-      logger.error(`Error getting key ${key} from Redis:`, error);
+      logger.error(`Error getting key ${key} from Redis:`, { error: error instanceof Error ? error.message : String(error) });
       return null;
     }
   }
@@ -70,7 +69,7 @@ export class RedisService {
       }
       return true;
     } catch (error) {
-      logger.error(`Error setting key ${key} in Redis:`, error);
+      logger.error(`Error setting key ${key} in Redis:`, { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
@@ -82,7 +81,7 @@ export class RedisService {
       await this.client.del(key);
       return true;
     } catch (error) {
-      logger.error(`Error deleting key ${key} from Redis:`, error);
+      logger.error(`Error deleting key ${key} from Redis:`, { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
@@ -94,7 +93,7 @@ export class RedisService {
       await this.client.flushdb();
       return true;
     } catch (error) {
-      logger.error('Error clearing Redis cache:', error);
+      logger.error('Error clearing Redis cache:', { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
   }
