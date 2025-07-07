@@ -1,9 +1,18 @@
-import { knex } from '../config/database';
+import { db } from '../config/database';
+import { Knex } from 'knex';
+
+declare global {
+  namespace NodeJS {
+    interface Global {
+      testTransaction: Knex.Transaction;
+    }
+  }
+}
 
 beforeAll(async () => {
   // Wait for database to be ready
   try {
-    await knex.raw('SELECT 1');
+    await db.raw('SELECT 1');
   } catch (error) {
     console.error('Database connection failed:', error);
     throw error;
@@ -12,7 +21,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   // Start transaction for test isolation
-  await knex.transaction(async (trx) => {
+  await db.transaction(async (trx) => {
     // Store the transaction for use in tests
     global.testTransaction = trx;
   });
@@ -28,5 +37,5 @@ afterEach(async () => {
 
 afterAll(async () => {
   // Close database connection
-  await knex.destroy();
+  await db.destroy();
 }); 
