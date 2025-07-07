@@ -1,42 +1,122 @@
 import { Knex } from 'knex';
 import { RBACConfig, ABACConfig, Permission, Role } from '../../types/access-control';
 import { knex } from '../../config/database';
+import { RedisService } from '../cache/redisService';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
 
 export class AccessControlService {
   private db: Knex;
+  private redis: RedisService;
+  private readonly RBAC_CACHE_TTL = 3600; // 1 hour
+  private readonly ABAC_CACHE_TTL = 3600; // 1 hour
+  private readonly USER_CACHE_TTL = 900; // 15 minutes
 
   constructor(transaction?: Knex.Transaction) {
     this.db = transaction || knex;
+    this.redis = RedisService.getInstance();
   }
 
   async getRBACConfig(projectId: string): Promise<RBACConfig | null> {
+    const cacheKey = `rbac:${projectId}`;
+    
+    if (this.redis.isEnabled()) {
+      const cached = await this.redis.get<RBACConfig>(cacheKey);
+      if (cached) {
+        logger.debug('RBAC config cache hit', { projectId });
+        return cached;
+      }
+    }
+
     const result = await this.db('project_settings')
       .where({ project_id: projectId, key: 'rbac_config' })
       .first();
-    return result?.value as RBACConfig;
+    
+    const config = result?.value as RBACConfig;
+    
+    if (config && this.redis.isEnabled()) {
+      await this.redis.set(cacheKey, config, this.RBAC_CACHE_TTL);
+      logger.debug('RBAC config cached', { projectId });
+    }
+
+    return config;
   }
 
   async getABACConfig(projectId: string): Promise<ABACConfig | null> {
+    const cacheKey = `abac:${projectId}`;
+    
+    if (this.redis.isEnabled()) {
+      const cached = await this.redis.get<ABACConfig>(cacheKey);
+      if (cached) {
+        logger.debug('ABAC config cache hit', { projectId });
+        return cached;
+      }
+    }
+
     const result = await this.db('project_settings')
       .where({ project_id: projectId, key: 'abac_config' })
       .first();
-    return result?.value as ABACConfig;
+    
+    const config = result?.value as ABACConfig;
+    
+    if (config && this.redis.isEnabled()) {
+      await this.redis.set(cacheKey, config, this.ABAC_CACHE_TTL);
+      logger.debug('ABAC config cached', { projectId });
+    }
+
+    return config;
   }
 
   async getUserRoles(userId: string): Promise<string[]> {
+    const cacheKey = `user:roles:${userId}`;
+    
+    if (this.redis.isEnabled()) {
+      const cached = await this.redis.get<string[]>(cacheKey);
+      if (cached) {
+        logger.debug('User roles cache hit', { userId });
+        return cached;
+      }
+    }
+
     const user = await this.db('users')
       .where({ id: userId })
       .select('metadata')
       .first();
-    return user?.metadata?.roles || [];
+    
+    const roles = user?.metadata?.roles || [];
+    
+    if (roles.length && this.redis.isEnabled()) {
+      await this.redis.set(cacheKey, roles, this.USER_CACHE_TTL);
+      logger.debug('User roles cached', { userId });
+    }
+
+    return roles;
   }
 
   async getUserAttributes(userId: string): Promise<Record<string, any>> {
+    const cacheKey = `user:attributes:${userId}`;
+    
+    if (this.redis.isEnabled()) {
+      const cached = await this.redis.get<Record<string, any>>(cacheKey);
+      if (cached) {
+        logger.debug('User attributes cache hit', { userId });
+        return cached;
+      }
+    }
+
     const user = await this.db('users')
       .where({ id: userId })
       .select('metadata')
       .first();
-    return user?.metadata?.attributes || {};
+    
+    const attributes = user?.metadata?.attributes || {};
+    
+    if (Object.keys(attributes).length && this.redis.isEnabled()) {
+      await this.redis.set(cacheKey, attributes, this.USER_CACHE_TTL);
+      logger.debug('User attributes cached', { userId });
+    }
+
+    return attributes;
   }
 
   async hasPermission(userId: string, projectId: string, requiredPermission: Permission): Promise<boolean> {
@@ -154,5 +234,38 @@ export class AccessControlService {
       details: context,
       created_at: new Date()
     });
+  }
+
+  /**
+   * Invalidate cached RBAC configuration for a project
+   */
+  public async invalidateRBACCache(projectId: string): Promise<void> {
+    if (this.redis.isEnabled()) {
+      await this.redis.del(`rbac:${projectId}`);
+      logger.debug('RBAC config cache invalidated', { projectId });
+    }
+  }
+
+  /**
+   * Invalidate cached ABAC configuration for a project
+   */
+  public async invalidateABACCache(projectId: string): Promise<void> {
+    if (this.redis.isEnabled()) {
+      await this.redis.del(`abac:${projectId}`);
+      logger.debug('ABAC config cache invalidated', { projectId });
+    }
+  }
+
+  /**
+   * Invalidate cached user data
+   */
+  public async invalidateUserCache(userId: string): Promise<void> {
+    if (this.redis.isEnabled()) {
+      await Promise.all([
+        this.redis.del(`user:roles:${userId}`),
+        this.redis.del(`user:attributes:${userId}`)
+      ]);
+      logger.debug('User cache invalidated', { userId });
+    }
   }
 } 
