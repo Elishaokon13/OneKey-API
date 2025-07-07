@@ -57,6 +57,37 @@ export const getClient = async (): Promise<PoolClient> => {
   return pool.connect();
 };
 
+// Check database health
+export const checkDatabaseHealth = async (): Promise<{
+  status: string;
+  details: {
+    connected: boolean;
+    postgresVersion?: string;
+    uptime?: number;
+  };
+}> => {
+  try {
+    const pool = getDatabase();
+    const result = await pool.query('SELECT version(), pg_postmaster_start_time()');
+    
+    return {
+      status: 'healthy',
+      details: {
+        connected: true,
+        postgresVersion: result.rows[0].version,
+        uptime: Date.now() - new Date(result.rows[0].pg_postmaster_start_time).getTime(),
+      }
+    };
+  } catch (error) {
+    return {
+      status: 'unhealthy',
+      details: {
+        connected: false
+      }
+    };
+  }
+};
+
 // Close database connections
 export const closeDatabase = async (): Promise<void> => {
   if (pool) {
@@ -65,111 +96,6 @@ export const closeDatabase = async (): Promise<void> => {
   }
   await knex.destroy();
   await closeSupabase();
-};
-
-// Database health check
-export const checkDatabaseHealth = async (): Promise<{
-  status: string;
-  details: {
-    connected: boolean;
-    totalConnections: number;
-    idleConnections: number;
-    waitingConnections: number;
-    serverVersion?: string;
-    uptime?: string;
-    supabase?: {
-      status: string;
-      publicClient: boolean;
-      serviceClient: boolean;
-      url?: string;
-    };
-  };
-}> => {
-  // Handle Supabase-only mode
-  if (isSupabaseConfigured() && !pool) {
-    const supabaseStatus = await checkSupabaseHealth();
-    return {
-      status: supabaseStatus.status === 'healthy' ? 'healthy' : 'unhealthy',
-      details: {
-        connected: supabaseStatus.details.connected,
-        totalConnections: 0, // N/A for Supabase mode
-        idleConnections: 0,  // N/A for Supabase mode
-        waitingConnections: 0, // N/A for Supabase mode
-        serverVersion: 'Supabase (managed)',
-        uptime: 'N/A (managed service)',
-        supabase: {
-          status: supabaseStatus.status,
-          publicClient: supabaseStatus.details.publicClient,
-          serviceClient: supabaseStatus.details.serviceClient,
-          ...(supabaseStatus.details.url && { url: supabaseStatus.details.url }),
-        },
-      },
-    };
-  }
-
-  if (!pool) {
-    return {
-      status: 'disconnected',
-      details: {
-        connected: false,
-        totalConnections: 0,
-        idleConnections: 0,
-        waitingConnections: 0,
-      },
-    };
-  }
-
-  try {
-    const client = await pool.connect();
-    
-    // Get server info
-    const versionResult = await client.query('SELECT version()');
-    const uptimeResult = await client.query('SELECT EXTRACT(EPOCH FROM (now() - pg_postmaster_start_time())) as uptime');
-    
-    client.release();
-
-    const baseHealthDetails = {
-      connected: true,
-      totalConnections: pool.totalCount,
-      idleConnections: pool.idleCount,
-      waitingConnections: pool.waitingCount,
-      serverVersion: versionResult.rows[0]?.version || 'Unknown',
-      uptime: `${Math.floor(uptimeResult.rows[0]?.uptime || 0)} seconds`,
-    };
-
-    // Check Supabase health if configured
-    if (isSupabaseConfigured()) {
-      const supabaseStatus = await checkSupabaseHealth();
-      return {
-        status: 'healthy',
-        details: {
-          ...baseHealthDetails,
-          supabase: {
-            status: supabaseStatus.status,
-            publicClient: supabaseStatus.details.publicClient,
-            serviceClient: supabaseStatus.details.serviceClient,
-            ...(supabaseStatus.details.url && { url: supabaseStatus.details.url }),
-          },
-        },
-      };
-    }
-
-    return {
-      status: 'healthy',
-      details: baseHealthDetails,
-    };
-  } catch (error) {
-    console.error('Database health check failed:', error);
-    return {
-      status: 'unhealthy',
-      details: {
-        connected: false,
-        totalConnections: pool.totalCount,
-        idleConnections: pool.idleCount,
-        waitingConnections: pool.waitingCount,
-      },
-    };
-  }
 };
 
 // Transaction wrapper
