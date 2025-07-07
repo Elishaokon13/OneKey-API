@@ -1,9 +1,29 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
 import { config } from './environment';
 import { initializeSupabase, checkSupabaseHealth, isSupabaseConfigured, closeSupabase } from './supabase';
+import knex from 'knex';
 
 // Database connection pool
 let pool: Pool | null = null;
+
+// Knex instance
+export const db = knex({
+  client: 'pg',
+  connection: {
+    host: config.database.host,
+    port: config.database.port,
+    database: config.database.name,
+    user: config.database.user,
+    password: config.database.password,
+    ssl: config.server.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
+  },
+  pool: {
+    min: 2,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    acquireTimeoutMillis: 10000,
+  }
+});
 
 // Database configuration
 const dbConfig = {
