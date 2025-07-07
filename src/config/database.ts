@@ -1,13 +1,10 @@
 import { Pool, PoolClient, QueryResult } from 'pg';
 import { config } from './environment';
 import { initializeSupabase, checkSupabaseHealth, isSupabaseConfigured, closeSupabase } from './supabase';
-import knex from 'knex';
+import knexLib from 'knex';
 
-// Database connection pool
-let pool: Pool | null = null;
-
-// Knex instance
-export const db = knex({
+// Create Knex instance
+export const knex = knexLib({
   client: 'pg',
   connection: {
     host: config.database.host,
@@ -24,6 +21,9 @@ export const db = knex({
     acquireTimeoutMillis: 10000,
   }
 });
+
+// Database connection pool
+let pool: Pool | null = null;
 
 // Database configuration
 const dbConfig = {
