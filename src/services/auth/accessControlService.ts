@@ -51,21 +51,26 @@ export class AccessControlService {
 
     // Check each role's permissions
     for (const roleName of userRoles) {
-      const role = rbacConfig.roles[roleName];
-      if (!role) continue;
-
-      // Direct permission check
-      if (this.roleHasPermission(role, requiredPermission)) {
+      if (this.checkRolePermission(roleName, requiredPermission, rbacConfig.roles)) {
         return true;
       }
+    }
 
-      // Check parent role if exists
-      if (role.parent && rbacConfig.roles[role.parent]) {
-        const parentRole = rbacConfig.roles[role.parent];
-        if (parentRole && this.roleHasPermission(parentRole, requiredPermission)) {
-          return true;
-        }
-      }
+    return false;
+  }
+
+  private checkRolePermission(roleName: string, requiredPermission: Permission, roles: Record<string, Role>): boolean {
+    const role = roles[roleName];
+    if (!role) return false;
+
+    // Check direct permissions
+    if (this.roleHasPermission(role, requiredPermission)) {
+      return true;
+    }
+
+    // Check parent role if exists
+    if (role.parent && roles[role.parent]) {
+      return this.checkRolePermission(role.parent, requiredPermission, roles);
     }
 
     return false;
