@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { query, getDatabase } from '@/config/database';
-import { isSupabaseConfigured } from '@/config/supabase';
+import { knex } from '../config/database';
+import { isSupabaseConfigured } from '../config/supabase';
 
 interface Migration {
   version: string;
@@ -42,11 +42,16 @@ const getMigrationFiles = (): Migration[] => {
 // Check if migration has been applied
 const isMigrationApplied = async (version: string): Promise<boolean> => {
   try {
-    const result = await query(
-      'SELECT 1 FROM schema_migrations WHERE version = $1',
-      [version]
-    );
-    return result.rows.length > 0;
+    // Create schema_migrations table if it doesn't exist
+    await knex.schema.createTableIfNotExists('schema_migrations', table => {
+      table.string('version').primary();
+      table.timestamp('applied_at').defaultTo(knex.fn.now());
+    });
+
+    const result = await knex('schema_migrations')
+      .where({ version })
+      .first();
+    return !!result;
   } catch (error) {
     // If schema_migrations table doesn't exist, no migrations have been applied
     return false;
@@ -59,7 +64,7 @@ const applyMigration = async (migration: Migration): Promise<void> => {
   
   try {
     // Execute the migration SQL
-    await query(migration.content);
+    await knex.raw(migration.content);
     console.log(`✅ Migration ${migration.version} applied successfully`);
   } catch (error) {
     console.error(`❌ Failed to apply migration ${migration.version}:`, error);
@@ -79,9 +84,6 @@ export const runMigrations = async (): Promise<void> => {
   }
   
   try {
-    // Ensure database connection is available
-    const pool = getDatabase();
-    
     // Get all migration files
     const migrations = getMigrationFiles();
     
@@ -182,10 +184,9 @@ export const rollbackMigration = async (version: string): Promise<void> => {
   
   try {
     // Remove from schema_migrations table
-    await query(
-      'DELETE FROM schema_migrations WHERE version = $1',
-      [version]
-    );
+    await knex('schema_migrations')
+      .where({ version })
+      .delete();
     
     console.log(`✅ Migration ${version} rolled back (removed from tracking)`);
     console.log('⚠️  Note: This only removes the migration tracking. Manual cleanup may be required.');
@@ -201,20 +202,19 @@ export const resetDatabase = async (): Promise<void> => {
   
   try {
     // Get list of all tables
-    const tablesResult = await query(`
-      SELECT tablename FROM pg_tables 
-      WHERE schemaname = 'public' 
-      AND tablename != 'schema_migrations'
-    `);
+    const tables = await knex('pg_tables')
+      .select('tablename')
+      .where('schemaname', 'public')
+      .whereNot('tablename', 'schema_migrations');
     
     // Drop all tables
-    for (const row of tablesResult.rows) {
-      await query(`DROP TABLE IF EXISTS ${row.tablename} CASCADE`);
-      console.log(`🗑️  Dropped table: ${row.tablename}`);
+    for (const { tablename } of tables) {
+      await knex.raw(`DROP TABLE IF EXISTS ${tablename} CASCADE`);
+      console.log(`🗑️  Dropped table: ${tablename}`);
     }
     
     // Clear migration history
-    await query('DELETE FROM schema_migrations');
+    await knex('schema_migrations').delete();
     
     console.log('✅ Database reset complete');
     
@@ -222,4 +222,14 @@ export const resetDatabase = async (): Promise<void> => {
     console.error('❌ Database reset failed:', error);
     throw error;
   }
-}; 
+};
+
+// Run migrations if this file is executed directly
+if (require.main === module) {
+  runMigrations()
+    .then(() => process.exit(0))
+    .catch(error => {
+      console.error(error);
+      process.exit(1);
+    });
+} 
