@@ -15,26 +15,31 @@ describe('AccessControlService', () => {
   let regularUser: any;
 
   beforeEach(async () => {
-    accessControlService = new AccessControlService(global.testTransaction || knex);
+    const trx = global.testTransaction;
+    if (!trx) {
+      throw new Error('Test transaction not initialized');
+    }
+
+    accessControlService = new AccessControlService(trx);
 
     // Create test data
-    testOrg = await createTestOrganization(global.testTransaction);
-    testProject = await createTestProject(testOrg.id, global.testTransaction);
+    testOrg = await createTestOrganization(trx);
+    testProject = await createTestProject(testOrg.id, trx);
     
     // Create users with different roles
-    adminUser = await createTestUser(testProject.id, 'admin', 'admin@test.com', global.testTransaction);
-    devUser = await createTestUser(testProject.id, 'developer', 'dev@test.com', global.testTransaction);
-    regularUser = await createTestUser(testProject.id, 'user', 'user@test.com', global.testTransaction);
+    adminUser = await createTestUser(testProject.id, 'admin', 'admin@test.com', trx);
+    devUser = await createTestUser(testProject.id, 'developer', 'dev@test.com', trx);
+    regularUser = await createTestUser(testProject.id, 'user', 'user@test.com', trx);
   });
 
   describe('RBAC', () => {
     it('should get RBAC config', async () => {
       const config = await accessControlService.getRBACConfig(testProject.id);
       expect(config).toBeDefined();
-      expect(config.enabled).toBe(true);
-      expect(config.roles).toHaveProperty('admin');
-      expect(config.roles).toHaveProperty('developer');
-      expect(config.roles).toHaveProperty('user');
+      expect(config?.enabled).toBe(true);
+      expect(config?.roles).toHaveProperty('admin');
+      expect(config?.roles).toHaveProperty('developer');
+      expect(config?.roles).toHaveProperty('user');
     });
 
     it('should get user roles', async () => {
@@ -81,8 +86,8 @@ describe('AccessControlService', () => {
     it('should get ABAC config', async () => {
       const config = await accessControlService.getABACConfig(testProject.id);
       expect(config).toBeDefined();
-      expect(config.enabled).toBe(true);
-      expect(config.rules).toHaveLength(2);
+      expect(config?.enabled).toBe(true);
+      expect(config?.rules).toHaveLength(2);
     });
 
     it('should allow admin access to production', async () => {
@@ -151,7 +156,12 @@ describe('AccessControlService', () => {
         context
       );
 
-      const log = await (global.testTransaction || knex)('audit_logs')
+      const trx = global.testTransaction;
+      if (!trx) {
+        throw new Error('Test transaction not initialized');
+      }
+
+      const log = await trx('audit_logs')
         .where({
           user_id: adminUser.id,
           project_id: testProject.id,
@@ -175,7 +185,12 @@ describe('AccessControlService', () => {
         context
       );
 
-      const log = await (global.testTransaction || knex)('audit_logs')
+      const trx = global.testTransaction;
+      if (!trx) {
+        throw new Error('Test transaction not initialized');
+      }
+
+      const log = await trx('audit_logs')
         .where({
           user_id: devUser.id,
           project_id: testProject.id,
