@@ -134,6 +134,12 @@ interface Config {
     db: number;
     ttl: number;
     keyPrefix: string;
+    queues: {
+      auditLogs: {
+        batchSize: number;
+        batchTimeout: number;
+      };
+    };
   };
 }
 
@@ -267,7 +273,13 @@ const config: Config = {
     password: process.env.REDIS_PASSWORD || '',
     db: parseInt(process.env.REDIS_DB || '0', 10),
     ttl: parseInt(process.env.REDIS_TTL || '3600', 10), // 1 hour default
-    keyPrefix: process.env.REDIS_KEY_PREFIX || 'onekey:'
+    keyPrefix: process.env.REDIS_KEY_PREFIX || 'onekey:',
+    queues: {
+      auditLogs: {
+        batchSize: parseInt(process.env.AUDIT_LOG_BATCH_SIZE || '100', 10),
+        batchTimeout: parseInt(process.env.AUDIT_LOG_BATCH_TIMEOUT || '5000', 10)
+      }
+    }
   },
 };
 
