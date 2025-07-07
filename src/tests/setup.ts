@@ -1,34 +1,27 @@
-import { knex } from '../config/database';
-import { Knex } from 'knex';
+import { config } from '../config/environment';
+import { RedisService } from '../services/cache/redisService';
 
-declare global {
-  var testTransaction: Knex.Transaction | null;
-}
+// Configure Redis for testing
+config.redis = {
+  enabled: true,
+  host: process.env.TEST_REDIS_HOST || 'localhost',
+  port: parseInt(process.env.TEST_REDIS_PORT || '6379', 10),
+  password: process.env.TEST_REDIS_PASSWORD || '',
+  db: parseInt(process.env.TEST_REDIS_DB || '1', 10), // Use a different DB for tests
+  ttl: 3600,
+  keyPrefix: 'test:'
+};
 
+// Clear Redis cache before tests
 beforeAll(async () => {
-  // Wait for database to be ready
-  try {
-    await knex.raw('SELECT 1');
-  } catch (error) {
-    console.error('Database connection failed:', error);
-    throw error;
+  const redis = RedisService.getInstance();
+  if (redis.isEnabled()) {
+    await redis.clearCache();
   }
 });
 
-beforeEach(async () => {
-  // Start transaction for test isolation
-  global.testTransaction = await knex.transaction();
-});
-
-afterEach(async () => {
-  // Rollback transaction after each test
-  if (global.testTransaction) {
-    await global.testTransaction.rollback();
-    global.testTransaction = null;
-  }
-});
-
+// Disconnect Redis after tests
 afterAll(async () => {
-  // Close database connection
-  await knex.destroy();
+  const redis = RedisService.getInstance();
+  await redis.disconnect();
 }); 
