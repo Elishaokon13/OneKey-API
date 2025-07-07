@@ -1,29 +1,35 @@
 import { AccessControlService } from '../../services/auth/accessControlService';
 import { knex } from '../../config/database';
+import {
+  createTestOrganization,
+  createTestProject,
+  createTestUser
+} from '../fixtures/accessControl';
 
 describe('AccessControlService', () => {
   let accessControlService: AccessControlService;
-  let testProjectId: string;
-  let testUserId: string;
+  let testOrg: any;
+  let testProject: any;
+  let adminUser: any;
+  let devUser: any;
+  let regularUser: any;
 
-  beforeAll(async () => {
-    accessControlService = new AccessControlService(knex);
+  beforeEach(async () => {
+    accessControlService = new AccessControlService(global.testTransaction || knex);
 
-    // Get test project and user IDs
-    const project = await knex('projects')
-      .where({ slug: 'test-project' })
-      .first();
-    testProjectId = project.id;
-
-    const user = await knex('users')
-      .where({ email: 'admin@example.com' })
-      .first();
-    testUserId = user.id;
+    // Create test data
+    testOrg = await createTestOrganization(global.testTransaction);
+    testProject = await createTestProject(testOrg.id, global.testTransaction);
+    
+    // Create users with different roles
+    adminUser = await createTestUser(testProject.id, 'admin', 'admin@test.com', global.testTransaction);
+    devUser = await createTestUser(testProject.id, 'developer', 'dev@test.com', global.testTransaction);
+    regularUser = await createTestUser(testProject.id, 'user', 'user@test.com', global.testTransaction);
   });
 
   describe('RBAC', () => {
     it('should get RBAC config', async () => {
-      const config = await accessControlService.getRBACConfig(testProjectId);
+      const config = await accessControlService.getRBACConfig(testProject.id);
       expect(config).toBeDefined();
       expect(config.enabled).toBe(true);
       expect(config.roles).toHaveProperty('admin');
@@ -32,106 +38,123 @@ describe('AccessControlService', () => {
     });
 
     it('should get user roles', async () => {
-      const roles = await accessControlService.getUserRoles(testUserId);
+      const roles = await accessControlService.getUserRoles(adminUser.id);
       expect(roles).toContain('admin');
     });
 
-    it('should verify admin permission', async () => {
+    it('should verify admin has all permissions', async () => {
       const hasPermission = await accessControlService.hasPermission(
-        testUserId,
-        testProjectId,
+        adminUser.id,
+        testProject.id,
         'all:*'
       );
       expect(hasPermission).toBe(true);
     });
 
-    it('should verify specific permission inheritance', async () => {
-      // Create a developer user
-      const devUser = await knex('users')
-        .insert({
-          email: 'dev@example.com',
-          project_id: testProjectId,
-          metadata: {
-            roles: ['developer'],
-            attributes: {
-              department: 'Engineering'
-            }
-          }
-        })
-        .returning('id');
-
+    it('should verify developer has api:read permission', async () => {
       const hasPermission = await accessControlService.hasPermission(
-        devUser[0].id,
-        testProjectId,
+        devUser.id,
+        testProject.id,
         'api:read'
       );
       expect(hasPermission).toBe(true);
+    });
+
+    it('should verify regular user has limited permissions', async () => {
+      const readPermission = await accessControlService.hasPermission(
+        regularUser.id,
+        testProject.id,
+        'api:read'
+      );
+      expect(readPermission).toBe(true);
+
+      const writePermission = await accessControlService.hasPermission(
+        regularUser.id,
+        testProject.id,
+        'api:write'
+      );
+      expect(writePermission).toBe(false);
     });
   });
 
   describe('ABAC', () => {
     it('should get ABAC config', async () => {
-      const config = await accessControlService.getABACConfig(testProjectId);
+      const config = await accessControlService.getABACConfig(testProject.id);
       expect(config).toBeDefined();
       expect(config.enabled).toBe(true);
       expect(config.rules).toHaveLength(2);
     });
 
-    it('should evaluate ABAC rules', async () => {
+    it('should allow admin access to production', async () => {
       const context = {
-        environment: 'development',
+        environment: 'production'
       };
 
       const allowed = await accessControlService.evaluateABACRules(
-        testUserId,
-        testProjectId,
+        adminUser.id,
+        testProject.id,
         context
       );
       expect(allowed).toBe(true);
     });
 
-    it('should respect environment restrictions', async () => {
+    it('should allow developer access to development', async () => {
       const context = {
-        environment: 'production',
+        environment: 'development'
       };
 
-      // Create a developer user
-      const devUser = await knex('users')
-        .insert({
-          email: 'dev2@example.com',
-          project_id: testProjectId,
-          metadata: {
-            roles: ['developer'],
-            attributes: {
-              department: 'Engineering'
-            }
-          }
-        })
-        .returning('id');
+      const allowed = await accessControlService.evaluateABACRules(
+        devUser.id,
+        testProject.id,
+        context
+      );
+      expect(allowed).toBe(true);
+    });
+
+    it('should deny developer access to production', async () => {
+      const context = {
+        environment: 'production'
+      };
 
       const allowed = await accessControlService.evaluateABACRules(
-        devUser[0].id,
-        testProjectId,
+        devUser.id,
+        testProject.id,
         context
       );
       expect(allowed).toBe(false);
+    });
+
+    it('should evaluate user attributes', async () => {
+      const context = {
+        environment: 'development',
+        department: 'Engineering'
+      };
+
+      const allowed = await accessControlService.evaluateABACRules(
+        devUser.id,
+        testProject.id,
+        context
+      );
+      expect(allowed).toBe(true);
     });
   });
 
   describe('Audit Logging', () => {
     it('should log access attempts', async () => {
+      const context = { test: 'context' };
+      
       await accessControlService.logAccessAttempt(
-        testUserId,
-        testProjectId,
+        adminUser.id,
+        testProject.id,
         'test:action',
         true,
-        { test: 'context' }
+        context
       );
 
-      const log = await knex('audit_logs')
+      const log = await (global.testTransaction || knex)('audit_logs')
         .where({
-          user_id: testUserId,
-          project_id: testProjectId,
+          user_id: adminUser.id,
+          project_id: testProject.id,
           action: 'test:action'
         })
         .first();
@@ -139,6 +162,30 @@ describe('AccessControlService', () => {
       expect(log).toBeDefined();
       expect(log.allowed).toBe(true);
       expect(log.details).toHaveProperty('test', 'context');
+    });
+
+    it('should log failed access attempts', async () => {
+      const context = { environment: 'production' };
+      
+      await accessControlService.logAccessAttempt(
+        devUser.id,
+        testProject.id,
+        'production:access',
+        false,
+        context
+      );
+
+      const log = await (global.testTransaction || knex)('audit_logs')
+        .where({
+          user_id: devUser.id,
+          project_id: testProject.id,
+          action: 'production:access'
+        })
+        .first();
+
+      expect(log).toBeDefined();
+      expect(log.allowed).toBe(false);
+      expect(log.details).toHaveProperty('environment', 'production');
     });
   });
 });
