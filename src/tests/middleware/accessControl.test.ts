@@ -7,6 +7,8 @@ import {
   createTestProject,
   createTestUser
 } from '../fixtures/accessControl';
+import { User } from '../../types/user';
+import { Project } from '../../types/project';
 
 describe('Access Control Middleware', () => {
   let mockReq: Partial<Request>;
@@ -42,8 +44,25 @@ describe('Access Control Middleware', () => {
   describe('requirePermission', () => {
     it('should allow admin access', async () => {
       mockReq = {
-        user: { id: adminUser.id },
-        project: { id: testProject.id },
+        user: {
+          id: adminUser.id,
+          email: adminUser.email,
+          created_at: adminUser.created_at,
+          updated_at: adminUser.updated_at,
+          is_active: true,
+          metadata: adminUser.metadata
+        } as User,
+        project: {
+          id: testProject.id,
+          name: testProject.name,
+          slug: testProject.slug,
+          organizationId: testProject.organization_id,
+          environment: testProject.environment,
+          status: testProject.status,
+          metadata: testProject.metadata,
+          createdAt: testProject.created_at,
+          updatedAt: testProject.updated_at
+        } as Project,
         path: '/test',
         method: 'GET'
       };
@@ -57,8 +76,25 @@ describe('Access Control Middleware', () => {
 
     it('should allow developer access to permitted actions', async () => {
       mockReq = {
-        user: { id: devUser.id },
-        project: { id: testProject.id },
+        user: {
+          id: devUser.id,
+          email: devUser.email,
+          created_at: devUser.created_at,
+          updated_at: devUser.updated_at,
+          is_active: true,
+          metadata: devUser.metadata
+        } as User,
+        project: {
+          id: testProject.id,
+          name: testProject.name,
+          slug: testProject.slug,
+          organizationId: testProject.organization_id,
+          environment: testProject.environment,
+          status: testProject.status,
+          metadata: testProject.metadata,
+          createdAt: testProject.created_at,
+          updatedAt: testProject.updated_at
+        } as Project,
         path: '/test',
         method: 'GET'
       };
@@ -72,8 +108,25 @@ describe('Access Control Middleware', () => {
 
     it('should deny regular user access to restricted actions', async () => {
       mockReq = {
-        user: { id: regularUser.id },
-        project: { id: testProject.id },
+        user: {
+          id: regularUser.id,
+          email: regularUser.email,
+          created_at: regularUser.created_at,
+          updated_at: regularUser.updated_at,
+          is_active: true,
+          metadata: regularUser.metadata
+        } as User,
+        project: {
+          id: testProject.id,
+          name: testProject.name,
+          slug: testProject.slug,
+          organizationId: testProject.organization_id,
+          environment: testProject.environment,
+          status: testProject.status,
+          metadata: testProject.metadata,
+          createdAt: testProject.created_at,
+          updatedAt: testProject.updated_at
+        } as Project,
         path: '/test',
         method: 'POST'
       };
@@ -104,8 +157,25 @@ describe('Access Control Middleware', () => {
   describe('requireEnvironment', () => {
     it('should allow admin access to production', async () => {
       mockReq = {
-        user: { id: adminUser.id },
-        project: { id: testProject.id },
+        user: {
+          id: adminUser.id,
+          email: adminUser.email,
+          created_at: adminUser.created_at,
+          updated_at: adminUser.updated_at,
+          is_active: true,
+          metadata: adminUser.metadata
+        } as User,
+        project: {
+          id: testProject.id,
+          name: testProject.name,
+          slug: testProject.slug,
+          organizationId: testProject.organization_id,
+          environment: testProject.environment,
+          status: testProject.status,
+          metadata: testProject.metadata,
+          createdAt: testProject.created_at,
+          updatedAt: testProject.updated_at
+        } as Project,
         path: '/test',
         method: 'GET'
       };
@@ -119,8 +189,25 @@ describe('Access Control Middleware', () => {
 
     it('should allow developer access to development', async () => {
       mockReq = {
-        user: { id: devUser.id },
-        project: { id: testProject.id },
+        user: {
+          id: devUser.id,
+          email: devUser.email,
+          created_at: devUser.created_at,
+          updated_at: devUser.updated_at,
+          is_active: true,
+          metadata: devUser.metadata
+        } as User,
+        project: {
+          id: testProject.id,
+          name: testProject.name,
+          slug: testProject.slug,
+          organizationId: testProject.organization_id,
+          environment: testProject.environment,
+          status: testProject.status,
+          metadata: testProject.metadata,
+          createdAt: testProject.created_at,
+          updatedAt: testProject.updated_at
+        } as Project,
         path: '/test',
         method: 'GET'
       };
@@ -134,8 +221,25 @@ describe('Access Control Middleware', () => {
 
     it('should deny developer access to production', async () => {
       mockReq = {
-        user: { id: devUser.id },
-        project: { id: testProject.id },
+        user: {
+          id: devUser.id,
+          email: devUser.email,
+          created_at: devUser.created_at,
+          updated_at: devUser.updated_at,
+          is_active: true,
+          metadata: devUser.metadata
+        } as User,
+        project: {
+          id: testProject.id,
+          name: testProject.name,
+          slug: testProject.slug,
+          organizationId: testProject.organization_id,
+          environment: testProject.environment,
+          status: testProject.status,
+          metadata: testProject.metadata,
+          createdAt: testProject.created_at,
+          updatedAt: testProject.updated_at
+        } as Project,
         path: '/test',
         method: 'GET'
       };
