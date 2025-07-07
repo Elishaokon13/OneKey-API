@@ -126,6 +126,15 @@ interface Config {
       maxSize: number;
     };
   };
+  redis: {
+    enabled: boolean;
+    host: string;
+    port: number;
+    password: string;
+    db: number;
+    ttl: number;
+    keyPrefix: string;
+  };
 }
 
 const config: Config = {
@@ -250,6 +259,15 @@ const config: Config = {
       ttl: parseInt(process.env.ARWEAVE_CACHE_TTL || '3600'), // 1 hour
       maxSize: parseInt(process.env.ARWEAVE_CACHE_MAX_SIZE || '1000')
     }
+  },
+  redis: {
+    enabled: process.env.REDIS_ENABLED === 'true',
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || '',
+    db: parseInt(process.env.REDIS_DB || '0', 10),
+    ttl: parseInt(process.env.REDIS_TTL || '3600', 10), // 1 hour default
+    keyPrefix: process.env.REDIS_KEY_PREFIX || 'onekey:'
   },
 };
 
