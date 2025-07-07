@@ -2,50 +2,37 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { AccessControlService } from '../services/auth/accessControlService';
-import { Permission } from '../types/access-control';
 
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    project_id?: string;
-  };
-}
-
-export const requirePermission = (permission: Permission) => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const user = req.user;
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const projectId = req.params.projectId || user.project_id;
-    if (!projectId) {
-      return res.status(400).json({ error: 'Project ID is required' });
-    }
-
-    const accessControlService = new AccessControlService(req.app.locals.db);
-
+export const requirePermission = (permission: string) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const userId = req.user?.id;
+      const projectId = req.project?.id;
+
+      if (!userId || !projectId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const accessControlService = new AccessControlService();
       const hasPermission = await accessControlService.hasPermission(
-        user.id,
+        userId,
         projectId,
         permission
       );
 
       if (!hasPermission) {
         await accessControlService.logAccessAttempt(
-          user.id,
+          userId,
           projectId,
           permission,
           false,
           { path: req.path, method: req.method }
         );
-        return res.status(403).json({ error: 'Insufficient permissions' });
+        return res.status(403).json({ error: 'Forbidden' });
       }
 
       await accessControlService.logAccessAttempt(
-        user.id,
+        userId,
         projectId,
         permission,
         true,
@@ -54,68 +41,50 @@ export const requirePermission = (permission: Permission) => {
 
       next();
     } catch (error) {
-      console.error('Access control error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      next(error);
     }
   };
 };
 
-export const requireContext = (contextValidator: (context: Record<string, any>) => Record<string, any>) => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const user = req.user;
-    if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const projectId = req.params.projectId || user.project_id;
-    if (!projectId) {
-      return res.status(400).json({ error: 'Project ID is required' });
-    }
-
+export const requireEnvironment = (environment: string) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Build context from request
-      const context = contextValidator({
-        path: req.path,
-        method: req.method,
-        query: req.query,
-        body: req.body,
-        params: req.params,
-        headers: req.headers,
-      });
+      const userId = req.user?.id;
+      const projectId = req.project?.id;
 
-      const accessControlService = new AccessControlService(req.app.locals.db);
-      
+      if (!userId || !projectId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const accessControlService = new AccessControlService();
       const allowed = await accessControlService.evaluateABACRules(
-        user.id,
+        userId,
         projectId,
-        context
+        { environment }
       );
 
       if (!allowed) {
         await accessControlService.logAccessAttempt(
-          user.id,
+          userId,
           projectId,
-          'abac:evaluate',
+          `${environment}:access`,
           false,
-          context
+          { path: req.path, method: req.method }
         );
-        return res.status(403).json({ error: 'Access denied by ABAC rules' });
+        return res.status(403).json({ error: 'Forbidden' });
       }
 
       await accessControlService.logAccessAttempt(
-        user.id,
+        userId,
         projectId,
-        'abac:evaluate',
+        `${environment}:access`,
         true,
-        context
+        { path: req.path, method: req.method }
       );
 
-      // Add validated context to request for route handlers
-      req.abacContext = context;
       next();
     } catch (error) {
-      console.error('ABAC evaluation error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      next(error);
     }
   };
 }; 
