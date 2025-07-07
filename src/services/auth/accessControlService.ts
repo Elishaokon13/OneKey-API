@@ -31,11 +31,11 @@ export class AccessControlService {
       }
     }
 
-    const result = await this.db('project_settings')
-      .where({ project_id: projectId, key: 'rbac_config' })
+    const result = await this.db('mv_project_rbac_config')
+      .where({ project_id: projectId })
       .first();
     
-    const config = result?.value as RBACConfig;
+    const config = result?.rbac_config as RBACConfig;
     
     if (config && this.redis.isEnabled()) {
       await this.redis.set(cacheKey, config, this.RBAC_CACHE_TTL);
@@ -56,11 +56,11 @@ export class AccessControlService {
       }
     }
 
-    const result = await this.db('project_settings')
-      .where({ project_id: projectId, key: 'abac_config' })
+    const result = await this.db('mv_project_abac_config')
+      .where({ project_id: projectId })
       .first();
     
-    const config = result?.value as ABACConfig;
+    const config = result?.abac_config as ABACConfig;
     
     if (config && this.redis.isEnabled()) {
       await this.redis.set(cacheKey, config, this.ABAC_CACHE_TTL);
@@ -81,12 +81,9 @@ export class AccessControlService {
       }
     }
 
-    const user = await this.db('users')
-      .where({ id: userId })
-      .select('metadata')
-      .first();
-    
-    const roles = user?.metadata?.roles || [];
+    const roles = await this.db('mv_user_roles')
+      .where({ user_id: userId, active: true })
+      .pluck('role');
     
     if (roles.length && this.redis.isEnabled()) {
       await this.redis.set(cacheKey, roles, this.USER_CACHE_TTL);
@@ -107,12 +104,11 @@ export class AccessControlService {
       }
     }
 
-    const user = await this.db('users')
-      .where({ id: userId })
-      .select('metadata')
+    const result = await this.db('mv_user_attributes')
+      .where({ user_id: userId })
       .first();
     
-    const attributes = user?.metadata?.attributes || {};
+    const attributes = result?.attributes ? JSON.parse(result.attributes) : {};
     
     if (Object.keys(attributes).length && this.redis.isEnabled()) {
       await this.redis.set(cacheKey, attributes, this.USER_CACHE_TTL);
@@ -123,53 +119,54 @@ export class AccessControlService {
   }
 
   async hasPermission(userId: string, projectId: string, requiredPermission: Permission): Promise<boolean> {
-    const [userRoles, rbacConfig] = await Promise.all([
-      this.getUserRoles(userId),
-      this.getRBACConfig(projectId)
-    ]);
-
-    if (!rbacConfig?.enabled || !userRoles.length) {
-      return false;
-    }
-
-    // Check each role's permissions
-    for (const roleName of userRoles) {
-      if (this.checkRolePermission(roleName, requiredPermission, rbacConfig.roles)) {
-        return true;
+    // First check Redis cache
+    const cacheKey = `permission:${userId}:${projectId}:${requiredPermission}`;
+    
+    if (this.redis.isEnabled()) {
+      const cached = await this.redis.get<boolean>(cacheKey);
+      if (cached !== null) {
+        logger.debug('Permission check cache hit', { userId, requiredPermission });
+        return cached;
       }
     }
 
-    return false;
-  }
+    // Check materialized view for direct permission
+    const hasDirectPermission = await this.db('mv_user_permissions')
+      .where({
+        user_id: userId,
+        project_id: projectId,
+        permission: requiredPermission
+      })
+      .first()
+      .then(result => !!result);
 
-  private checkRolePermission(roleName: string, requiredPermission: Permission, roles: Record<string, Role>): boolean {
-    const role = roles[roleName];
-    if (!role) return false;
-
-    // Check direct permissions
-    if (this.roleHasPermission(role, requiredPermission)) {
+    if (hasDirectPermission) {
+      if (this.redis.isEnabled()) {
+        await this.redis.set(cacheKey, true, this.USER_CACHE_TTL);
+      }
       return true;
     }
 
-    // Check parent role if exists
-    if (role.parent && roles[role.parent]) {
-      return this.checkRolePermission(role.parent, requiredPermission, roles);
+    // Check for wildcard permissions
+    const hasWildcardPermission = await this.db('mv_user_permissions')
+      .where({
+        user_id: userId,
+        project_id: projectId,
+        permission: 'all:*'
+      })
+      .orWhere({
+        user_id: userId,
+        project_id: projectId,
+        permission: `${requiredPermission.split(':')[0]}:*`
+      })
+      .first()
+      .then(result => !!result);
+
+    if (this.redis.isEnabled()) {
+      await this.redis.set(cacheKey, hasWildcardPermission, this.USER_CACHE_TTL);
     }
 
-    return false;
-  }
-
-  private roleHasPermission(role: Role, requiredPermission: Permission): boolean {
-    return role.permissions.some((permission: Permission) => {
-      // Check for wildcard permissions
-      if (permission === 'all:*') return true;
-      
-      const [resource, action] = permission.split(':');
-      const [reqResource, reqAction] = requiredPermission.split(':');
-      
-      return (resource === reqResource || resource === 'all') && 
-             (action === reqAction || action === '*');
-    });
+    return hasWildcardPermission;
   }
 
   async evaluateABACRules(
