@@ -17,10 +17,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   // Start transaction for test isolation
-  await knex.transaction(async (trx: Knex.Transaction) => {
-    // Store the transaction for use in tests
-    global.testTransaction = trx;
-  });
+  global.testTransaction = await knex.transaction();
 });
 
 afterEach(async () => {
