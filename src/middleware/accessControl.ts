@@ -1,258 +1,121 @@
 // OneKey KYC API - Access Control Middleware
 
 import { Request, Response, NextFunction } from 'express';
-import { Pool } from 'pg';
-import {
-  AccessRequest,
-  Permission,
-  SubjectAttributes,
-  ResourceAttributes,
-  EnvironmentAttributes
-} from '@/types/accessControl';
-import { PolicyEngine } from '@/services/access/policyEngine';
-import { logger } from '@/utils/logger';
+import { AccessControlService } from '../services/auth/accessControlService';
+import { Permission } from '../types/access-control';
 
-export class AccessControlMiddleware {
-  private readonly policyEngine: PolicyEngine;
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    project_id?: string;
+  };
+}
 
-  constructor(pool: Pool) {
-    this.policyEngine = new PolicyEngine(pool);
-  }
+export const requirePermission = (permission: Permission) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
-  /**
-   * Build subject attributes from request
-   */
-  private buildSubjectAttributes(req: Request): SubjectAttributes {
-    return {
-      roles: req.user?.roles || [],
-      organization: req.user?.organizationId || '',
-      projectId: req.project?.id || '',
-      environment: req.project?.environment || 'development',
-      ipAddress: req.ip,
-      deviceId: req.headers['x-device-id'] as string,
-      lastAuthenticated: req.user?.lastAuthenticated
-        ? new Date(req.user.lastAuthenticated)
-        : undefined,
-      customAttributes: req.user?.attributes || {}
-    };
-  }
+    const projectId = req.params.projectId || user.project_id;
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
 
-  /**
-   * Build resource attributes from request
-   */
-  private buildResourceAttributes(req: Request): ResourceAttributes {
-    return {
-      type: req.baseUrl.split('/')[1] || '',
-      id: req.params.id || '',
-      owner: req.params.owner || req.user?.id || '',
-      projectId: req.project?.id || '',
-      organization: req.project?.organizationId || '',
-      environment: req.project?.environment || 'development',
-      tags: req.resource?.tags || [],
-      sensitivity: req.resource?.sensitivity || 'internal',
-      customAttributes: req.resource?.attributes || {}
-    };
-  }
+    const accessControlService = new AccessControlService(req.app.locals.db);
 
-  /**
-   * Build environment attributes from request
-   */
-  private buildEnvironmentAttributes(req: Request): EnvironmentAttributes {
-    const now = new Date();
-    return {
-      timestamp: now,
-      timeOfDay: now.getHours(),
-      dayOfWeek: now.getDay(),
-      ipRange: req.headers['x-forwarded-for'] as string || req.ip,
-      location: req.headers['x-geo-location'] as string,
-      customAttributes: {}
-    };
-  }
+    try {
+      const hasPermission = await accessControlService.hasPermission(
+        user.id,
+        projectId,
+        permission
+      );
 
-  /**
-   * Check access for a specific permission
-   */
-  public checkPermission(permission: Permission) {
-    return async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        // Build access request
-        const accessRequest: AccessRequest = {
-          subject: this.buildSubjectAttributes(req),
-          resource: this.buildResourceAttributes(req),
-          action: permission,
-          environment: this.buildEnvironmentAttributes(req),
-          context: {
-            method: req.method,
-            path: req.path,
-            query: req.query,
-            headers: req.headers
-          }
-        };
-
-        // Check access
-        const response = await this.policyEngine.checkAccess(accessRequest);
-
-        // Log access attempt
-        logger.info('Access control check', {
-          userId: req.user?.id,
+      if (!hasPermission) {
+        await accessControlService.logAccessAttempt(
+          user.id,
+          projectId,
           permission,
-          allowed: response.allowed,
-          reason: response.reason,
-          requestId: response.auditLog?.requestId
-        });
-
-        if (!response.allowed) {
-          return res.status(403).json({
-            error: 'Access denied',
-            reason: response.reason,
-            requestId: response.auditLog?.requestId
-          });
-        }
-
-        // Attach access response to request for downstream use
-        req.accessControl = {
-          response,
-          permission
-        };
-
-        next();
-      } catch (error) {
-        logger.error('Access control check failed', {
-          error,
-          userId: req.user?.id,
-          permission
-        });
-
-        return res.status(500).json({
-          error: 'Failed to check access permissions',
-          requestId: crypto.randomUUID()
-        });
-      }
-    };
-  }
-
-  /**
-   * Check multiple permissions (any)
-   */
-  public checkAnyPermission(permissions: Permission[]) {
-    return async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const accessRequests: AccessRequest[] = permissions.map(permission => ({
-          subject: this.buildSubjectAttributes(req),
-          resource: this.buildResourceAttributes(req),
-          action: permission,
-          environment: this.buildEnvironmentAttributes(req),
-          context: {
-            method: req.method,
-            path: req.path,
-            query: req.query,
-            headers: req.headers
-          }
-        }));
-
-        // Check each permission
-        const responses = await Promise.all(
-          accessRequests.map(request => this.policyEngine.checkAccess(request))
+          false,
+          { path: req.path, method: req.method }
         );
-
-        // If any permission is allowed, grant access
-        const allowedResponse = responses.find(response => response.allowed);
-
-        if (allowedResponse) {
-          // Attach access response to request for downstream use
-          req.accessControl = {
-            response: allowedResponse,
-            permissions
-          };
-
-          next();
-        } else {
-          return res.status(403).json({
-            error: 'Access denied',
-            reason: 'None of the required permissions are granted',
-            requestId: crypto.randomUUID()
-          });
-        }
-      } catch (error) {
-        logger.error('Access control check failed', {
-          error,
-          userId: req.user?.id,
-          permissions
-        });
-
-        return res.status(500).json({
-          error: 'Failed to check access permissions',
-          requestId: crypto.randomUUID()
-        });
+        return res.status(403).json({ error: 'Insufficient permissions' });
       }
-    };
-  }
 
-  /**
-   * Check multiple permissions (all)
-   */
-  public checkAllPermissions(permissions: Permission[]) {
-    return async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const accessRequests: AccessRequest[] = permissions.map(permission => ({
-          subject: this.buildSubjectAttributes(req),
-          resource: this.buildResourceAttributes(req),
-          action: permission,
-          environment: this.buildEnvironmentAttributes(req),
-          context: {
-            method: req.method,
-            path: req.path,
-            query: req.query,
-            headers: req.headers
-          }
-        }));
+      await accessControlService.logAccessAttempt(
+        user.id,
+        projectId,
+        permission,
+        true,
+        { path: req.path, method: req.method }
+      );
 
-        // Check each permission
-        const responses = await Promise.all(
-          accessRequests.map(request => this.policyEngine.checkAccess(request))
+      next();
+    } catch (error) {
+      console.error('Access control error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+};
+
+export const requireContext = (contextValidator: (context: Record<string, any>) => Record<string, any>) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const projectId = req.params.projectId || user.project_id;
+    if (!projectId) {
+      return res.status(400).json({ error: 'Project ID is required' });
+    }
+
+    try {
+      // Build context from request
+      const context = contextValidator({
+        path: req.path,
+        method: req.method,
+        query: req.query,
+        body: req.body,
+        params: req.params,
+        headers: req.headers,
+      });
+
+      const accessControlService = new AccessControlService(req.app.locals.db);
+      
+      const allowed = await accessControlService.evaluateABACRules(
+        user.id,
+        projectId,
+        context
+      );
+
+      if (!allowed) {
+        await accessControlService.logAccessAttempt(
+          user.id,
+          projectId,
+          'abac:evaluate',
+          false,
+          context
         );
-
-        // All permissions must be allowed
-        const allAllowed = responses.every(response => response.allowed);
-
-        if (allAllowed) {
-          // Attach access responses to request for downstream use
-          req.accessControl = {
-            responses,
-            permissions
-          };
-
-          next();
-        } else {
-          const deniedPermissions = responses
-            .map((response, index) => ({
-              permission: permissions[index],
-              response
-            }))
-            .filter(item => !item.response.allowed);
-
-          return res.status(403).json({
-            error: 'Access denied',
-            reason: 'Missing required permissions',
-            deniedPermissions: deniedPermissions.map(item => ({
-              permission: item.permission,
-              reason: item.response.reason
-            })),
-            requestId: crypto.randomUUID()
-          });
-        }
-      } catch (error) {
-        logger.error('Access control check failed', {
-          error,
-          userId: req.user?.id,
-          permissions
-        });
-
-        return res.status(500).json({
-          error: 'Failed to check access permissions',
-          requestId: crypto.randomUUID()
-        });
+        return res.status(403).json({ error: 'Access denied by ABAC rules' });
       }
-    };
-  }
-} 
+
+      await accessControlService.logAccessAttempt(
+        user.id,
+        projectId,
+        'abac:evaluate',
+        true,
+        context
+      );
+
+      // Add validated context to request for route handlers
+      req.abacContext = context;
+      next();
+    } catch (error) {
+      console.error('ABAC evaluation error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+}; 
