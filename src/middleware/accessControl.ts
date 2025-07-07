@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AccessControlService } from '../services/auth/accessControlService';
 
 export const requirePermission = (permission: string) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void | Response> => {
     try {
       const userId = req.user?.id;
       const projectId = req.project?.id;
@@ -47,7 +47,7 @@ export const requirePermission = (permission: string) => {
 };
 
 export const requireEnvironment = (environment: string) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void | Response> => {
     try {
       const userId = req.user?.id;
       const projectId = req.project?.id;
