@@ -56,6 +56,35 @@ A secure and scalable API service for managing user authentication, authorizatio
   - Cache invalidation
   - Performance monitoring
 
+## Audit Log System
+
+The system uses a Redis-based queue for processing audit logs in batches, improving performance and reliability:
+
+### Features
+- Batch processing of audit logs
+- Configurable batch size and timeout
+- Automatic fallback to direct database writes if Redis is unavailable
+- Built-in error handling and retry mechanisms
+
+### Configuration
+Configure the audit log queue through environment variables:
+```env
+AUDIT_LOG_BATCH_SIZE=100      # Number of logs to process in each batch
+AUDIT_LOG_BATCH_TIMEOUT=5000  # Time between batch processing in milliseconds
+```
+
+### Architecture
+1. Audit logs are first queued in Redis
+2. A background processor runs at configured intervals
+3. Logs are processed in batches for better performance
+4. Failed writes are handled gracefully with fallback mechanisms
+
+### Monitoring
+Monitor the queue status through:
+- Redis queue length
+- Processing metrics in logs
+- Database write success/failure rates
+
 ## Getting Started
 
 ### Prerequisites
