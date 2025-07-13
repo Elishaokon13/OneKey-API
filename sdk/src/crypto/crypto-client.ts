@@ -148,10 +148,14 @@ export class CryptoClient extends EventEmitter {
         ...options
       });
       
+      if (!response.data) {
+        throw new OneKeyError('REMOTE_ENCRYPTION_FAILED', 'No data received from encryption endpoint');
+      }
+      
       this.emit('data:encrypted:remote', { keyId: response.data.keyId });
       return response.data;
     } catch (error) {
-      throw new OneKeyError('REMOTE_ENCRYPTION_FAILED', 'Failed to encrypt data remotely', error);
+      throw new OneKeyError('REMOTE_ENCRYPTION_FAILED', 'Failed to encrypt data remotely', error as any);
     }
   }
 
@@ -173,10 +177,14 @@ export class CryptoClient extends EventEmitter {
         ...options
       });
       
+      if (!response.data) {
+        throw new OneKeyError('REMOTE_DECRYPTION_FAILED', 'No data received from decryption endpoint');
+      }
+      
       this.emit('data:decrypted:remote', { keyId });
       return response.data.decrypted;
     } catch (error) {
-      throw new OneKeyError('REMOTE_DECRYPTION_FAILED', 'Failed to decrypt data remotely', error);
+      throw new OneKeyError('REMOTE_DECRYPTION_FAILED', 'Failed to decrypt data remotely', error as any);
     }
   }
 
