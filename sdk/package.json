@@ -1,6 +1,7 @@
 {
   "name": "@onekey/sdk",
   "version": "1.0.0",
+  "type": "module",
   "description": "OneKey KYC API SDK - Privacy-preserving identity verification with reusable attestations",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
