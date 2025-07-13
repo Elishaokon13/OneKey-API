@@ -78,6 +78,9 @@ await startKYC({ documentType: 'passport', country: 'US' });
 - `sdk/src/core/onekey-sdk.ts` - Main SDK class with all service integrations
 - `sdk/src/utils/errors.ts` - Error handling utilities and factory functions
 - `sdk/src/kyc/kyc-client.ts` - Dedicated KYC client with full feature set
+- `sdk/src/crypto/encryption.ts` - AES-256-GCM encryption manager with key management
+- `sdk/src/crypto/crypto-client.ts` - Crypto client for encryption operations
+- `sdk/src/crypto/index.ts` - Crypto module exports
 - `sdk/src/index.ts` - Main entry point with all exports
 
 ### 🚀 **KYC Client Features Implemented**
