@@ -23,7 +23,13 @@ export interface RequestOptions {
 }
 
 export class HttpClient extends EventEmitter {
-  private config: Required<OneKeyConfig>;
+  private config: OneKeyConfig & { 
+    baseUrl: string; 
+    timeout: number; 
+    headers: Record<string, string>; 
+    debug: boolean; 
+    retry: { attempts: number; delay: number; backoff: 'linear' | 'exponential' }; 
+  };
   private accessToken: string | null = null;
 
   constructor(config: OneKeyConfig) {
@@ -32,9 +38,10 @@ export class HttpClient extends EventEmitter {
     // Set defaults
     this.config = {
       apiKey: config.apiKey,
-      environment: config.environment || 'production',
-      baseUrl: config.baseUrl || this.getDefaultBaseUrl(config.environment || 'production'),
+      environment: config.environment,
+      baseUrl: config.baseUrl || this.getDefaultBaseUrl(config.environment),
       timeout: config.timeout || 30000,
+      retryAttempts: config.retryAttempts || 3,
       headers: config.headers || {},
       debug: config.debug || false,
       retry: config.retry || {
@@ -278,6 +285,73 @@ export class HttpClient extends EventEmitter {
   }
 
   /**
+   * GET request
+   */
+  public async get<T = any>(endpoint: string, params?: Record<string, any>, options?: Partial<RequestOptions>): Promise<ApiResponse<T>> {
+    return this.request<T>({
+      method: 'GET',
+      endpoint,
+      params,
+      ...options
+    });
+  }
+
+  /**
+   * POST request
+   */
+  public async post<T = any>(endpoint: string, data?: any, options?: Partial<RequestOptions>): Promise<ApiResponse<T>> {
+    return this.request<T>({
+      method: 'POST',
+      endpoint,
+      data,
+      ...options
+    });
+  }
+
+  /**
+   * PATCH request
+   */
+  public async patch<T = any>(endpoint: string, data?: any, options?: Partial<RequestOptions>): Promise<ApiResponse<T>> {
+    return this.request<T>({
+      method: 'PATCH',
+      endpoint,
+      data,
+      ...options
+    });
+  }
+
+  /**
+   * PUT request
+   */
+  public async put<T = any>(endpoint: string, data?: any, options?: Partial<RequestOptions>): Promise<ApiResponse<T>> {
+    return this.request<T>({
+      method: 'PUT',
+      endpoint,
+      data,
+      ...options
+    });
+  }
+
+  /**
+   * DELETE request
+   */
+  public async delete<T = any>(endpoint: string, options?: Partial<RequestOptions>): Promise<ApiResponse<T>> {
+    return this.request<T>({
+      method: 'DELETE',
+      endpoint,
+      ...options
+    });
+  }
+
+  /**
+   * Destroy/cleanup method
+   */
+  public destroy(): void {
+    this.removeAllListeners();
+    this.accessToken = null;
+  }
+
+  /**
    * Update configuration
    */
   public updateConfig(newConfig: Partial<OneKeyConfig>): void {
@@ -293,7 +367,7 @@ export class HttpClient extends EventEmitter {
   /**
    * Get current configuration
    */
-  public getConfig(): Readonly<Required<OneKeyConfig>> {
+  public getConfig(): Readonly<typeof this.config> {
     return { ...this.config };
   }
 } 
