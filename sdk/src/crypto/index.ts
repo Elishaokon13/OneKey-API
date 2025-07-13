@@ -1,13 +1,16 @@
 // Export encryption manager and related types
 export {
   EncryptionManager,
-  EncryptionOptions,
-  EncryptionResult,
-  DecryptionOptions,
-  KeyPair,
   createEncryptionManager,
   generateSecurePassword,
   validateEncryptionKey
+} from './encryption';
+
+export type {
+  EncryptionOptions,
+  EncryptionResult,
+  DecryptionOptions,
+  KeyPair
 } from './encryption';
 
 // Export crypto client
