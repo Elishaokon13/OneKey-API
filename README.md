@@ -270,3 +270,11 @@ Features:
 - Configurable block duration
 - Rate limit reset capability
 - Detailed logging and monitoring 
+
+# Generate a new SSH key (you can choose to set a passphrase or leave it empty)
+ssh-keygen -t ed25519 -C "eliscodavid@gmail.com" -f ~/.ssh/id_ed25519_new
+
+# Add it to SSH agent
+ssh-add ~/.ssh/id_ed25519_new
+
+# Update git to use the new key
