@@ -30,9 +30,12 @@ export class CryptoClient extends EventEmitter {
   async getProviders(): Promise<CryptoProvider[]> {
     try {
       const response = await this.httpClient.get<CryptoProvider[]>('/crypto/providers');
+      if (!response.data) {
+        throw new OneKeyError('CRYPTO_PROVIDERS_FETCH_FAILED', 'No data received from crypto providers endpoint');
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('CRYPTO_PROVIDERS_FETCH_FAILED', 'Failed to fetch crypto providers', error);
+      throw new OneKeyError('CRYPTO_PROVIDERS_FETCH_FAILED', 'Failed to fetch crypto providers', error as any);
     }
   }
 
