@@ -1,5 +1,65 @@
 # OneKey KYC API Implementation Progress
 
+## Task 1.4.1: Client-Side SDK Development 🚧
+**Status**: In Progress  
+**Priority**: High - Critical for user experience and frontend integration
+
+### 🎯 **Why This Task Next?**
+The OneKey API backend is complete, but there's no easy way for developers to integrate it. The architecture document extensively describes an "SDK-driven architecture to abstract Web3 complexities" and provide a "seamless user experience for non-technical users."
+
+### 📋 **Implementation Plan**
+1. **SDK Architecture** - TypeScript package structure and build system
+2. **Core SDK Client** - Authentication, configuration, HTTP client 
+3. **KYC Integration** - Session management, document upload, status tracking
+4. **Client-Side Encryption** - AES-256-GCM encryption utilities and key management
+5. **Attestation Methods** - Query, verify, and manage blockchain attestations
+6. **Privy Integration** - Web3 wallet authentication and signing
+7. **React Hooks** - useOneKey, useKYC, useAttestation for easy React integration
+8. **TypeScript Types** - Complete type definitions for developer experience
+9. **Test Coverage** - Comprehensive testing for all SDK functionality
+10. **Documentation** - SDK docs, examples, and integration guides
+
+### 🏗️ **SDK Architecture Goals**
+- **Framework Agnostic**: Works with React, Vue, vanilla JS, Node.js
+- **TypeScript First**: Complete type safety and IntelliSense
+- **Modular Design**: Import only what you need (tree-shaking)
+- **Web3 Abstraction**: Hide blockchain complexity from developers
+- **Zero-PII Client**: All encryption happens client-side
+- **Developer Experience**: Simple, intuitive API with great docs
+
+### 🚀 **Key Features to Implement**
+- **Authentication**: JWT and Privy Web3 wallet auth
+- **KYC Workflows**: Create sessions, upload docs, track verification
+- **Encryption**: Client-side data encryption before API calls
+- **Attestations**: Query and verify blockchain attestations
+- **React Integration**: Hooks for state management and UI updates
+- **Error Handling**: Comprehensive error types and recovery
+- **Offline Support**: Cache and retry capabilities
+- **Real-time Updates**: WebSocket/polling for live status updates
+
+### 📦 **Planned Package Structure**
+```
+@onekey/sdk-core      // Core client and utilities
+@onekey/sdk-react     // React hooks and components  
+@onekey/sdk-types     // TypeScript type definitions
+@onekey/sdk-crypto    // Encryption and key management
+```
+
+### 🎯 **Target Developer Experience**
+```typescript
+// Simple, intuitive API
+import { OneKeySDK } from '@onekey/sdk-core';
+import { useKYC } from '@onekey/sdk-react';
+
+const onekey = new OneKeySDK({ apiKey: 'your-key' });
+const { startKYC, status, error } = useKYC();
+
+// Start KYC with one line
+await startKYC({ documentType: 'passport', country: 'US' });
+```
+
+---
+
 ## Task 1.3.1: EAS (Ethereum Attestation Service) Integration ✅
 **Status**: COMPLETED
 **Priority**: High - Core blockchain attestation functionality
