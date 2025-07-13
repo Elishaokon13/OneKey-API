@@ -60,7 +60,7 @@ export class CryptoClient extends EventEmitter {
       this.encryptionManager.importKey(keyId, keyData);
       this.emit('key:imported', { keyId });
     } catch (error) {
-      throw new OneKeyError('KEY_IMPORT_FAILED', `Failed to import key ${keyId}`, error);
+      throw new OneKeyError('KEY_IMPORT_FAILED', `Failed to import key ${keyId}`, error as any);
     }
   }
 
@@ -71,7 +71,7 @@ export class CryptoClient extends EventEmitter {
     try {
       return this.encryptionManager.exportKey(keyId);
     } catch (error) {
-      throw new OneKeyError('KEY_EXPORT_FAILED', `Failed to export key ${keyId}`, error);
+      throw new OneKeyError('KEY_EXPORT_FAILED', `Failed to export key ${keyId}`, error as any);
     }
   }
 
@@ -84,7 +84,7 @@ export class CryptoClient extends EventEmitter {
       this.emit('key:derived', { keyId: result.keyId });
       return result;
     } catch (error) {
-      throw new OneKeyError('KEY_DERIVATION_FAILED', 'Failed to derive key from password', error);
+      throw new OneKeyError('KEY_DERIVATION_FAILED', 'Failed to derive key from password', error as any);
     }
   }
 
@@ -101,7 +101,7 @@ export class CryptoClient extends EventEmitter {
       this.emit('data:encrypted', { keyId, size: result.encrypted.length });
       return result;
     } catch (error) {
-      throw new OneKeyError('LOCAL_ENCRYPTION_FAILED', 'Failed to encrypt data locally', error);
+      throw new OneKeyError('LOCAL_ENCRYPTION_FAILED', 'Failed to encrypt data locally', error as any);
     }
   }
 
@@ -114,7 +114,7 @@ export class CryptoClient extends EventEmitter {
       this.emit('data:decrypted', { keyId });
       return result;
     } catch (error) {
-      throw new OneKeyError('LOCAL_DECRYPTION_FAILED', 'Failed to decrypt data locally', error);
+      throw new OneKeyError('LOCAL_DECRYPTION_FAILED', 'Failed to decrypt data locally', error as any);
     }
   }
 
