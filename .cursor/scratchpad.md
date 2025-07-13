@@ -62,8 +62,8 @@ await startKYC({ documentType: 'passport', country: 'US' });
 ✅ **SDK Architecture Complete** - Package structure, TypeScript config, build system
 ✅ **Core SDK Client Complete** - Main OneKeySDK class with authentication and configuration
 ✅ **KYC Integration Complete** - Full KYC client with session management, document upload, webhook handling
-🚧 **Encryption Utilities** - Currently implementing client-side crypto utilities
-⏳ **Attestation Methods** - Querying and verification of blockchain attestations
+✅ **Encryption Utilities Complete** - Client-side crypto utilities with AES-256-GCM encryption
+🚧 **Attestation Methods** - Currently implementing querying and verification of blockchain attestations
 ⏳ **Privy Integration** - Web3 wallet authentication and signing
 ⏳ **React Hooks** - Easy-to-use React integration hooks
 ⏳ **Test Coverage** - Comprehensive testing for all SDK functionality
