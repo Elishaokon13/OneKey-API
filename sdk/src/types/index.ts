@@ -142,8 +142,8 @@ export interface CryptoProvider {
 
 export class OneKeyError extends Error {
   constructor(
-    message: string,
     public code: string,
+    message: string,
     public details?: Record<string, any>
   ) {
     super(message);
@@ -158,7 +158,37 @@ export class ApiError extends OneKeyError {
     code: string,
     details?: Record<string, any>
   ) {
-    super(message, code, details);
+    super(code, message, details);
     this.name = 'ApiError';
+  }
+}
+
+export class NetworkError extends OneKeyError {
+  constructor(
+    message: string,
+    details?: Record<string, any>
+  ) {
+    super('NETWORK_ERROR', message, details);
+    this.name = 'NetworkError';
+  }
+}
+
+export class AuthenticationError extends OneKeyError {
+  constructor(
+    message: string,
+    details?: Record<string, any>
+  ) {
+    super('AUTHENTICATION_FAILED', message, details);
+    this.name = 'AuthenticationError';
+  }
+}
+
+export class ValidationError extends OneKeyError {
+  constructor(
+    message: string,
+    details?: Record<string, any>
+  ) {
+    super('VALIDATION_ERROR', message, details);
+    this.name = 'ValidationError';
   }
 } 
