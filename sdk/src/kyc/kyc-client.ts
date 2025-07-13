@@ -133,10 +133,13 @@ export class KycClient extends EventEmitter {
       };
 
       const response = await this.httpClient.patch<KycSession>(`/kyc/sessions/${sessionId}`, payload);
+      if (!response.data) {
+        throw new OneKeyError('KYC_SESSION_UPDATE_FAILED', `No data received for session update ${sessionId}`);
+      }
       this.emit('session:updated', response.data);
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_SESSION_UPDATE_FAILED', `Failed to update KYC session ${sessionId}`, error);
+      throw new OneKeyError('KYC_SESSION_UPDATE_FAILED', `Failed to update KYC session ${sessionId}`, error as any);
     }
   }
 
@@ -148,7 +151,7 @@ export class KycClient extends EventEmitter {
       await this.httpClient.post(`/kyc/sessions/${sessionId}/cancel`, { reason });
       this.emit('session:cancelled', { sessionId, reason });
     } catch (error) {
-      throw new OneKeyError('KYC_SESSION_CANCEL_FAILED', `Failed to cancel KYC session ${sessionId}`, error);
+      throw new OneKeyError('KYC_SESSION_CANCEL_FAILED', `Failed to cancel KYC session ${sessionId}`, error as any);
     }
   }
 
