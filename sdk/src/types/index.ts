@@ -4,10 +4,11 @@
 // ===== Core Configuration =====
 
 export interface OneKeyConfig {
-  apiKey: string;
-  environment?: 'production' | 'sandbox';
+  apiKey?: string;
+  environment: 'production' | 'sandbox';
   baseUrl?: string;
   timeout?: number;
+  retryAttempts?: number;
   headers?: Record<string, string>;
   debug?: boolean;
   retry?: {
