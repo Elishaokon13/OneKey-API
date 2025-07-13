@@ -34,9 +34,12 @@ export class KycClient extends EventEmitter {
   async getProviders(): Promise<KycProvider[]> {
     try {
       const response = await this.httpClient.get<KycProvider[]>('/kyc/providers');
+      if (!response.data) {
+        throw new OneKeyError('KYC_PROVIDERS_FETCH_FAILED', 'No data received from KYC providers endpoint');
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_PROVIDERS_FETCH_FAILED', 'Failed to fetch KYC providers', error);
+      throw new OneKeyError('KYC_PROVIDERS_FETCH_FAILED', 'Failed to fetch KYC providers', error as any);
     }
   }
 
@@ -46,9 +49,12 @@ export class KycClient extends EventEmitter {
   async getProvider(providerId: string): Promise<KycProvider> {
     try {
       const response = await this.httpClient.get<KycProvider>(`/kyc/providers/${providerId}`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_PROVIDER_FETCH_FAILED', `No data received for KYC provider ${providerId}`);
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_PROVIDER_FETCH_FAILED', `Failed to fetch KYC provider ${providerId}`, error);
+      throw new OneKeyError('KYC_PROVIDER_FETCH_FAILED', `Failed to fetch KYC provider ${providerId}`, error as any);
     }
   }
 
