@@ -48,7 +48,7 @@ export class CryptoClient extends EventEmitter {
       this.emit('key:generated', { keyId: id });
       return id;
     } catch (error) {
-      throw new OneKeyError('KEY_GENERATION_FAILED', 'Failed to generate encryption key', error);
+      throw new OneKeyError('KEY_GENERATION_FAILED', 'Failed to generate encryption key', error as any);
     }
   }
 
