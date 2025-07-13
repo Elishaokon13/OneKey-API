@@ -225,9 +225,12 @@ export class KycClient extends EventEmitter {
   async getSessionDocuments(sessionId: string): Promise<KycDocument[]> {
     try {
       const response = await this.httpClient.get<KycDocument[]>(`/kyc/sessions/${sessionId}/documents`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_DOCUMENTS_FETCH_FAILED', `No data received for session ${sessionId} documents`);
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_DOCUMENTS_FETCH_FAILED', `Failed to fetch documents for session ${sessionId}`, error);
+      throw new OneKeyError('KYC_DOCUMENTS_FETCH_FAILED', `Failed to fetch documents for session ${sessionId}`, error as any);
     }
   }
 
