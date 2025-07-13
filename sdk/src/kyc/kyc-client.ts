@@ -88,10 +88,13 @@ export class KycClient extends EventEmitter {
       };
 
       const response = await this.httpClient.post<KycSession>('/kyc/sessions', payload);
+      if (!response.data) {
+        throw new OneKeyError('KYC_SESSION_CREATE_FAILED', 'No data received from session creation');
+      }
       this.emit('session:created', response.data);
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_SESSION_CREATE_FAILED', 'Failed to create KYC session', error);
+      throw new OneKeyError('KYC_SESSION_CREATE_FAILED', 'Failed to create KYC session', error as any);
     }
   }
 
@@ -101,9 +104,12 @@ export class KycClient extends EventEmitter {
   async getSession(sessionId: string): Promise<KycSession> {
     try {
       const response = await this.httpClient.get<KycSession>(`/kyc/sessions/${sessionId}`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_SESSION_FETCH_FAILED', `No data received for session ${sessionId}`);
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_SESSION_FETCH_FAILED', `Failed to fetch KYC session ${sessionId}`, error);
+      throw new OneKeyError('KYC_SESSION_FETCH_FAILED', `Failed to fetch KYC session ${sessionId}`, error as any);
     }
   }
 
