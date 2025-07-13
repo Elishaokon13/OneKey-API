@@ -66,7 +66,7 @@ export class EncryptionManager {
       const key = CryptoJS.enc.Hex.parse(keyData);
       this.keys.set(keyId, key);
     } catch (error) {
-      throw new OneKeyError('ENCRYPTION_KEY_IMPORT_FAILED', `Failed to import key ${keyId}`, error);
+      throw new OneKeyError('ENCRYPTION_KEY_IMPORT_FAILED', `Failed to import key ${keyId}`, error as any);
     }
   }
 
@@ -120,7 +120,7 @@ export class EncryptionManager {
         return this.encryptCBC(plaintext, key, keyId, opts);
       }
     } catch (error) {
-      throw new OneKeyError('ENCRYPTION_FAILED', 'Failed to encrypt data', error);
+      throw new OneKeyError('ENCRYPTION_FAILED', 'Failed to encrypt data', error as any);
     }
   }
 
@@ -143,7 +143,7 @@ export class EncryptionManager {
         return this.decryptCBC(encryptedData, key);
       }
     } catch (error) {
-      throw new OneKeyError('DECRYPTION_FAILED', 'Failed to decrypt data', error);
+      throw new OneKeyError('DECRYPTION_FAILED', 'Failed to decrypt data', error as any);
     }
   }
 
@@ -170,8 +170,8 @@ export class EncryptionManager {
     const result = this.encrypt(data, keyId, options);
     return {
       ...result,
-      filename,
-      mimeType
+      ...(filename && { filename }),
+      ...(mimeType && { mimeType })
     };
   }
 
@@ -187,8 +187,8 @@ export class EncryptionManager {
     
     return {
       data,
-      filename: encryptedData.filename,
-      mimeType: encryptedData.mimeType
+      ...(encryptedData.filename && { filename: encryptedData.filename }),
+      ...(encryptedData.mimeType && { mimeType: encryptedData.mimeType })
     };
   }
 
