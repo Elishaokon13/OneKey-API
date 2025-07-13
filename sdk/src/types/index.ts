@@ -68,6 +68,27 @@ export interface KycSession {
   };
 }
 
+export interface KycDocument {
+  documentId: string;
+  sessionId: string;
+  documentType: DocumentType;
+  filename?: string;
+  mimeType?: string;
+  side?: 'front' | 'back';
+  status: 'uploaded' | 'processing' | 'processed' | 'failed';
+  metadata?: Record<string, any>;
+  uploadedAt: string;
+  processedAt?: string;
+}
+
+export interface KycWebhookEvent {
+  event: 'session.created' | 'session.updated' | 'session.completed' | 'session.failed' | 
+         'document.uploaded' | 'document.processed' | 'verification.completed';
+  data: any;
+  timestamp: string;
+  signature?: string;
+}
+
 // ===== Attestation Types =====
 
 export interface Attestation {
