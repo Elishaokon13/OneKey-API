@@ -100,6 +100,44 @@ export interface Attestation {
   createdAt: string;
 }
 
+export interface AttestationSchema {
+  id: string;
+  name: string;
+  description?: string;
+  schema: string;
+  resolver?: string;
+  revocable: boolean;
+  createdAt: string;
+}
+
+export interface AttestationRecord {
+  id: string;
+  uid: string;
+  schemaId: string;
+  recipient: string;
+  attester: string;
+  data: Record<string, any>;
+  revocable: boolean;
+  revoked: boolean;
+  revokedAt?: string;
+  expirationTime?: number;
+  transactionHash?: string;
+  blockNumber?: number;
+  createdAt: string;
+  metadata?: Record<string, any>;
+}
+
+// ===== Crypto Types =====
+
+export interface CryptoProvider {
+  id: string;
+  name: string;
+  type: 'symmetric' | 'asymmetric';
+  algorithms: string[];
+  keySize: number;
+  enabled: boolean;
+}
+
 // ===== Error Types =====
 
 export class OneKeyError extends Error {
