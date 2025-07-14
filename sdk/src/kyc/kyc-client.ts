@@ -356,9 +356,12 @@ export class KycClient extends EventEmitter {
       const response = await this.httpClient.get<{ sessions: KycSession[]; total: number }>(
         `/kyc/users/${userId}/sessions?${params.toString()}`
       );
+      if (!response.data) {
+        throw new OneKeyError('KYC_SESSIONS_FETCH_FAILED', `No data received for user ${userId} sessions`);
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_SESSIONS_FETCH_FAILED', `Failed to fetch sessions for user ${userId}`, error);
+      throw new OneKeyError('KYC_SESSIONS_FETCH_FAILED', `Failed to fetch sessions for user ${userId}`, error as any);
     }
   }
 
