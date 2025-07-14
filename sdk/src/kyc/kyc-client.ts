@@ -289,9 +289,12 @@ export class KycClient extends EventEmitter {
         details?: Record<string, any>;
         completedAt?: string;
       }>(`/kyc/sessions/${sessionId}/result`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_RESULT_FETCH_FAILED', `No data received for session ${sessionId} verification result`);
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_RESULT_FETCH_FAILED', `Failed to fetch verification result for session ${sessionId}`, error);
+      throw new OneKeyError('KYC_RESULT_FETCH_FAILED', `Failed to fetch verification result for session ${sessionId}`, error as any);
     }
   }
 
