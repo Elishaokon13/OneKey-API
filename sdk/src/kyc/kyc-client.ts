@@ -345,7 +345,7 @@ export class KycClient extends EventEmitter {
           this.emit('webhook:unknown', payload);
       }
     } catch (error) {
-      throw new OneKeyError('KYC_WEBHOOK_HANDLE_FAILED', 'Failed to handle KYC webhook', error);
+      throw new OneKeyError('KYC_WEBHOOK_HANDLE_FAILED', 'Failed to handle KYC webhook', error as any);
     }
   }
 
