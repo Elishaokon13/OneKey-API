@@ -264,10 +264,13 @@ export class KycClient extends EventEmitter {
   async submitSession(sessionId: string): Promise<KycSession> {
     try {
       const response = await this.httpClient.post<KycSession>(`/kyc/sessions/${sessionId}/submit`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_SESSION_SUBMIT_FAILED', `No data received for session ${sessionId} submission`);
+      }
       this.emit('session:submitted', response.data);
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_SESSION_SUBMIT_FAILED', `Failed to submit KYC session ${sessionId}`, error);
+      throw new OneKeyError('KYC_SESSION_SUBMIT_FAILED', `Failed to submit KYC session ${sessionId}`, error as any);
     }
   }
 
