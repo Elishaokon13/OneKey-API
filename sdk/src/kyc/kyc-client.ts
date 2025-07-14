@@ -200,6 +200,9 @@ export class KycClient extends EventEmitter {
         }
       );
 
+      if (!response.data) {
+        throw new OneKeyError('KYC_DOCUMENT_UPLOAD_FAILED', 'No data received from document upload');
+      }
       this.emit('document:uploaded', response.data);
       return response.data;
     } catch (error) {
@@ -213,6 +216,9 @@ export class KycClient extends EventEmitter {
   async getDocument(documentId: string): Promise<KycDocument> {
     try {
       const response = await this.httpClient.get<KycDocument>(`/kyc/documents/${documentId}`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_DOCUMENT_FETCH_FAILED', `No data received for document ${documentId}`);
+      }
       return response.data;
     } catch (error) {
       throw new OneKeyError('KYC_DOCUMENT_FETCH_FAILED', `Failed to fetch KYC document ${documentId}`, error as any);
