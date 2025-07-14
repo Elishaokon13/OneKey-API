@@ -242,7 +242,7 @@ export class KycClient extends EventEmitter {
       await this.httpClient.delete(`/kyc/documents/${documentId}`);
       this.emit('document:deleted', { documentId });
     } catch (error) {
-      throw new OneKeyError('KYC_DOCUMENT_DELETE_FAILED', `Failed to delete KYC document ${documentId}`, error);
+      throw new OneKeyError('KYC_DOCUMENT_DELETE_FAILED', `Failed to delete KYC document ${documentId}`, error as any);
     }
   }
 
@@ -254,7 +254,7 @@ export class KycClient extends EventEmitter {
       const response = await this.httpClient.get<KycStatus>(`/kyc/status/${userId}`);
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_STATUS_FETCH_FAILED', `Failed to fetch KYC status for user ${userId}`, error);
+      throw new OneKeyError('KYC_STATUS_FETCH_FAILED', `Failed to fetch KYC status for user ${userId}`, error as any);
     }
   }
 
