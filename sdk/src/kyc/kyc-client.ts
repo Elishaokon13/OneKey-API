@@ -258,6 +258,9 @@ export class KycClient extends EventEmitter {
   async getStatus(userId: string): Promise<KycStatus> {
     try {
       const response = await this.httpClient.get<KycStatus>(`/kyc/status/${userId}`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_STATUS_FETCH_FAILED', `No data received for user ${userId} status`);
+      }
       return response.data;
     } catch (error) {
       throw new OneKeyError('KYC_STATUS_FETCH_FAILED', `Failed to fetch KYC status for user ${userId}`, error as any);
