@@ -203,7 +203,7 @@ export class KycClient extends EventEmitter {
       this.emit('document:uploaded', response.data);
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_DOCUMENT_UPLOAD_FAILED', 'Failed to upload KYC document', error);
+      throw new OneKeyError('KYC_DOCUMENT_UPLOAD_FAILED', 'Failed to upload KYC document', error as any);
     }
   }
 
@@ -215,7 +215,7 @@ export class KycClient extends EventEmitter {
       const response = await this.httpClient.get<KycDocument>(`/kyc/documents/${documentId}`);
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_DOCUMENT_FETCH_FAILED', `Failed to fetch KYC document ${documentId}`, error);
+      throw new OneKeyError('KYC_DOCUMENT_FETCH_FAILED', `Failed to fetch KYC document ${documentId}`, error as any);
     }
   }
 
