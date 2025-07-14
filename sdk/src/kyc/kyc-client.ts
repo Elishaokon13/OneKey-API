@@ -397,9 +397,12 @@ export class KycClient extends EventEmitter {
         averageCompletionTime: number;
         successRate: number;
       }>(`/kyc/statistics?${params.toString()}`);
+      if (!response.data) {
+        throw new OneKeyError('KYC_STATISTICS_FETCH_FAILED', 'No data received from KYC statistics endpoint');
+      }
       return response.data;
     } catch (error) {
-      throw new OneKeyError('KYC_STATISTICS_FETCH_FAILED', 'Failed to fetch KYC statistics', error);
+      throw new OneKeyError('KYC_STATISTICS_FETCH_FAILED', 'Failed to fetch KYC statistics', error as any);
     }
   }
 
